@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "22073478183",
+    "project_id": "protrading-ai-2026",
+    "storage_bucket": "protrading-ai-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:22073478183:android:28e25f8ee160fc7bfd9202",
+        "android_client_info": {
+          "package_name": "com.protrading.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRjDdoTPCLNJq9m8_Zx4kB2A2MqUPIrqo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

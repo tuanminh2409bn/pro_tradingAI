@@ -1,0 +1,49 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "protrading-ai-2026",
+          "appId": "1:22073478183:android:28e25f8ee160fc7bfd9202",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "protrading-ai-2026",
+          "configurations": {
+            "android": "1:22073478183:android:28e25f8ee160fc7bfd9202",
+            "ios": "1:22073478183:ios:1deac0d9017f2325fd9202",
+            "web": "1:22073478183:web:196301514afe83b4fd9202"
+          }
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "protrading-ai-2026",
+          "appId": "1:22073478183:ios:1deac0d9017f2325fd9202",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KINETIC - Admin Control Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+        .glass-panel {
+            background: rgba(50, 53, 56, 0.7);
+            backdrop-filter: blur(24px);
+        }
+        .pulse-secondary {
+            animation: pulse-ring 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            80%, 100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#ffb4aa",
+                        "on-primary-container": "#002469",
+                        "on-secondary-container": "#004b00",
+                        "on-primary-fixed": "#00174b",
+                        "on-tertiary-container": "#5c0002",
+                        "tertiary-container": "#ff5545",
+                        "on-secondary-fixed-variant": "#005300",
+                        "inverse-primary": "#0053db",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#690003",
+                        "on-background": "#e1e2e7",
+                        "secondary-fixed": "#77ff62",
+                        "error-container": "#93000a",
+                        "surface-variant": "#323538",
+                        "surface-container-low": "#191c1f",
+                        "surface-container-high": "#272a2e",
+                        "primary-fixed": "#dbe1ff",
+                        "surface": "#111417",
+                        "primary-container": "#618bff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-bright": "#37393d",
+                        "surface-container-highest": "#323538",
+                        "surface-tint": "#b4c5ff",
+                        "outline-variant": "#434655",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "secondary": "#3ce42f",
+                        "on-tertiary-fixed": "#410001",
+                        "background": "#111417",
+                        "on-secondary-fixed": "#002200",
+                        "tertiary-fixed": "#ffdad5",
+                        "on-tertiary-fixed-variant": "#930005",
+                        "surface-dim": "#111417",
+                        "surface-container": "#1d2023",
+                        "inverse-on-surface": "#2e3134",
+                        "secondary-fixed-dim": "#3ce42f",
+                        "outline": "#8d90a1",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#ffb4aa",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#c3c6d8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 bg-[#111417] h-16 font-['Inter'] tabular-nums tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black tracking-tighter text-[#e1e2e7]">KINETIC</span>
+<div class="hidden md:flex items-center gap-6">
+<span class="text-[#c3c6d8] hover:text-[#e1e2e7] transition-colors duration-200 cursor-default">Equity: $42,050.00</span>
+<span class="text-[#c3c6d8] hover:text-[#e1e2e7] transition-colors duration-200 cursor-default">Margin: 840%</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] transition-colors duration-200 rounded-lg">
+<span class="material-symbols-outlined">rss_feed</span>
+</button>
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] transition-colors duration-200 rounded-lg">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] transition-colors duration-200 rounded-lg">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-16 bottom-0 w-64 flex flex-col z-40 bg-[#191c1f] font-['Inter'] text-sm font-medium uppercase tracking-[0.05em]">
+<div class="p-6 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shield_person</span>
+</div>
+<div>
+<div class="text-[#e1e2e7] leading-none">Pro Trader</div>
+<div class="text-[10px] text-primary mt-1 opacity-80">Level 42</div>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto">
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">show_chart</span> Trading Room
+            </a>
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">auto_stories</span> Journal
+            </a>
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">dynamic_feed</span> News Feed
+            </a>
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">history_edu</span> Backtest Dojo
+            </a>
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">groups</span> Community
+            </a>
+<a class="text-[#c3c6d8] hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined">workspace_premium</span> Rewards
+            </a>
+<a class="text-[#3772FF] bg-[#1d2023] border-r-2 border-[#3772FF] flex items-center gap-3 px-6 py-4" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span> Admin
+            </a>
+</nav>
+<div class="p-6 border-t border-outline-variant/10">
+<button class="w-full bg-primary-container text-on-primary-fixed py-2 rounded-lg mb-4 hover:brightness-110 transition-all font-bold">
+                Connect API
+            </button>
+<div class="flex flex-col gap-2">
+<a class="text-[#c3c6d8] hover:text-[#e1e2e7] flex items-center gap-3" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+                </a>
+<a class="text-[#c3c6d8] hover:text-[#e1e2e7] flex items-center gap-3" href="#">
+<span class="material-symbols-outlined">help_outline</span> Support
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-8 h-[calc(100vh-4rem)] overflow-y-auto bg-surface space-y-8 pb-12">
+<!-- Header & Top Stats -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-bold text-on-surface tracking-tight">Admin Control Center</h1>
+<p class="text-on-surface-variant mt-1">Operational oversight and system configuration.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-low px-6 py-3 rounded-lg border-l-4 border-secondary">
+<div class="text-[10px] uppercase font-bold text-outline tracking-wider">System Status</div>
+<div class="flex items-center gap-2 mt-1">
+<div class="relative flex h-2 w-2">
+<span class="pulse-secondary absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</div>
+<span class="font-bold text-secondary">ACTIVE - 60 FPS</span>
+</div>
+</div>
+<div class="bg-surface-container-low px-6 py-3 rounded-lg border-l-4 border-primary">
+<div class="text-[10px] uppercase font-bold text-outline tracking-wider">Pending Alerts</div>
+<div class="text-xl font-black text-primary mt-1">14</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Analytics Hub (MAU/DAU) -->
+<div class="col-span-8 bg-surface-container-low rounded-xl p-6 relative overflow-hidden group">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                            Analytics Hub
+                        </h3>
+<p class="text-sm text-on-surface-variant">User engagement and retention metrics</p>
+</div>
+<div class="flex bg-surface-container-highest p-1 rounded-lg text-[10px] font-bold">
+<button class="px-3 py-1 bg-surface-container text-on-surface rounded-md">DAU</button>
+<button class="px-3 py-1 text-on-surface-variant hover:text-on-surface">MAU</button>
+</div>
+</div>
+<div class="h-64 flex items-end gap-2 px-2 relative">
+<!-- Faux Line Chart Simulation -->
+<svg class="absolute inset-0 w-full h-full px-4 pt-12" viewbox="0 0 800 200">
+<path d="M0,150 Q100,140 200,160 T400,100 T600,80 T800,20" fill="none" stroke="#b4c5ff" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,150 Q100,140 200,160 T400,100 T600,80 T800,20 V200 H0 Z" fill="url(#gradient-chart)" opacity="0.1"></path>
+<defs>
+<lineargradient id="gradient-chart" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#b4c5ff"></stop>
+<stop offset="100%" stop-color="#111417" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Data Points -->
+<circle cx="200" cy="160" fill="#b4c5ff" r="4"></circle>
+<circle cx="400" cy="100" fill="#b4c5ff" r="4"></circle>
+<circle cx="600" cy="80" fill="#b4c5ff" r="4"></circle>
+<circle cx="800" cy="20" fill="#b4c5ff" r="4"></circle>
+</svg>
+<!-- Ticks -->
+<div class="absolute bottom-0 left-0 w-full flex justify-between text-[10px] text-outline font-bold px-4">
+<span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-outline-variant/10">
+<div>
+<span class="text-[10px] uppercase font-bold text-outline">Growth</span>
+<div class="text-xl font-bold text-secondary">+12.4%</div>
+</div>
+<div>
+<span class="text-[10px] uppercase font-bold text-outline">Sessions</span>
+<div class="text-xl font-bold text-on-surface">1,402 / min</div>
+</div>
+<div>
+<span class="text-[10px] uppercase font-bold text-outline">Latency</span>
+<div class="text-xl font-bold text-primary">24ms</div>
+</div>
+</div>
+</div>
+<!-- Global Heatmap Section -->
+<div class="col-span-4 bg-surface-container-low rounded-xl p-6 flex flex-col">
+<h3 class="text-lg font-bold flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-secondary">public</span>
+                    Global Access
+                </h3>
+<div class="flex-1 rounded-lg overflow-hidden bg-surface relative group">
+<img class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-110" data-alt="stylized vector world map in dark charcoal and electric blue colors highlighting global user traffic density" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpw-LflepOp2Bbd-arEtikQ6b2SlDviOHko7rxolo5pHEPjTrRmdE68E1BE75Ki9No4qsd0uCHaUNZkHhd8MYFe0MjVdUbedG2dMl_Jwok6IiqA5q1A-YmYr2vGfE9WyUtSnyRymlX7YjRWrPQT1v4zaJvGCwgNiGnpXVCaxlNJLvg8tIysjPntnYytjRM6_hUPeptZ6IgplWhveY40A5aRf8OZNFkTcVxYVbWGQQZwumMmY58iupheTDcCKACOqSpuMFpd4GPzg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
+<!-- Mock Hotspots -->
+<div class="absolute top-1/4 left-1/3 w-3 h-3 bg-secondary rounded-full pulse-secondary"></div>
+<div class="absolute top-1/3 right-1/4 w-2 h-2 bg-secondary rounded-full pulse-secondary"></div>
+<div class="absolute bottom-1/4 left-1/2 w-4 h-4 bg-secondary rounded-full pulse-secondary"></div>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">North America</span>
+<span class="font-bold tabular-nums">48%</span>
+</div>
+<div class="w-full h-1 bg-surface rounded-full">
+<div class="w-[48%] h-full bg-primary rounded-full"></div>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-on-surface-variant">Europe</span>
+<span class="font-bold tabular-nums">32%</span>
+</div>
+<div class="w-full h-1 bg-surface rounded-full">
+<div class="w-[32%] h-full bg-primary rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Request Management Table -->
+<div class="col-span-7 bg-surface-container-low rounded-xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary-container">approval_delegation</span>
+                        Pending Approvals
+                    </h3>
+<button class="text-[10px] uppercase font-bold text-primary hover:underline">View All Requests</button>
+</div>
+<div class="flex-1 overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-highest text-[10px] uppercase font-bold text-outline">
+<tr>
+<th class="px-6 py-3">User / ID</th>
+<th class="px-6 py-3">Type</th>
+<th class="px-6 py-3">Amount</th>
+<th class="px-6 py-3">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">@alex_trader</div>
+<div class="text-[10px] text-outline">#TR-9042</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface px-2 py-1 rounded text-[10px] font-bold text-on-surface-variant">WITHDRAWAL</span>
+</td>
+<td class="px-6 py-4 font-bold tabular-nums">$12,400.00</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-1.5 bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary rounded transition-colors">
+<span class="material-symbols-outlined text-sm">check</span>
+</button>
+<button class="p-1.5 bg-tertiary-container/10 text-tertiary-container hover:bg-tertiary-container hover:text-on-tertiary-fixed rounded transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="bg-surface-container-lowest/30 hover:bg-surface-container transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">@zen_master</div>
+<div class="text-[10px] text-outline">#TR-8812</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-primary-container/20 px-2 py-1 rounded text-[10px] font-bold text-primary">REWARD GRANT</span>
+</td>
+<td class="px-6 py-4 font-bold tabular-nums">2,500 KNT</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-1.5 bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary rounded transition-colors">
+<span class="material-symbols-outlined text-sm">check</span>
+</button>
+<button class="p-1.5 bg-tertiary-container/10 text-tertiary-container hover:bg-tertiary-container hover:text-on-tertiary-fixed rounded transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4">
+<div class="font-bold">@whale_99</div>
+<div class="text-[10px] text-outline">#TR-7721</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface px-2 py-1 rounded text-[10px] font-bold text-on-surface-variant">WITHDRAWAL</span>
+</td>
+<td class="px-6 py-4 font-bold tabular-nums">$154,200.00</td>
+<td class="px-6 py-4">
+<div class="flex gap-2">
+<button class="p-1.5 bg-secondary/10 text-secondary hover:bg-secondary hover:text-on-secondary rounded transition-colors">
+<span class="material-symbols-outlined text-sm">check</span>
+</button>
+<button class="p-1.5 bg-tertiary-container/10 text-tertiary-container hover:bg-tertiary-container hover:text-on-tertiary-fixed rounded transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Global Watchlist Editor -->
+<div class="col-span-5 bg-surface-container-low rounded-xl p-6 space-y-4">
+<h3 class="text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">radar</span>
+                    Radar Configuration
+                </h3>
+<div class="space-y-3">
+<div class="text-xs font-bold text-outline uppercase">Global Watchlist Assets</div>
+<div class="flex flex-wrap gap-2">
+<span class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded-full text-xs font-bold">
+                            XAUUSD <button class="material-symbols-outlined text-xs hover:text-tertiary-container">close</button>
+</span>
+<span class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded-full text-xs font-bold">
+                            BTCUSD <button class="material-symbols-outlined text-xs hover:text-tertiary-container">close</button>
+</span>
+<span class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded-full text-xs font-bold">
+                            EURUSD <button class="material-symbols-outlined text-xs hover:text-tertiary-container">close</button>
+</span>
+<span class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 rounded-full text-xs font-bold">
+                            ETHBTC <button class="material-symbols-outlined text-xs hover:text-tertiary-container">close</button>
+</span>
+<button class="px-3 py-1.5 border border-primary/20 text-primary rounded-full text-xs font-bold hover:bg-primary/10 transition-colors">
+                            + Add Asset
+                        </button>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant/10 space-y-4">
+<div class="text-xs font-bold text-outline uppercase">System Sensitivity</div>
+<input class="w-full h-2 bg-surface rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+<div class="flex justify-between text-[10px] text-outline font-bold">
+<span>CONSERVATIVE</span>
+<span>AGGRESSIVE</span>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-highest hover:bg-surface-bright rounded font-bold text-xs uppercase tracking-widest transition-all">
+                    Push Changes to Radar
+                </button>
+</div>
+<!-- Bulk Notification Center -->
+<div class="col-span-12 glass-panel p-8 rounded-xl border border-outline-variant/5">
+<div class="grid grid-cols-3 gap-8">
+<div class="col-span-1">
+<h3 class="text-lg font-bold flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">broadcast_on_home</span>
+                            Signal Blast
+                        </h3>
+<p class="text-sm text-on-surface-variant">Send high-priority notifications to specific user tiers or global audience.</p>
+<div class="mt-6 space-y-2">
+<label class="block text-[10px] font-bold text-outline uppercase">Target Tier</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-lg text-sm text-on-surface focus:ring-1 focus:ring-primary">
+<option>All Users (Global)</option>
+<option>Pro Tier Only</option>
+<option>Elite Tier Only</option>
+<option>Level 50+ Pioneers</option>
+</select>
+</div>
+</div>
+<div class="col-span-2 space-y-4">
+<div class="space-y-2">
+<label class="block text-[10px] font-bold text-outline uppercase">Message Content</label>
+<textarea class="w-full bg-surface-container-lowest border-none rounded-lg text-sm text-on-surface focus:ring-1 focus:ring-primary p-4" placeholder="Enter signal details, market alerts, or system maintenance notices..." rows="3"></textarea>
+</div>
+<div class="flex justify-end gap-4">
+<button class="px-6 py-2 rounded font-bold text-sm text-on-surface-variant hover:text-on-surface transition-colors">Save Template</button>
+<button class="px-8 py-2 bg-gradient-to-br from-secondary to-[#004b00] text-on-secondary rounded font-black text-sm uppercase tracking-wider flex items-center gap-2 hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-sm">send</span>
+                                Broadcast Now
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Ticker) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center gap-8 px-4 bg-[#0b0e11] h-8 font-['Inter'] tabular-nums text-[10px] uppercase font-bold border-t border-[#434655]/15">
+<div class="flex items-center gap-2 text-[#3ce42f]">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+            XAUUSD: 2042.12
+        </div>
+<div class="flex items-center gap-2 text-[#c3c6d8]">
+<span class="material-symbols-outlined text-xs">trending_down</span>
+            BTCUSD: 64210.50
+        </div>
+<div class="flex items-center gap-2 text-[#c3c6d8]">
+<span class="material-symbols-outlined text-xs text-[#3772FF]">trending_flat</span>
+            EURUSD: 1.0821
+        </div>
+</footer>
+</body></html>

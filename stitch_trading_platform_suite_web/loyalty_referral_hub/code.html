@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kinetic Precision | Loyalty &amp; Referral Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#ffb4aa",
+                    "on-primary-container": "#002469",
+                    "on-secondary-container": "#004b00",
+                    "on-primary-fixed": "#00174b",
+                    "on-tertiary-container": "#5c0002",
+                    "tertiary-container": "#ff5545",
+                    "on-secondary-fixed-variant": "#005300",
+                    "inverse-primary": "#0053db",
+                    "error": "#ffb4ab",
+                    "on-tertiary": "#690003",
+                    "on-background": "#e1e2e7",
+                    "secondary-fixed": "#77ff62",
+                    "error-container": "#93000a",
+                    "surface-variant": "#323538",
+                    "surface-container-low": "#191c1f",
+                    "surface-container-high": "#272a2e",
+                    "primary-fixed": "#dbe1ff",
+                    "surface": "#111417",
+                    "primary-container": "#618bff",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "surface-bright": "#37393d",
+                    "surface-container-highest": "#323538",
+                    "surface-tint": "#b4c5ff",
+                    "outline-variant": "#434655",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "secondary": "#3ce42f",
+                    "on-tertiary-fixed": "#410001",
+                    "background": "#111417",
+                    "on-secondary-fixed": "#002200",
+                    "tertiary-fixed": "#ffdad5",
+                    "on-tertiary-fixed-variant": "#930005",
+                    "surface-dim": "#111417",
+                    "surface-container": "#1d2023",
+                    "inverse-on-surface": "#2e3134",
+                    "secondary-fixed-dim": "#3ce42f",
+                    "outline": "#8d90a1",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#ffb4aa",
+                    "on-error": "#690005",
+                    "on-surface-variant": "#c3c6d8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(50, 53, 56, 0.7);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient-btn {
+            background: linear-gradient(145deg, #3ce42f 0%, #004b00 100%);
+        }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#111417] font-['Inter'] tabular-nums tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black tracking-tighter text-[#e1e2e7]">KINETIC</span>
+<nav class="hidden md:flex gap-6 items-center">
+<span class="text-[#c3c6d8] hover:text-[#e1e2e7] transition-colors duration-200 cursor-pointer">Equity: $42,050.00</span>
+<span class="text-[#c3c6d8] hover:text-[#e1e2e7] transition-colors duration-200 cursor-pointer">Margin: 840%</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] transition-colors duration-200 rounded-lg">
+<span class="material-symbols-outlined" data-icon="rss_feed">rss_feed</span>
+</button>
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] transition-colors duration-200 rounded-lg">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="flex items-center gap-2 p-1 pl-3 bg-surface-container rounded-full border border-outline-variant/15">
+<span class="text-xs font-bold text-on-surface-variant">PRO TRADER</span>
+<span class="material-symbols-outlined text-primary" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-16 bottom-0 w-64 flex flex-col z-40 bg-[#191c1f] font-['Inter'] text-sm font-medium uppercase tracking-[0.05em]">
+<div class="flex flex-col flex-grow py-6">
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="show_chart">show_chart</span> Trading Room
+            </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span> Journal
+            </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dynamic_feed">dynamic_feed</span> News Feed
+            </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span> Backtest Dojo
+            </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span> Community
+            </a>
+<a class="text-[#3772FF] bg-[#1d2023] border-r-2 border-[#3772FF] flex items-center gap-3 px-4 py-3" href="#">
+<span class="material-symbols-outlined" data-icon="workspace_premium">workspace_premium</span> Rewards
+            </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-3 hover:bg-[#1d2023] hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span> Admin
+            </a>
+</div>
+<div class="p-4 border-t border-outline-variant/15">
+<button class="w-full py-3 bg-primary-container text-on-primary-fixed font-bold rounded-lg flex items-center justify-center gap-2 mb-4 hover:brightness-110 transition-all">
+                Connect API
+            </button>
+<div class="flex flex-col gap-1">
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-2 hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="settings">settings</span> Settings
+                </a>
+<a class="text-[#c3c6d8] flex items-center gap-3 px-4 py-2 hover:text-[#e1e2e7] transition-all" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="help_outline">help_outline</span> Support
+                </a>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 mt-16 mb-8 p-8 min-h-screen">
+<div class="max-w-7xl mx-auto space-y-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-4xl font-black tracking-tight text-on-surface uppercase mb-2">Rewards Hub</h1>
+<p class="text-on-surface-variant">Scale your network, optimize your yield, and manage your portfolio incentives.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-low px-6 py-4 rounded-lg flex flex-col">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Total Earnings</span>
+<span class="text-2xl font-bold tabular-nums text-secondary">$12,840.42</span>
+</div>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Referral & QR (Col 4) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container rounded-xl p-6 relative overflow-hidden">
+<div class="relative z-10">
+<h3 class="text-sm font-bold uppercase tracking-wider text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="share">share</span> Referral Link
+                            </h3>
+<div class="bg-surface-container-lowest p-3 rounded-lg flex items-center justify-between mb-6 group border border-transparent hover:border-primary/40 transition-all">
+<code class="text-xs text-on-surface/80 truncate">kinetic.io/ref/trader_4291</code>
+<button class="text-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<div class="flex flex-col items-center gap-4 py-4 bg-white/5 rounded-xl border border-outline-variant/10">
+<div class="w-32 h-32 bg-white p-2 rounded-lg">
+<img alt="QR Code" class="w-full h-full" data-alt="high-contrast geometric minimalist QR code on white background for digital referral link verification" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEHSymqHxEzjlg9bYDpm5C9f0lPUYT_Vyuh6RY1sKgBkDHjjQ00Swn2BYOCa_bKjqk2uY-Hg_sj0RJ4eEJgTqf85Ya_CrnDuB7uwvbDqIzCFyLDmQjjykChxceYl7ike_bwpC-DoEsoIE168Mn5JYEPOKLmS69dA3mPWyxUG2Zd7qqSzUBcyPBDZZ9ayqave1tCjtxsKrArcY1y6fOvZt12sAopr1TV6BDwz0mxwJxamy4IAcTv7Yr9YqQoz3SkVTRgf0dRBJzxQ"/>
+</div>
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">Scan to invite instantly</span>
+</div>
+</div>
+</div>
+<!-- Withdrawal Form -->
+<div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/10">
+<h3 class="text-sm font-bold uppercase tracking-wider text-on-surface mb-6">Withdraw Rewards</h3>
+<form class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-2">Withdrawal Amount</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-lg py-3 px-4 text-on-surface focus:ring-1 focus:ring-primary/40 tabular-nums font-bold" type="text" value="450.00"/>
+<span class="absolute right-4 top-3 text-on-surface-variant font-bold text-sm">USD</span>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-2">Destination</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-lg py-3 px-4 text-on-surface focus:ring-1 focus:ring-primary/40">
+<option>Main Wallet (...4x91)</option>
+<option>Bank Account (...8823)</option>
+</select>
+</div>
+<button class="w-full signature-gradient-btn text-on-secondary font-black py-4 rounded-lg uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 transition-all" type="button">
+                                Confirm Request
+                            </button>
+</form>
+</div>
+</div>
+<!-- Member Tree & Visualization (Col 8) -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Tree Viz Area -->
+<div class="bg-surface-container rounded-xl p-8 min-h-[400px] flex flex-col">
+<div class="flex justify-between items-center mb-12">
+<div>
+<h3 class="text-lg font-bold">Member Tree</h3>
+<p class="text-xs text-on-surface-variant uppercase tracking-widest font-semibold">Active Network Growth</p>
+</div>
+<div class="flex gap-4">
+<div class="text-right">
+<div class="text-[10px] text-on-surface-variant font-bold">F1 DIRECTS</div>
+<div class="text-xl font-bold tabular-nums">24</div>
+</div>
+<div class="text-right">
+<div class="text-[10px] text-on-surface-variant font-bold">F2 NETWORK</div>
+<div class="text-xl font-bold tabular-nums">118</div>
+</div>
+</div>
+</div>
+<!-- Conceptual Tree Flow -->
+<div class="flex-grow flex items-center justify-center relative">
+<div class="flex flex-col items-center gap-16 w-full">
+<!-- Root -->
+<div class="relative group">
+<div class="w-20 h-20 rounded-full border-2 border-primary p-1 bg-surface-container-high flex items-center justify-center relative z-10">
+<img class="w-full h-full rounded-full object-cover" data-alt="portrait of a professional male trader with sharp features and a confident gaze in warm cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAnJ5Vql8WJsebd7f8EyRDiI8ZMsReqggMNRWToQLATLstbW2P4tMirJcctMV6S-DFkLOjnUIkvnUbyVHK4GXMss_pgWINXU7a-N364ASUfwFsh1ull0_pRVAjZQcprZovnlSkwb6HsP6o2zx2FnLzysuciXWM8FlWZu_Zw0RDF-Cbe7rIeL7OSALbR7-ND1W6P6C2rFPyYXrNLemg0Z_VFpkFCK-rwfuxTtHTnreiAOXTHds96ZAzmkVTRddPCFHeBxLxDLCoIw"/>
+</div>
+<div class="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap bg-primary text-on-primary text-[10px] font-black px-2 py-0.5 rounded uppercase">You</div>
+</div>
+<!-- Level F1 -->
+<div class="flex justify-center gap-24 relative w-full">
+<!-- Connection Lines -->
+<div class="absolute -top-16 left-1/2 -translate-x-1/2 w-[40%] h-16 border-l-2 border-r-2 border-t-2 border-outline-variant/30 rounded-t-3xl"></div>
+<!-- F1 Node 1 -->
+<div class="relative flex flex-col items-center group">
+<div class="w-14 h-14 rounded-full border border-secondary p-1 bg-surface-container-high flex items-center justify-center">
+<img class="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="smiling female entrepreneur with professional demeanor and modern eyewear in a brightly lit office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvJgBWiPMMIZCj49smsJr1d76tq3Icgvi811-SINM1Q3cUMOX8ETqMqqR26wgr7PtInSTESo8ZdlC2w3-ZmSwhKfFHiF9gkN_n_0fJt1yX4VKTAsm1GRjpYF69WqdWTEeDZeKEXliGBgwyryEGIrTfXpGV5fdSTj3fozxD8fEqMaPbsoccYThoKi5Z_3PtI4HH6NHwKVokipeVfd89Zxw4-8TxGboIij8HTWIRJoG8OM4moXhHLNCZ62K1kN2AYwjw_HwXgXZVKA"/>
+</div>
+<div class="mt-2 text-[10px] font-bold text-on-surface text-center">Elena_V<br/><span class="text-secondary tabular-nums">+$4.2k</span></div>
+</div>
+<!-- F1 Node 2 -->
+<div class="relative flex flex-col items-center group">
+<div class="w-14 h-14 rounded-full border border-secondary p-1 bg-surface-container-high flex items-center justify-center">
+<img class="w-full h-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="creative male professional with a short beard and casual attire in a soft natural light environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc_ByJK2uE0QL3f9two0uLrukCofAVo8orzIfYQjeQvKcLGJvZZOrXl5pyx2MA0YmXjHT8hY_TmwQZ00jKYPE-oSpIPAJ0-NEM3xxrPp2t2e_wUsRNcobp0sWLWYTAzVCQeKnQhrmWKm_6QzcKrZeaKRg342nEb8qcq7pGlI4U2BZe-4pgHvnaUDnzPTrG2cUAlOY1VIt3RU_ed69it4b2tmjN3hryFhVdbuKsvABJlERZhNOsF3WF9q4qB4rOM8-L0j37cdzyPg"/>
+</div>
+<div class="mt-2 text-[10px] font-bold text-on-surface text-center">Marcus_K<br/><span class="text-secondary tabular-nums">+$2.1k</span></div>
+</div>
+<!-- F1 Node 3 -->
+<div class="relative flex flex-col items-center group">
+<div class="w-14 h-14 rounded-full border border-outline-variant p-1 bg-surface-container-high flex items-center justify-center">
+<div class="w-full h-full rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">+21</div>
+</div>
+<div class="mt-2 text-[10px] font-bold text-on-surface-variant text-center">Others</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- History Log (Asymmetric Layout) -->
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-outline-variant/10 flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-widest">Reward History</h3>
+<button class="text-xs text-primary font-bold hover:underline">Download CSV</button>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<!-- Transaction 1 -->
+<div class="px-6 py-4 flex items-center hover:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded bg-secondary/10 flex items-center justify-center text-secondary mr-4">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div class="flex-grow">
+<div class="text-sm font-bold">F1 Trading Commission - Marcus_K</div>
+<div class="text-[10px] text-on-surface-variant uppercase font-bold tabular-nums">Oct 24, 2023 • 14:22:10</div>
+</div>
+<div class="text-right">
+<div class="text-sm font-bold text-secondary tabular-nums">+$142.50</div>
+<div class="text-[10px] text-on-surface-variant font-bold uppercase">Completed</div>
+</div>
+</div>
+<!-- Transaction 2 -->
+<div class="px-6 py-4 flex items-center hover:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary mr-4">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+</div>
+<div class="flex-grow">
+<div class="text-sm font-bold">F2 Network Activity Bonus</div>
+<div class="text-[10px] text-on-surface-variant uppercase font-bold tabular-nums">Oct 23, 2023 • 09:15:44</div>
+</div>
+<div class="text-right">
+<div class="text-sm font-bold text-secondary tabular-nums">+$840.12</div>
+<div class="text-[10px] text-on-surface-variant font-bold uppercase">Completed</div>
+</div>
+</div>
+<!-- Transaction 3 -->
+<div class="px-6 py-4 flex items-center hover:bg-surface-container transition-colors">
+<div class="w-10 h-10 rounded bg-tertiary-container/10 flex items-center justify-center text-tertiary-container mr-4">
+<span class="material-symbols-outlined" data-icon="outbound">outbound</span>
+</div>
+<div class="flex-grow">
+<div class="text-sm font-bold">Withdrawal to Wallet (...4x91)</div>
+<div class="text-[10px] text-on-surface-variant uppercase font-bold tabular-nums">Oct 21, 2023 • 18:02:11</div>
+</div>
+<div class="text-right">
+<div class="text-sm font-bold text-tertiary-container tabular-nums">-$1,500.00</div>
+<div class="text-[10px] text-on-surface-variant font-bold uppercase">Processed</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Shell (Ticker) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center items-center gap-8 px-4 h-8 bg-[#0b0e11] font-['Inter'] tabular-nums text-[10px] uppercase font-bold border-t border-[#434655]/15">
+<div class="flex items-center gap-2 text-[#3ce42f]">
+<span class="material-symbols-outlined text-xs" data-icon="trending_up">trending_up</span>
+            XAUUSD: 2042.12
+        </div>
+<div class="flex items-center gap-2 text-[#c3c6d8]">
+<span class="material-symbols-outlined text-xs" data-icon="trending_down">trending_down</span>
+            BTCUSD: 64210.50
+        </div>
+<div class="flex items-center gap-2 text-[#c3c6d8]">
+<span class="material-symbols-outlined text-xs" data-icon="trending_flat">trending_flat</span>
+            EURUSD: 1.0821
+        </div>
+</footer>
+</body></html>

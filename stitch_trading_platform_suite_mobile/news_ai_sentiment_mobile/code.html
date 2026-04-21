@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>KINETIC | News &amp; Sentiment</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#690005",
+                    "on-tertiary-fixed-variant": "#930005",
+                    "on-error-container": "#ffdad6",
+                    "inverse-primary": "#0053db",
+                    "surface-bright": "#37393d",
+                    "primary-container": "#618bff",
+                    "error-container": "#93000a",
+                    "on-background": "#e1e2e7",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "on-primary-fixed": "#00174b",
+                    "inverse-surface": "#e1e2e7",
+                    "surface-container-high": "#272a2e",
+                    "tertiary": "#ffb4aa",
+                    "error": "#ffb4ab",
+                    "outline": "#8d90a1",
+                    "on-tertiary-fixed": "#410001",
+                    "on-tertiary": "#690003",
+                    "background": "#111417",
+                    "secondary": "#3ce42f",
+                    "on-surface-variant": "#c3c6d8",
+                    "surface-container-low": "#191c1f",
+                    "surface-container": "#1d2023",
+                    "secondary-container": "#00c705",
+                    "surface": "#111417",
+                    "on-secondary-fixed-variant": "#005300",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "on-tertiary-container": "#5c0002",
+                    "tertiary-fixed-dim": "#ffb4aa",
+                    "primary-fixed": "#dbe1ff",
+                    "on-primary": "#002a78",
+                    "surface-tint": "#b4c5ff",
+                    "secondary-fixed-dim": "#3ce42f",
+                    "surface-variant": "#323538",
+                    "on-secondary-fixed": "#002200",
+                    "on-primary-container": "#002469",
+                    "surface-container-lowest": "#0b0e11",
+                    "outline-variant": "#434655",
+                    "on-secondary-container": "#004b00",
+                    "primary": "#b4c5ff",
+                    "secondary-fixed": "#77ff62",
+                    "inverse-on-surface": "#2e3134",
+                    "tertiary-fixed": "#ffdad5",
+                    "on-surface": "#e1e2e7",
+                    "on-secondary": "#003a00",
+                    "tertiary-container": "#ff5545",
+                    "surface-dim": "#111417",
+                    "surface-container-highest": "#323538"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse-glow {
+            box-shadow: 0 0 20px rgba(60, 228, 47, 0.2);
+        }
+        ::-webkit-scrollbar { display: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body select-none">
+<header class="fixed top-0 w-full z-50 h-16 bg-[#191c1f] shadow-[0_40px_40px_rgba(0,62,168,0.05)] flex justify-between items-center px-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="professional male trader headshot with neutral lighting and blurred corporate office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzFlM70uuMFhxwqKYMUsTTH0rN5rVAikhGIBE17NMZPXufj544ATh1p7otVw3wvjEh7E_3mMXjciCLQLj8aLo7Jp3BD13pClk6bMfjWtJ5xbOb3ahJcEmKvwpbm3-au6vF2CRSVVDC-eFsLF6Dw3ZPk7TdFD0hVySjpASLfWLPgsfFCg5wWLmjg8i1pFa11v8GR36F_nIfElzLVP5Itljy6vt_d9YTHtqP7VYExrPcMAnBkVNPW7_jMP3H9JaHWG8cMOnLy4yhqQ"/>
+</div>
+<span class="text-xl font-black tracking-tighter text-[#3772FF] uppercase">KINETIC</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#3772FF] text-2xl">sensors</span>
+</div>
+</header>
+<main class="pt-20 pb-28 px-4 flex flex-col gap-6">
+<section class="relative p-6 rounded-xl bg-surface-container-low overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<div class="flex items-center gap-1.5 px-2 py-1 bg-secondary/10 rounded-full">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase">Live Pulse</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-on-surface-variant text-[10px] font-bold uppercase tracking-[0.2em]">Global Market Sentiment</span>
+<div class="flex items-end gap-3">
+<h1 class="text-6xl font-black tracking-tight text-on-surface">82</h1>
+<div class="pb-2">
+<span class="text-secondary font-bold text-lg flex items-center">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+                            Extreme Greed
+                        </span>
+</div>
+</div>
+</div>
+<div class="mt-6 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-tertiary-container via-primary-container to-secondary w-[82%]"></div>
+</div>
+<div class="mt-2 flex justify-between text-[10px] font-bold text-outline uppercase tracking-wider">
+<span>Fear</span>
+<span>Neutral</span>
+<span>Greed</span>
+</div>
+</section>
+<section class="flex flex-col gap-3">
+<div class="bg-tertiary-container/20 p-4 rounded-lg flex items-start gap-4 shadow-sm">
+<span class="material-symbols-outlined text-tertiary-container mt-1">warning</span>
+<div class="flex flex-col">
+<span class="text-xs font-black uppercase text-tertiary-container tracking-tighter">High Impact Alert</span>
+<p class="text-sm font-semibold leading-tight mt-1 text-on-surface">FOMC Meeting Minutes released in 45 minutes. Expect high volatility across USD pairs.</p>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<h2 class="text-lg font-bold tracking-tight text-on-surface uppercase">Intelligence Feed</h2>
+<div class="flex gap-2">
+<button class="p-2 rounded bg-surface-container text-on-surface-variant active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm">tune</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="p-4 bg-surface-container rounded-lg flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-[#3b5998]/20 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-[#b4c5ff]">trending_up</span>
+</div>
+<span class="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">ForexFactory</span>
+</div>
+<span class="text-[10px] text-outline">2m ago</span>
+</div>
+<p class="text-sm font-medium leading-relaxed">AUD/USD jumps to 0.6540 following stronger than expected Australian CPI data (3.4% vs 3.2% exp).</p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[10px] font-bold rounded uppercase">Bullish</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded uppercase">AUD</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container rounded-lg flex flex-col gap-3 border-l-2 border-tertiary-container">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-[#1DA1F2]/20 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-[#b4c5ff]">public</span>
+</div>
+<span class="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Twitter (X)</span>
+</div>
+<span class="text-[10px] text-outline">15m ago</span>
+</div>
+<p class="text-sm font-medium leading-relaxed">Rumors circulating regarding sudden liquidity crunch at major offshore exchange. Crypto markets reacting sharply.</p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-tertiary-container/10 text-tertiary-container text-[10px] font-bold rounded uppercase">Bearish</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded uppercase">BTC</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded uppercase">Alert</span>
+</div>
+</div>
+<div class="p-4 bg-surface-container rounded-lg flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 bg-primary-container/20 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-[#b4c5ff]">analytics</span>
+</div>
+<span class="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Macro Pulse</span>
+</div>
+<span class="text-[10px] text-outline">42m ago</span>
+</div>
+<p class="text-sm font-medium leading-relaxed">US 10-Year Treasury yield stabilizes at 4.25% as markets anticipate Powell's upcoming commentary.</p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-primary-container/10 text-primary-container text-[10px] font-bold rounded uppercase">Neutral</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-outline text-[10px] font-bold rounded uppercase">Macro</span>
+</div>
+</div>
+</div>
+</section>
+<section class="flex flex-col gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">psychology</span>
+<h2 class="text-lg font-bold tracking-tight text-on-surface uppercase">DeepSeek AI Analysis</h2>
+</div>
+<div class="bg-surface-container-highest/70 backdrop-blur-3xl rounded-xl p-4 min-h-[280px] flex flex-col shadow-2xl">
+<div class="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[200px] mb-4 pr-2">
+<div class="bg-surface-container-low p-3 rounded-lg self-start max-w-[85%]">
+<p class="text-xs text-on-surface opacity-80 leading-relaxed italic">"How will the unexpected CPI beat affect the AUD/JPY carry trade structure over the next 48 hours?"</p>
+</div>
+<div class="bg-primary/5 p-3 rounded-lg border-l-2 border-primary self-end max-w-[95%]">
+<div class="flex items-center gap-1.5 mb-1.5">
+<span class="material-symbols-outlined text-xs text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-[10px] font-black uppercase text-primary tracking-widest">DeepSeek Kinetic</span>
+</div>
+<p class="text-xs font-medium leading-relaxed text-on-surface">The CPI beat strengthens RBA's hawkish stance. Combined with JPY's continued yield curve weakness, expect a tactical long opportunity for AUD/JPY. Immediate resistance at 98.40. Target 99.10 if US session maintains risk-on tone.</p>
+</div>
+</div>
+<div class="relative flex items-center">
+<input class="w-full bg-surface-container-lowest border-none text-sm p-4 pr-12 rounded-lg placeholder:text-outline focus:ring-1 focus:ring-primary/40 transition-all" placeholder="Ask about market scenarios..." type="text"/>
+<button class="absolute right-2 p-2 bg-primary rounded-md text-on-primary-container active:scale-90 transition-all">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<nav class="fixed bottom-0 w-full z-50 pb-safe rounded-t-lg bg-[#111417]/70 backdrop-blur-3xl shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex justify-around items-center h-20 px-2 border-t border-[#434655]/15">
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 hover:text-[#3772FF] active:scale-90 transition-all cubic-bezier(0.2,0.8,0.2,1)" href="#">
+<span class="material-symbols-outlined">candlestick_chart</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">Trade</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 hover:text-[#3772FF] active:scale-90 transition-all cubic-bezier(0.2,0.8,0.2,1)" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">Radar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#3ce42f] scale-110 transition-all active:scale-90 cubic-bezier(0.2,0.8,0.2,1)" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">newspaper</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">News</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 hover:text-[#3772FF] active:scale-90 transition-all cubic-bezier(0.2,0.8,0.2,1)" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">Social</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 hover:text-[#3772FF] active:scale-90 transition-all cubic-bezier(0.2,0.8,0.2,1)" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

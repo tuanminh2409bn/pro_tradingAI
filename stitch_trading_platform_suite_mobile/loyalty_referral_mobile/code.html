@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-error": "#690005",
+                "on-tertiary-fixed-variant": "#930005",
+                "on-error-container": "#ffdad6",
+                "inverse-primary": "#0053db",
+                "surface-bright": "#37393d",
+                "primary-container": "#618bff",
+                "error-container": "#93000a",
+                "on-background": "#e1e2e7",
+                "on-primary-fixed-variant": "#003ea8",
+                "on-primary-fixed": "#00174b",
+                "inverse-surface": "#e1e2e7",
+                "surface-container-high": "#272a2e",
+                "tertiary": "#ffb4aa",
+                "error": "#ffb4ab",
+                "outline": "#8d90a1",
+                "on-tertiary-fixed": "#410001",
+                "on-tertiary": "#690003",
+                "background": "#111417",
+                "secondary": "#3ce42f",
+                "on-surface-variant": "#c3c6d8",
+                "surface-container-low": "#191c1f",
+                "surface-container": "#1d2023",
+                "secondary-container": "#00c705",
+                "surface": "#111417",
+                "on-secondary-fixed-variant": "#005300",
+                "primary-fixed-dim": "#b4c5ff",
+                "on-tertiary-container": "#5c0002",
+                "tertiary-fixed-dim": "#ffb4aa",
+                "primary-fixed": "#dbe1ff",
+                "on-primary": "#002a78",
+                "surface-tint": "#b4c5ff",
+                "secondary-fixed-dim": "#3ce42f",
+                "surface-variant": "#323538",
+                "on-secondary-fixed": "#002200",
+                "on-primary-container": "#002469",
+                "surface-container-lowest": "#0b0e11",
+                "outline-variant": "#434655",
+                "on-secondary-container": "#004b00",
+                "primary": "#b4c5ff",
+                "secondary-fixed": "#77ff62",
+                "inverse-on-surface": "#2e3134",
+                "tertiary-fixed": "#ffdad5",
+                "on-surface": "#e1e2e7",
+                "on-secondary": "#003a00",
+                "tertiary-container": "#ff5545",
+                "surface-dim": "#111417",
+                "surface-container-highest": "#323538"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "fontFamily": {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+            }
+          },
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(50, 53, 56, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 min-h-screen pb-32">
+<!-- Top Navigation -->
+<header class="fixed top-0 w-full z-50 h-16 bg-[#111417] flex justify-between items-center px-4 shadow-[0_40px_40px_rgba(0,62,168,0.05)]">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a high-tech digital avatar with neon blue accents and geometric facial patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjlFyiUR-MH8TJXysHzU1Robq03qqZvkjP3utBFO_7C46lYelbHBojw6jH-QZyqOs9JyvG-uKJu0q1v0NXMHGY85gSISd8IO72SsgeU_re3KK2vcqcXC9Cc3_ktFjOWNjlo_CkCWUZzjnwSY8R5tSrRLr7xbzIHnDdfsPi3GffqeU4B6QnMKoXYRiZV0Aee8yaAhWjzwIJr_plh6WsvSc1ft6ZheGgQUbhW8ZPY4U91FF8kdI9oHBVFjB6vF47UyUwE0KFlW4mPg"/>
+</div>
+<span class="text-xl font-black tracking-tighter text-[#3772FF] uppercase font-headline">KINETIC</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-[#c3c6d8] hover:bg-[#1d2023] rounded-lg transition-colors active:scale-95">
+<span class="material-symbols-outlined">sensors</span>
+</button>
+</div>
+</header>
+<main class="pt-20 px-4 space-y-6">
+<!-- Referral Header Card -->
+<section class="relative overflow-hidden rounded-xl bg-surface-container-low p-6">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[60px] -mr-16 -mt-16"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant font-bold mb-1">Total Rewards</p>
+<h1 class="text-4xl font-headline font-bold text-on-surface tabular-nums tracking-tight">$12,480.50</h1>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-secondary/10 rounded-full">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></div>
+<span class="text-[10px] font-bold text-secondary uppercase tracking-wider">Active Hub</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container rounded-lg p-3">
+<p class="text-[9px] uppercase tracking-wider text-on-surface-variant font-bold mb-1">Network Growth</p>
+<p class="text-lg font-bold text-primary tabular-nums">+14.2%</p>
+</div>
+<div class="bg-surface-container rounded-lg p-3">
+<p class="text-[9px] uppercase tracking-wider text-on-surface-variant font-bold mb-1">F1/F2 Nodes</p>
+<p class="text-lg font-bold text-on-surface tabular-nums">142 / 856</p>
+</div>
+</div>
+</div>
+</section>
+<!-- QR & Referral Link -->
+<section class="grid grid-cols-1 gap-4">
+<div class="bg-surface-container rounded-xl p-5 flex items-center gap-5">
+<div class="bg-white p-2 rounded-md shrink-0">
+<img alt="Referral QR Code" class="w-16 h-16" data-alt="stylized minimalist QR code with cyan glow accents on a white high-contrast background for scannability" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYirSWzw4MwbqYXjFGatxTIssOjIxtzePVrLEQNGc74KIYhtJvLiICiqKnCqswgroOiTj76bbZ7KO8aQe2i-EuyVjIPsiydfW0RPjAyiOy4ypY3LPzCEfTqOOhrb-OVI9-UbxvuNbq82nwSpgGW3wsfnFv7wEe61mKPDxr8xJCiQcjHwouFBBMFhoVen_icGLKDtQeKg049-5VdC7PJM-b042K8s2KQZYMDZJP7Q82Y4992MeMNkEY5Bkw_ruNz9MmZAKQvXJk7Q"/>
+</div>
+<div class="flex-1 space-y-3">
+<p class="text-sm font-bold text-on-surface">Share Referral Link</p>
+<div class="flex items-center gap-2 bg-surface-container-lowest p-2 rounded-lg">
+<span class="text-[11px] text-on-surface-variant truncate font-mono">kinetic.io/ref/node_x92..</span>
+<button class="ml-auto p-1.5 bg-primary-container text-on-primary-container rounded-md active:scale-90 transition-all">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Network Tree (F1, F2 Visualization) -->
+<section>
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest">Network Architecture</h3>
+<span class="text-[10px] font-bold text-on-surface-variant">VIEW MAP</span>
+</div>
+<div class="space-y-3">
+<!-- F1 Row -->
+<div class="bg-surface-container-low rounded-xl p-4">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-base">hub</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Direct Nodes (F1)</p>
+<p class="text-[10px] text-on-surface-variant">142 Total Connections</p>
+</div>
+<div class="ml-auto text-right">
+<p class="text-xs font-bold text-secondary">+$2,450</p>
+<p class="text-[9px] text-on-surface-variant">COMMISSION</p>
+</div>
+</div>
+<!-- Node Preview -->
+<div class="flex -space-x-2 overflow-hidden mb-4">
+<img alt="Node 1" class="inline-block h-6 w-6 rounded-full ring-2 ring-surface-container-low" data-alt="abstract circular profile icon with high contrast neon patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCinovG6hM5qbW9ULymJpoGbzzyxH5Xu6-YZsv-FC0HtvjQS69ztkGR2BL8hrm79csX3pPYV_jBswMOy8D67OwA06HEUn6A76_PMATZhdiHy1P2REcwp8iwqPqEZ1P99UZIcteHYzxc831cR9HnRghOYx6jVpem9RNWodljDHnG87fuaQxLXc2Kirgp6T2d41q4vLw3jMuFO7BIOMjk315IG5cxllAjxd1JkYg8gaFDHXtERtM1wCl5VIEXmqxQsim0O3oBQxNyLA"/>
+<img alt="Node 2" class="inline-block h-6 w-6 rounded-full ring-2 ring-surface-container-low" data-alt="abstract circular profile icon with high contrast neon patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkWF3TPKizk_e0FXdBZw_WuPgsyt7gwyz4B7FMXG-m6U5atEs2XMD7InAxYVua6MpGkUVy2RSpi_E_hcJz0xWEyvKuPTRp57qzBVJf7larQ6SwetImzNu22_kJ1XVd_pnbozz7-wwwQ7My20UoqTeTSI_oZQ4jjw7aLTU_Df7TDRxhrW4EyBw8EFs7jFKL9h9ayekAq9hF_6n2ur9ZaowY7pXafrBdrJEbOY1hk51zxiddmLp5mXTz5kDStsr1ACEo7Q9-D3D2Bw"/>
+<img alt="Node 3" class="inline-block h-6 w-6 rounded-full ring-2 ring-surface-container-low" data-alt="abstract circular profile icon with high contrast neon patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7_3ofRSUJvkksoqbVKYps9wutUm_JvOpLIBWTizmwyE2It4B-Q9LaaNOZTY134eHDuqC9qAndmsl7lr1eEMgwkIwkyMGpcTcCAB8jffg7o1S-LaTYPjFL1dlB3a54PisylrooAWr2D1nlEpeZCxKwQVFNFP8BC9Y3KnLZSLM2DhysuMCDzZDHh6NTYe181JgCGN3jyVuQbKUY8KJynTlcAMNf5BgPzl_9jN76_rddZs1N1Ogf58O4o0QyhPutIDY6IgJ-PxExBQ"/>
+<div class="h-6 w-6 rounded-full bg-surface-container-high ring-2 ring-surface-container-low flex items-center justify-center text-[8px] font-bold">+139</div>
+</div>
+<div class="h-1 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[70%] rounded-full"></div>
+</div>
+</div>
+<!-- F2 Row -->
+<div class="bg-surface-container-low rounded-xl p-4">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-base">account_tree</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Network Depth (F2)</p>
+<p class="text-[10px] text-on-surface-variant">856 Total Connections</p>
+</div>
+<div class="ml-auto text-right">
+<p class="text-xs font-bold text-secondary">+$8,120</p>
+<p class="text-[9px] text-on-surface-variant">COMMISSION</p>
+</div>
+</div>
+<div class="flex gap-2">
+<div class="flex-1 h-1.5 bg-surface-container-lowest rounded-full"><div class="h-full bg-primary-container w-[40%] rounded-full"></div></div>
+<div class="flex-1 h-1.5 bg-surface-container-lowest rounded-full"><div class="h-full bg-primary-container w-[85%] rounded-full"></div></div>
+<div class="flex-1 h-1.5 bg-surface-container-lowest rounded-full"><div class="h-full bg-primary-container w-[20%] rounded-full"></div></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Withdrawal & History -->
+<section class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface uppercase tracking-widest">Withdrawal Operations</h3>
+<!-- Request Form -->
+<div class="bg-surface-container rounded-xl p-5">
+<div class="space-y-4">
+<div>
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Available to Withdraw</label>
+<div class="text-2xl font-bold text-secondary tabular-nums">$4,120.00</div>
+</div>
+<div class="space-y-2">
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border-none rounded-lg p-4 text-on-surface placeholder:text-outline-variant focus:ring-1 focus:ring-primary/40 transition-all outline-none" placeholder="Enter amount" type="number"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary uppercase">MAX</button>
+</div>
+<button class="w-full h-12 bg-secondary text-on-secondary font-bold rounded-lg flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-[0_4px_20px_rgba(60,228,47,0.2)]">
+<span class="material-symbols-outlined text-lg">payments</span>
+                            EXECUTE WITHDRAWAL
+                        </button>
+</div>
+</div>
+</div>
+<!-- Recent History -->
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="px-4 py-3 border-b border-outline-variant/10 flex justify-between items-center">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Recent Activity</span>
+<span class="material-symbols-outlined text-on-surface-variant text-sm">history</span>
+</div>
+<div class="divide-y divide-outline-variant/10">
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">call_received</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Withdrawal Success</p>
+<p class="text-[10px] text-on-surface-variant">24 Oct, 2023 • USDT-TRC20</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface tabular-nums">-$1,200.00</p>
+<p class="text-[9px] text-secondary font-bold uppercase">COMPLETED</p>
+</div>
+</div>
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">auto_graph</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Weekly Commission</p>
+<p class="text-[10px] text-on-surface-variant">21 Oct, 2023 • Network Bonus</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface tabular-nums">+$420.50</p>
+<p class="text-[9px] text-primary font-bold uppercase">DISTRIBUTED</p>
+</div>
+</div>
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">hourglass_empty</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Pending Approval</p>
+<p class="text-[10px] text-on-surface-variant">19 Oct, 2023 • Internal Transfer</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-sm font-bold text-on-surface tabular-nums">-$500.00</p>
+<p class="text-[9px] text-outline font-bold uppercase">PROCESSING</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 px-2 bg-[#111417]/70 backdrop-blur-3xl border-t border-[#434655]/15 pb-safe rounded-t-lg">
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 active:scale-90 transition-all font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold" href="#">
+<span class="material-symbols-outlined mb-1">candlestick_chart</span>
+            Trade
+        </a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 active:scale-90 transition-all font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold" href="#">
+<span class="material-symbols-outlined mb-1">explore</span>
+            Radar
+        </a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 active:scale-90 transition-all font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold" href="#">
+<span class="material-symbols-outlined mb-1">newspaper</span>
+            News
+        </a>
+<a class="flex flex-col items-center justify-center text-[#3ce42f] scale-110 active:scale-90 transition-all font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold" href="#">
+<span class="material-symbols-outlined mb-1">groups</span>
+            Social
+        </a>
+<a class="flex flex-col items-center justify-center text-[#c3c6d8] opacity-60 active:scale-90 transition-all font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+            Profile
+        </a>
+</nav>
+</body></html>
