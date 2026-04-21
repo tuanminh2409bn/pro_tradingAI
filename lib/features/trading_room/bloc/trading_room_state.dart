@@ -16,12 +16,14 @@ class TradingRoomLoaded extends TradingRoomState {
   final TradingAccount account;
   final TradingSignal? currentSignal;
   final String currentSymbol;
+  final String currentTimeframe;
   final List<Candle> candles;
 
   const TradingRoomLoaded({
     required this.account,
     this.currentSignal,
     required this.currentSymbol,
+    this.currentTimeframe = '5',
     this.candles = const [],
   });
 
@@ -29,18 +31,20 @@ class TradingRoomLoaded extends TradingRoomState {
     TradingAccount? account,
     TradingSignal? currentSignal,
     String? currentSymbol,
+    String? currentTimeframe,
     List<Candle>? candles,
   }) {
     return TradingRoomLoaded(
       account: account ?? this.account,
       currentSignal: currentSignal ?? this.currentSignal,
       currentSymbol: currentSymbol ?? this.currentSymbol,
+      currentTimeframe: currentTimeframe ?? this.currentTimeframe,
       candles: candles ?? this.candles,
     );
   }
 
   @override
-  List<Object?> get props => [account, currentSignal, currentSymbol, candles];
+  List<Object?> get props => [account, currentSignal, currentSymbol, currentTimeframe, candles];
 }
 
 class TradingRoomError extends TradingRoomState {

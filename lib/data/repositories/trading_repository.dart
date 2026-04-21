@@ -1,118 +1,127 @@
 import 'dart:async';
-import 'dart:math' as math;
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:http/http.dart' as http;
 import '../models/trading_models.dart';
 
 class TradingRepository {
   final FirebaseFirestore _firestore;
+  static const String _serverUrl = 'protrading-data-engine-22073478183.asia-southeast1.run.app';
+  static const String _wsUrl = 'wss://$_serverUrl/ws/trading';
+  static const String _apiUrl = 'https://$_serverUrl/api/trade';
+  
+  WebSocketChannel? _channel;
+  final _accountController = StreamController<TradingAccount>.broadcast();
+  final _candleController = StreamController<List<Candle>>.broadcast();
+
+  List<Candle> _cache = [];
 
   TradingRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _firestore = firestore ?? FirebaseFirestore.instance {
+    _initWebSocket();
+  }
 
-  Stream<TradingAccount> getTradingAccount(String userId) {
-    return _firestore
-        .collection('accounts')
-        .doc(userId)
-        .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data();
-      if (data == null) {
-        return const TradingAccount(
-          balance: 38204.12,
-          equity: 42050.00,
-          margin: 840,
-          leverage: 500,
-          status: 'LIVE',
-        );
-      }
-      return TradingAccount(
-        balance: (data['balance'] ?? 0).toDouble(),
-        equity: (data['equity'] ?? 0).toDouble(),
-        margin: (data['margin'] ?? 0).toDouble(),
-        leverage: (data['leverage'] ?? 0).toInt(),
-        status: data['status'] ?? 'DEMO',
+  void _initWebSocket() {
+    print('Attempting Global Connection: $_wsUrl');
+    try {
+      _channel?.sink.close();
+      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
+      _channel!.stream.listen(
+        (message) {
+          final data = jsonDecode(message);
+          print('REPO: Received type: ${data['type']}, candles: ${data['candles']?.length ?? 0}');
+          
+          if (data['type'] == 'heartbeat') return;
+
+          if (data['account'] != null) {
+            final acc = data['account'];
+            _accountController.add(TradingAccount(
+              balance: (acc['balance'] as num).toDouble(),
+              equity: (acc['equity'] as num).toDouble(),
+              margin: (acc['margin'] as num).toDouble(),
+              leverage: (acc['leverage'] as num).toInt(),
+              status: 'LIVE',
+            ));
+          }
+
+          final List<dynamic>? candlesJson = data['candles'];
+          if (candlesJson != null && candlesJson.isNotEmpty) {
+            final List<Candle> realCandles = candlesJson.map((c) => Candle(
+              timestamp: DateTime.fromMillisecondsSinceEpoch(c['t'] * 1000),
+              open: (c['o'] as num).toDouble(),
+              high: (c['h'] as num).toDouble(),
+              low: (c['l'] as num).toDouble(),
+              close: (c['c'] as num).toDouble(),
+            )).toList();
+            
+            _cache = List.from(realCandles);
+            // print('REPO: Received ${realCandles.length} candles. Emitting...');
+            _candleController.add(_cache);
+          }
+        },
+        onError: (e) {
+          print('REPO: Error: $e');
+          _reconnect();
+        },
+        onDone: () {
+          print('REPO: Connection Closed');
+          _reconnect();
+        },
       );
+    } catch (e) { 
+      print('REPO: Exception: $e');
+      _reconnect(); 
+    }
+  }
+
+  void _reconnect() {
+    _channel?.sink.close();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (_channel == null || _channel!.closeCode != null) {
+        _initWebSocket();
+      }
     });
+  }
+
+  Future<bool> executeTrade(String symbol, String type, double lotSize) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': type, 'volume': lotSize, 'symbol': symbol}),
+      );
+      return response.statusCode == 200;
+    } catch (e) { return false; }
+  }
+
+  Stream<TradingAccount> getTradingAccount(String userId) async* {
+    yield* _accountController.stream;
+  }
+
+  Stream<List<Candle>> getCandleStream(String symbol) async* {
+    if (_cache.isNotEmpty) yield _cache;
+    yield* _candleController.stream;
+  }
+
+  void changeTimeframe(String tf) {
+    _channel?.sink.add(jsonEncode({"action": "set_interval", "interval": tf}));
   }
 
   Stream<List<TradingSignal>> getActiveSignals() {
-    return _firestore
-        .collection('signals')
-        .where('status', isEqualTo: 'ACTIVE')
-        .snapshots()
-        .map((snapshot) {
+    return _firestore.collection('signals').where('status', isEqualTo: 'ACTIVE').snapshots().map((snapshot) {
       if (snapshot.docs.isEmpty) {
-        // Return mock signal if empty for demo
-        return [
-          const TradingSignal(
-            symbol: 'XAUUSD',
-            entryPrice: 2038.50,
-            slPrice: 2032.10,
-            tpPrices: [2055.00],
-            probability: 85,
-            type: 'BUY',
-            status: 'ACTIVE',
-          )
-        ];
+        return [const TradingSignal(symbol: 'XAUUSD', entryPrice: 4809.50, slPrice: 4802.10, tpPrices: [4825.0], probability: 85, type: 'BUY', status: 'ACTIVE')];
       }
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TradingSignal(
-          symbol: data['symbol'] ?? '',
-          entryPrice: (data['entryPrice'] ?? 0).toDouble(),
-          slPrice: (data['slPrice'] ?? 0).toDouble(),
-          tpPrices: List<double>.from(data['tpPrices'] ?? []),
-          probability: (data['probability'] ?? 0).toInt(),
-          type: data['type'] ?? 'BUY',
-          status: data['status'] ?? 'ACTIVE',
-        );
-      }).toList();
+      return snapshot.docs.map((doc) => TradingSignal(
+        symbol: doc.data()['symbol'] ?? '',
+        entryPrice: (doc.data()['entryPrice'] ?? 0).toDouble(),
+        slPrice: (doc.data()['slPrice'] ?? 0).toDouble(),
+        tpPrices: List<double>.from(doc.data()['tpPrices'] ?? []),
+        probability: (doc.data()['probability'] ?? 0).toInt(),
+        type: doc.data()['type'] ?? 'BUY',
+        status: doc.data()['status'] ?? 'ACTIVE',
+      )).toList();
     });
-  }
-
-  // Simulated Real-time Candle Stream
-  Stream<List<Candle>> getCandleStream(String symbol) async* {
-    List<Candle> candles = [];
-    double lastClose = 2040.0;
-    
-    // Initial 50 candles
-    for (int i = 50; i >= 0; i--) {
-      final candle = _generateNextCandle(
-        symbol, 
-        lastClose, 
-        DateTime.now().subtract(Duration(minutes: i * 5)),
-      );
-      candles.add(candle);
-      lastClose = candle.close;
-    }
-
-    yield List.from(candles);
-
-    // Update every 5 seconds
-    while (true) {
-      await Future.delayed(const Duration(seconds: 5));
-      final nextCandle = _generateNextCandle(symbol, lastClose, DateTime.now());
-      candles.removeAt(0);
-      candles.add(nextCandle);
-      lastClose = nextCandle.close;
-      yield List.from(candles);
-    }
-  }
-
-  Candle _generateNextCandle(String symbol, double lastClose, DateTime time) {
-    final rand = math.Random();
-    double change = (rand.nextDouble() - 0.5) * 5.0;
-    double open = lastClose;
-    double close = open + change;
-    double high = math.max(open, close) + rand.nextDouble() * 2.0;
-    double low = math.min(open, close) - rand.nextDouble() * 2.0;
-
-    return Candle(
-      timestamp: time,
-      open: open,
-      high: high,
-      low: low,
-      close: close,
-    );
   }
 }

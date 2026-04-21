@@ -39,6 +39,8 @@
     - [ ] Hoàn thiện `KineticChart` với logic vẽ nến từ dữ liệu thật.
 
 ## 4. Ghi chú vận hành
+- **Yêu cầu quan trọng (Thương mại hóa):** KHÔNG dùng dữ liệu giả lập (Mock data). Ứng dụng phải chạy bằng dữ liệu thật (Real-time).
+- **Backend Data (Python):** Sẽ được triển khai lên **Google Cloud Run** để cấp dữ liệu qua WebSocket cho mọi nền tảng (Localhost & Firebase Hosting) hoạt động 24/7 mà không cần chạy thủ công file `server.py`.
 - Để chạy Web: `flutter run -d chrome`
 - Để chạy Android: `flutter run` (Đảm bảo đã mở Emulator/Thiết bị thật)
 - Để chạy iOS: `flutter run` (Yêu cầu macOS và Xcode)

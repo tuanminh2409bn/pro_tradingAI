@@ -140,10 +140,10 @@ class _AssetHeader extends StatelessWidget {
               const SizedBox(width: 8),
               Text('\$$price', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
               const Spacer(),
-              _buildTimeframeBtn('1M'),
-              _buildTimeframeBtn('5M', isActive: true),
-              _buildTimeframeBtn('15M'),
-              _buildTimeframeBtn('1H'),
+              _buildTimeframeBtn(context, '1M', '1', isActive: state is TradingRoomLoaded && state.currentTimeframe == '1'),
+              _buildTimeframeBtn(context, '5M', '5', isActive: state is TradingRoomLoaded && state.currentTimeframe == '5'),
+              _buildTimeframeBtn(context, '15M', '15', isActive: state is TradingRoomLoaded && state.currentTimeframe == '15'),
+              _buildTimeframeBtn(context, '1H', '60', isActive: state is TradingRoomLoaded && state.currentTimeframe == '60'),
             ],
           ),
         );
@@ -151,65 +151,108 @@ class _AssetHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeframeBtn(String label, {bool isActive = false}) {
-    return Container(
-      margin: const EdgeInsets.only(left: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: isActive ? AppColors.primary : Colors.white10),
+  Widget _buildTimeframeBtn(BuildContext context, String label, String value, {bool isActive = false}) {
+    return GestureDetector(
+      onTap: () {
+        context.read<TradingRoomBloc>().add(ChangeTimeframe(value));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: isActive ? AppColors.primary : Colors.white10),
+        ),
+        child: Text(label, style: TextStyle(color: isActive ? AppColors.primary : Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
       ),
-      child: Text(label, style: TextStyle(color: isActive ? AppColors.primary : Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 }
 
-class _OrderPanel extends StatelessWidget {
+class _OrderPanel extends StatefulWidget {
   const _OrderPanel();
+
+  @override
+  State<_OrderPanel> createState() => _OrderPanelState();
+}
+
+class _OrderPanelState extends State<_OrderPanel> {
+  final TextEditingController _lotController = TextEditingController(text: '0.10');
+
+  @override
+  void dispose() {
+    _lotController.dispose();
+    super.dispose();
+  }
+
+  void _handleTrade(BuildContext context, String type) {
+    final lot = double.tryParse(_lotController.text) ?? 0.10;
+    context.read<TradingRoomBloc>().add(ExecuteTrade(type: type, lotSize: lot));
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$type Order Executed: $lot Lots', style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: type == 'BUY' ? AppColors.primary : AppColors.bear,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('EXECUTION ENGINE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
-          const SizedBox(height: 24),
-          _buildInputLabel('LOT SIZE'),
-          const TextField(
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            decoration: InputDecoration(
-              hintText: '0.10',
-              hintStyle: TextStyle(color: Colors.white24),
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
-            ),
+    return BlocBuilder<TradingRoomBloc, TradingRoomState>(
+      builder: (context, state) {
+        double currentPrice = 0.0;
+        if (state is TradingRoomLoaded && state.candles.isNotEmpty) {
+          currentPrice = state.candles.last.close;
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
-          const SizedBox(height: 32),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: _buildTradeBtn('SELL', AppColors.bear),
+              const Text('EXECUTION ENGINE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
+              const SizedBox(height: 24),
+              _buildInputLabel('LOT SIZE'),
+              TextField(
+                controller: _lotController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                decoration: const InputDecoration(
+                  hintText: '0.10',
+                  hintStyle: TextStyle(color: Colors.white24),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white10)),
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTradeBtn('BUY', AppColors.primary),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTradeBtn(context, 'SELL', AppColors.bear, currentPrice),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildTradeBtn(context, 'BUY', AppColors.primary, currentPrice),
+                  ),
+                ],
               ),
+              const SizedBox(height: 40),
+              const Text('ACTIVE SIGNALS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
+              const SizedBox(height: 16),
+              _buildSignalCard('XAUUSD', 'BUY @ ${currentPrice > 0 ? currentPrice.toStringAsFixed(3) : '...'}', '85% Prob.'),
+              _buildSignalCard('BTCUSD', 'SELL @ 64200.000', '72% Prob.'),
             ],
           ),
-          const SizedBox(height: 40),
-          const Text('ACTIVE SIGNALS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
-          const SizedBox(height: 16),
-          _buildSignalCard('XAUUSD', 'BUY @ 2038.50', '85% Prob.'),
-          _buildSignalCard('BTCUSD', 'SELL @ 64200.00', '72% Prob.'),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -217,19 +260,28 @@ class _OrderPanel extends StatelessWidget {
     return Text(label, style: const TextStyle(fontSize: 9, color: Colors.white38, fontWeight: FontWeight.bold));
   }
 
-  Widget _buildTradeBtn(String label, Color color) {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Center(
-        child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, letterSpacing: 1)),
+  Widget _buildTradeBtn(BuildContext context, String label, Color color, double price) {
+    return GestureDetector(
+      onTap: () => _handleTrade(context, label),
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900, letterSpacing: 1, fontSize: 14)),
+            if (price > 0)
+              Text(price.toStringAsFixed(3), style: TextStyle(color: color.withOpacity(0.7), fontSize: 10, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
+
 
   Widget _buildSignalCard(String symbol, String desc, String prob) {
     return Container(

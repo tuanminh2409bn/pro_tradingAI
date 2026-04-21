@@ -48,6 +48,14 @@ class UpdateSignals extends TradingRoomEvent {
   List<Object?> get props => [signals];
 }
 
+class ChangeTimeframe extends TradingRoomEvent {
+  final String timeframe;
+  const ChangeTimeframe(this.timeframe);
+
+  @override
+  List<Object?> get props => [timeframe];
+}
+
 class ExecuteTrade extends TradingRoomEvent {
   final String type; // 'BUY' or 'SELL'
   final double lotSize;

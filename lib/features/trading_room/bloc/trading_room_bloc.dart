@@ -10,6 +10,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   StreamSubscription? _candleSubscription;
   StreamSubscription? _accountSubscription;
   StreamSubscription? _signalSubscription;
+  List<Candle> _initialCandles = [];
 
   TradingRoomBloc({required TradingRepository tradingRepository})
       : _tradingRepository = tradingRepository,
@@ -20,58 +21,42 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     on<UpdateAccount>(_onUpdateAccount);
     on<UpdateSignals>(_onUpdateSignals);
     on<ExecuteTrade>(_onExecuteTrade);
+    on<ChangeTimeframe>(_onChangeTimeframe);
   }
 
   void _onLoadTradingData(LoadTradingData event, Emitter<TradingRoomState> emit) async {
     emit(TradingRoomLoading());
     try {
-      final userId = event.userId;
-      
       _candleSubscription?.cancel();
       _accountSubscription?.cancel();
       _signalSubscription?.cancel();
 
-      // Only subscribe to Firestore if we have a real userId and not just a demo
-      if (userId != null && userId.isNotEmpty) {
-        _accountSubscription = _tradingRepository.getTradingAccount(userId).listen(
-          (account) => add(UpdateAccount(account)),
-          onError: (e) => print('TradingRoomBloc: Account stream error: $e'),
-        );
-
-        _signalSubscription = _tradingRepository.getActiveSignals().listen(
-          (signals) => add(UpdateSignals(signals)),
-          onError: (e) => print('TradingRoomBloc: Signals stream error: $e'),
-        );
-      }
-
-      const defaultAccount = TradingAccount(
-        balance: 38204.12,
-        equity: 42050.00,
-        margin: 840,
-        leverage: 500,
-        status: 'LIVE',
-      );
-
-      const defaultSignal = TradingSignal(
-        symbol: 'XAUUSD',
-        entryPrice: 2038.50,
-        slPrice: 2032.10,
-        tpPrices: [2055.00],
-        probability: 85,
-        type: 'BUY',
-        status: 'ACTIVE',
+      _accountSubscription = _tradingRepository.getTradingAccount(event.userId ?? '').listen(
+        (account) => add(UpdateAccount(account)),
       );
 
       _candleSubscription = _tradingRepository.getCandleStream('XAUUSD').listen(
         (candles) => add(UpdateCandles(candles)),
-        onError: (e) => print('TradingRoomBloc: Candles stream error: $e'),
       );
 
-      emit(const TradingRoomLoaded(
-        account: defaultAccount,
-        currentSignal: defaultSignal,
+      _signalSubscription = _tradingRepository.getActiveSignals().listen(
+        (signals) => add(UpdateSignals(signals)),
+      );
+
+      // Give it a short moment to receive the first batch of candles
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      emit(TradingRoomLoaded(
+        account: const TradingAccount(
+          balance: 38204.12,
+          equity: 42050.00,
+          margin: 840,
+          leverage: 500,
+          status: 'LIVE',
+        ),
         currentSymbol: 'XAUUSD',
-        candles: [],
+        currentTimeframe: '5',
+        candles: _initialCandles,
       ));
     } catch (e) {
       emit(TradingRoomError(e.toString()));
@@ -93,8 +78,18 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   }
 
   void _onUpdateCandles(UpdateCandles event, Emitter<TradingRoomState> emit) {
+    print('TradingRoomBloc: Received ${event.candles.length} candles');
     if (state is TradingRoomLoaded) {
       emit((state as TradingRoomLoaded).copyWith(candles: event.candles));
+    } else {
+      _initialCandles = event.candles;
+    }
+  }
+
+  void _onChangeTimeframe(ChangeTimeframe event, Emitter<TradingRoomState> emit) {
+    if (state is TradingRoomLoaded) {
+      _tradingRepository.changeTimeframe(event.timeframe);
+      emit((state as TradingRoomLoaded).copyWith(currentTimeframe: event.timeframe));
     }
   }
 
@@ -113,8 +108,19 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     }
   }
 
-  void _onExecuteTrade(ExecuteTrade event, Emitter<TradingRoomState> emit) {
-    print('Executing ${event.type} trade with lot size ${event.lotSize}');
+  void _onExecuteTrade(ExecuteTrade event, Emitter<TradingRoomState> emit) async {
+    if (state is TradingRoomLoaded) {
+      final currentState = state as TradingRoomLoaded;
+      final symbol = currentState.currentSymbol;
+      
+      final success = await _tradingRepository.executeTrade(symbol, event.type, event.lotSize);
+      
+      if (success) {
+        print('Trade executed successfully: ${event.type} $symbol ${event.lotSize}');
+      } else {
+        print('Trade execution failed.');
+      }
+    }
   }
 
   @override
