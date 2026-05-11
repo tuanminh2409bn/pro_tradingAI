@@ -95,6 +95,20 @@ class TradingRepository {
     } catch (e) { return false; }
   }
 
+  Future<void> requestAnalysis(String symbol, String timeframe) async {
+    try {
+      await _firestore.collection('analysis_requests').add({
+        'symbol': symbol,
+        'timeframe': timeframe,
+        'status': 'PENDING',
+        'requestedAt': FieldValue.serverTimestamp(),
+      });
+      print('REPO: Analysis request sent to Firebase for $symbol ($timeframe)');
+    } catch (e) {
+      print('REPO: Error sending analysis request: $e');
+    }
+  }
+
   Stream<TradingAccount> getTradingAccount(String userId) async* {
     yield* _accountController.stream;
   }
@@ -108,12 +122,20 @@ class TradingRepository {
     _channel?.sink.add(jsonEncode({"action": "set_interval", "interval": tf}));
   }
 
+  void changeSymbol(String symbol) {
+    _channel?.sink.add(jsonEncode({"action": "set_symbol", "symbol": symbol}));
+    _cache.clear(); // Clear cache when changing symbol
+    _candleController.add([]); // Emit empty to show loading
+  }
+
   Stream<List<TradingSignal>> getActiveSignals() {
     return _firestore.collection('signals').where('status', isEqualTo: 'ACTIVE').snapshots().map((snapshot) {
       if (snapshot.docs.isEmpty) {
-        return [const TradingSignal(symbol: 'XAUUSD', entryPrice: 4809.50, slPrice: 4802.10, tpPrices: [4825.0], probability: 85, type: 'BUY', status: 'ACTIVE')];
+        print('REPO: No active signals found in Firebase.');
+        return [];
       }
-      return snapshot.docs.map((doc) => TradingSignal(
+      
+      final signals = snapshot.docs.map((doc) => TradingSignal(
         symbol: doc.data()['symbol'] ?? '',
         entryPrice: (doc.data()['entryPrice'] ?? 0).toDouble(),
         slPrice: (doc.data()['slPrice'] ?? 0).toDouble(),
@@ -122,6 +144,9 @@ class TradingRepository {
         type: doc.data()['type'] ?? 'BUY',
         status: doc.data()['status'] ?? 'ACTIVE',
       )).toList();
+      
+      print('REPO: Parsed ${signals.length} active signals from Firebase. First signal entry: ${signals.first.entryPrice}');
+      return signals;
     });
   }
 }

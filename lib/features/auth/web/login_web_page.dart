@@ -13,7 +13,8 @@ class LoginWebPage extends StatefulWidget {
   State<LoginWebPage> createState() => _LoginWebPageState();
 }
 
-class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderStateMixin {
+class _LoginWebPageState extends State<LoginWebPage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -39,18 +40,25 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
   void _handleAuth() {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    
+
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields'), backgroundColor: AppColors.bear),
+        const SnackBar(
+          content: Text('Please fill all fields'),
+          backgroundColor: AppColors.bear,
+        ),
       );
       return;
     }
 
     if (_isRegistering) {
-      context.read<AuthBloc>().add(AuthRegisterRequested(email: email, password: password));
+      context.read<AuthBloc>().add(
+        AuthRegisterRequested(email: email, password: password),
+      );
     } else {
-      context.read<AuthBloc>().add(AuthLoginRequested(email: email, password: password));
+      context.read<AuthBloc>().add(
+        AuthLoginRequested(email: email, password: password),
+      );
     }
   }
 
@@ -62,18 +70,21 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
         listener: (context, state) {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.bear),
+              SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: AppColors.bear,
+              ),
             );
           }
         },
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isMobile = constraints.maxWidth < 900;
-            
+
             if (isMobile) {
               return _buildMobileLayout();
             }
-            
+
             return _buildDesktopLayout();
           },
         ),
@@ -82,7 +93,7 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
   }
 
   Widget _buildDesktopLayout() {
-    return IntrinsicHeight(
+    return SizedBox.expand(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -96,7 +107,9 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
                     animation: _animationController,
                     builder: (context, child) {
                       return CustomPaint(
-                        painter: NeuralPlexusPainter(_animationController.value),
+                        painter: NeuralPlexusPainter(
+                          _animationController.value,
+                        ),
                       );
                     },
                   ),
@@ -138,9 +151,18 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
                           ),
                         ),
                         SizedBox(height: 60),
-                        _FeatureItem(icon: Icons.auto_awesome, text: 'Neural-Network Driven Signals'),
-                        _FeatureItem(icon: Icons.speed, text: 'Zero-Latency Execution'),
-                        _FeatureItem(icon: Icons.hub, text: 'Global Liquidity Aggregation'),
+                        _FeatureItem(
+                          icon: Icons.auto_awesome,
+                          text: 'Neural-Network Driven Signals',
+                        ),
+                        _FeatureItem(
+                          icon: Icons.speed,
+                          text: 'Zero-Latency Execution',
+                        ),
+                        _FeatureItem(
+                          icon: Icons.hub,
+                          text: 'Global Liquidity Aggregation',
+                        ),
                       ],
                     ),
                   ),
@@ -155,7 +177,10 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
               color: AppColors.surface,
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 60,
+                    vertical: 40,
+                  ),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: _buildAuthForm(),
@@ -182,9 +207,7 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
             },
           ),
         ),
-        Container(
-          color: AppColors.background.withOpacity(0.8),
-        ),
+        Container(color: AppColors.background.withOpacity(0.8)),
         Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -213,11 +236,18 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
       children: [
         Text(
           _isRegistering ? 'CREATE ACCOUNT' : 'SYSTEM ACCESS',
-          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+          style: const TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
-          _isRegistering ? 'Join the next generation of trading' : 'Authorize your session to continue',
+          _isRegistering
+              ? 'Join the next generation of trading'
+              : 'Authorize your session to continue',
           style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 48),
@@ -241,7 +271,10 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
             Expanded(child: Divider(color: Colors.white10)),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text('OR', style: TextStyle(color: Colors.white24, fontSize: 10)),
+              child: Text(
+                'OR',
+                style: TextStyle(color: Colors.white24, fontSize: 10),
+              ),
             ),
             Expanded(child: Divider(color: Colors.white10)),
           ],
@@ -257,7 +290,9 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
               });
             },
             child: Text(
-              _isRegistering ? 'ALREADY HAVE AN ACCOUNT? LOGIN' : 'REQUEST ACCESS KEY',
+              _isRegistering
+                  ? 'ALREADY HAVE AN ACCOUNT? LOGIN'
+                  : 'REQUEST ACCESS KEY',
               style: const TextStyle(
                 color: AppColors.primary,
                 fontSize: 12,
@@ -282,7 +317,12 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+          style: const TextStyle(
+            color: Colors.white38,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -290,7 +330,11 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
           obscureText: isObscure,
           style: const TextStyle(color: Colors.white, fontSize: 15),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: AppColors.primary.withOpacity(0.5), size: 20),
+            prefixIcon: Icon(
+              icon,
+              color: AppColors.primary.withOpacity(0.5),
+              size: 20,
+            ),
             filled: true,
             fillColor: Colors.white.withOpacity(0.03),
             enabledBorder: OutlineInputBorder(
@@ -318,14 +362,27 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.black,
             padding: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
             elevation: 0,
           ),
           child: isLoading
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.black,
+                  ),
+                )
               : Text(
                   _isRegistering ? 'CREATE ACCOUNT' : 'SECURE LOGIN',
-                  style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                    fontSize: 14,
+                  ),
                 ),
         );
       },
@@ -336,9 +393,11 @@ class _LoginWebPageState extends State<LoginWebPage> with SingleTickerProviderSt
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state.status == AuthStatus.loading;
-        
+
         return InkWell(
-          onTap: isLoading ? null : () => context.read<AuthBloc>().add(AuthGoogleSignInRequested()),
+          onTap: isLoading
+              ? null
+              : () => context.read<AuthBloc>().add(AuthGoogleSignInRequested()),
           borderRadius: BorderRadius.circular(8),
           child: Container(
             height: 56,
@@ -394,8 +453,12 @@ class NeuralPlexusPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
     final List<Offset> scaledNodes = nodes.map((n) {
-      double dx = (n.dx * size.width + math.sin(animationValue * 2 * math.pi + n.dx * 100) * 20);
-      double dy = (n.dy * size.height + math.cos(animationValue * 2 * math.pi + n.dy * 100) * 20);
+      double dx =
+          (n.dx * size.width +
+          math.sin(animationValue * 2 * math.pi + n.dx * 100) * 20);
+      double dy =
+          (n.dy * size.height +
+          math.cos(animationValue * 2 * math.pi + n.dy * 100) * 20);
       return Offset(dx, dy);
     }).toList();
 
@@ -410,7 +473,11 @@ class NeuralPlexusPainter extends CustomPainter {
     }
 
     for (int i = 0; i < nodeCount; i++) {
-      canvas.drawCircle(scaledNodes[i], nodeRadii[i], paint..color = AppColors.primary.withOpacity(0.5));
+      canvas.drawCircle(
+        scaledNodes[i],
+        nodeRadii[i],
+        paint..color = AppColors.primary.withOpacity(0.5),
+      );
       if (i % 5 == 0) {
         canvas.drawCircle(scaledNodes[i], nodeRadii[i] + 2, glowPaint);
       }
@@ -444,7 +511,16 @@ class _FeatureItem extends StatelessWidget {
             child: Icon(icon, color: AppColors.primary, size: 20),
           ),
           const SizedBox(width: 20),
-          Flexible(child: Text(text, style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.w500))),
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -64,3 +64,7 @@ class ExecuteTrade extends TradingRoomEvent {
   @override
   List<Object?> get props => [type, lotSize];
 }
+
+class RequestAnalysis extends TradingRoomEvent {
+  const RequestAnalysis();
+}

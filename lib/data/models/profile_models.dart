@@ -23,6 +23,25 @@ class UserProfile extends Equatable {
   List<Object?> get props => [username, email, tier, rank];
 }
 
+class BrokerAccount extends Equatable {
+  final String accountId;
+  final String platform; // 'mt4' or 'mt5'
+  final String server;
+  final String login;
+  final String status; // 'CONNECTED', 'DISCONNECTED', 'PENDING'
+
+  const BrokerAccount({
+    required this.accountId,
+    required this.platform,
+    required this.server,
+    required this.login,
+    required this.status,
+  });
+
+  @override
+  List<Object?> get props => [accountId, platform, server, login, status];
+}
+
 class AccessQuota extends Equatable {
   final int apiUsed;
   final int apiLimit;

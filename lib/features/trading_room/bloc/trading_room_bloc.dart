@@ -22,6 +22,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     on<UpdateSignals>(_onUpdateSignals);
     on<ExecuteTrade>(_onExecuteTrade);
     on<ChangeTimeframe>(_onChangeTimeframe);
+    on<RequestAnalysis>(_onRequestAnalysis);
   }
 
   void _onLoadTradingData(LoadTradingData event, Emitter<TradingRoomState> emit) async {
@@ -70,10 +71,20 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   }
 
   void _onUpdateSignals(UpdateSignals event, Emitter<TradingRoomState> emit) {
+    print('TradingRoomBloc: Received ${event.signals.length} active signals from Repository');
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
-      final currentSignal = event.signals.isNotEmpty ? event.signals.first : currentState.currentSignal;
-      emit(currentState.copyWith(currentSignal: currentSignal));
+      final currentSignal = event.signals.isNotEmpty ? event.signals.first : null;
+      // Note: We use copyWith to replace currentSignal, so we need to ensure copyWith supports clearing it
+      // Let's manually reconstruct the state or ensure copyWith can set it to null.
+      // Assuming copyWith handles nullable signal if we don't pass it, it keeps the old one. We need a way to clear it.
+      emit(TradingRoomLoaded(
+        account: currentState.account,
+        currentSymbol: currentState.currentSymbol,
+        currentTimeframe: currentState.currentTimeframe,
+        candles: currentState.candles,
+        currentSignal: currentSignal, // Explicitly pass the new signal or null
+      ));
     }
   }
 
@@ -94,6 +105,8 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   }
 
   void _onUpdateSymbol(UpdateSymbol event, Emitter<TradingRoomState> emit) {
+    _tradingRepository.changeSymbol(event.symbol);
+    
     _candleSubscription?.cancel();
     _candleSubscription = _tradingRepository.getCandleStream(event.symbol).listen(
       (candles) => add(UpdateCandles(candles)),
@@ -120,6 +133,16 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       } else {
         print('Trade execution failed.');
       }
+    }
+  }
+
+  void _onRequestAnalysis(RequestAnalysis event, Emitter<TradingRoomState> emit) async {
+    if (state is TradingRoomLoaded) {
+      final currentState = state as TradingRoomLoaded;
+      await _tradingRepository.requestAnalysis(
+        currentState.currentSymbol, 
+        currentState.currentTimeframe
+      );
     }
   }
 

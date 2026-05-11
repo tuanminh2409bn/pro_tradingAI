@@ -1,11 +1,59 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../models/profile_models.dart';
 
 class ProfileRepository {
   final FirebaseFirestore _firestore;
+  static const String _apiUrl = 'https://protrading-data-engine-22073478183.asia-southeast1.run.app/api/account/link';
 
   ProfileRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
+
+  Stream<List<BrokerAccount>> getBrokerAccounts(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('broker_accounts')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return BrokerAccount(
+          accountId: doc.id,
+          platform: data['platform'] ?? 'mt4',
+          server: data['server'] ?? '',
+          login: data['login'] ?? '',
+          status: data['status'] ?? 'DISCONNECTED',
+        );
+      }).toList();
+    });
+  }
+
+  Future<bool> linkBrokerAccount({
+    required String userId,
+    required String platform,
+    required String server,
+    required String login,
+    required String password,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'platform': platform,
+          'server': server,
+          'login': login,
+          'password': password,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 
   Stream<UserProfile> getUserProfile(String userId) {
     return _firestore

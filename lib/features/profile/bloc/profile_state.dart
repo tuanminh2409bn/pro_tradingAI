@@ -15,28 +15,32 @@ class ProfileLoading extends ProfileState {}
 class ProfileLoaded extends ProfileState {
   final UserProfile profile;
   final AccessQuota quota;
+  final List<BrokerAccount> brokerAccounts;
   final bool is2FAEnabled;
 
   const ProfileLoaded({
     required this.profile,
     required this.quota,
+    this.brokerAccounts = const [],
     this.is2FAEnabled = true,
   });
 
   ProfileLoaded copyWith({
     UserProfile? profile,
     AccessQuota? quota,
+    List<BrokerAccount>? brokerAccounts,
     bool? is2FAEnabled,
   }) {
     return ProfileLoaded(
       profile: profile ?? this.profile,
       quota: quota ?? this.quota,
+      brokerAccounts: brokerAccounts ?? this.brokerAccounts,
       is2FAEnabled: is2FAEnabled ?? this.is2FAEnabled,
     );
   }
 
   @override
-  List<Object?> get props => [profile, quota, is2FAEnabled];
+  List<Object?> get props => [profile, quota, brokerAccounts, is2FAEnabled];
 }
 
 class ProfileError extends ProfileState {

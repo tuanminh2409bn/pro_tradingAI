@@ -44,3 +44,29 @@
 - Để chạy Web: `flutter run -d chrome`
 - Để chạy Android: `flutter run` (Đảm bảo đã mở Emulator/Thiết bị thật)
 - Để chạy iOS: `flutter run` (Yêu cầu macOS và Xcode)
+
+## 5. Kiến trúc Hệ thống Thương mại (Multi-Tenant & Real Trading)
+Mục tiêu: Đưa ứng dụng ProTrading AI thành sản phẩm SaaS (Software as a Service) phục vụ hàng ngàn người dùng cùng lúc, hỗ trợ liên kết tài khoản MT4/MT5 thật thông qua MetaApi Cloud.
+
+### 5.1. Luồng Liên kết Tài khoản MT4/MT5 (Broker Integration)
+1. **Frontend (Flutter):** Cung cấp form nhập thông tin (Login, Password, Server Sàn) trong màn hình `Profile`.
+2. **Backend (Python - Cloud Run):** Nhận thông tin qua API (yêu cầu xác thực Firebase ID Token). Thay vì đăng nhập trực tiếp, Python gọi API của **MetaApi Cloud** để tạo một hồ sơ (profile) cho tài khoản này trên cloud của MetaApi.
+3. **Database (Firestore):** Python lưu lại `MetaApi Account ID` vừa tạo vào Firestore dưới user hiện tại. *(Tuyệt đối không lưu mật khẩu MT4 trên Firestore, MetaApi sẽ chịu trách nhiệm bảo mật).*
+
+### 5.2. Luồng Cập nhật Số dư & Lịch sử lệnh (Real-time Equity/Balance)
+1. **Frontend:** Mở kết nối WebSocket tới Server Python, gửi kèm Token xác thực.
+2. **Backend (Python):**
+   - Kiểm tra Token hợp lệ -> Lấy `MetaApi Account ID` của người dùng từ Firestore.
+   - Thiết lập kết nối Synchronization Stream với MetaApi cho tài khoản đó.
+   - Liên tục đẩy dữ liệu (Equity, Balance, Open Positions) riêng biệt của từng người dùng qua luồng WebSocket cá nhân của họ.
+3. **Market Data (Chart):** Dữ liệu nến (XAUUSD, BTCUSD...) có thể sử dụng chung (1 luồng feed duy nhất từ TradingView hoặc APISed chia sẻ cho tất cả WebSocket) để tối ưu chi phí server.
+
+### 5.3. Luồng Khớp lệnh (Execution Engine)
+1. **Frontend:** Người dùng nhấn BUY/SELL (ví dụ 0.1 Lot XAUUSD). App gửi POST Request `(/api/trade)` lên Server Python (kèm Token).
+2. **Backend (Python):** Xác thực Token -> Lấy MetaApi Account ID -> Gọi lệnh **Market Order / Pending Order** trực tiếp xuống API của MetaApi.
+3. **Database:** Sau khi MetaApi báo khớp lệnh thành công (trả về Ticket ID), lưu thông tin lệnh vào Firestore (`trades/{userId}/{ticketId}`) để làm dữ liệu cho màn hình **Journal (Nhật ký giao dịch)**.
+
+### 5.4. Tiêu chuẩn Bảo mật Production
+- Tích hợp **CORS** chặt chẽ trên Backend.
+- Yêu cầu xác thực `Authorization: Bearer <Firebase_Token>` cho MỌI endpoint thao tác với tiền.
+- Rate Limiting (chống Spam API/DDoS) trên Cloud Run.

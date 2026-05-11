@@ -119,7 +119,7 @@ class _AssetHeader extends StatelessWidget {
     return BlocBuilder<TradingRoomBloc, TradingRoomState>(
       builder: (context, state) {
         String symbol = 'XAUUSD';
-        double price = 2038.50;
+        double price = 0.0;
         if (state is TradingRoomLoaded) {
           symbol = state.currentSymbol;
           if (state.candles.isNotEmpty) price = state.candles.last.close;
@@ -134,11 +134,31 @@ class _AssetHeader extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Text(symbol, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: symbol,
+                  dropdownColor: AppColors.surface,
+                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white54),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      context.read<TradingRoomBloc>().add(UpdateSymbol(newValue));
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(value: 'XAUUSD', child: Text('XAUUSD (Vàng)')),
+                    DropdownMenuItem(value: 'EURUSD', child: Text('EURUSD (Forex)')),
+                    DropdownMenuItem(value: 'BTCUSD', child: Text('BTCUSD (Crypto)')),
+                  ],
+                ),
+              ),
               const SizedBox(width: 12),
               const Icon(Icons.trending_up, color: AppColors.primary, size: 16),
               const SizedBox(width: 8),
-              Text('\$$price', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              Text(
+                price > 0 ? '\$${price.toStringAsFixed(3)}' : 'Loading...',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
               const Spacer(),
               _buildTimeframeBtn(context, '1M', '1', isActive: state is TradingRoomLoaded && state.currentTimeframe == '1'),
               _buildTimeframeBtn(context, '5M', '5', isActive: state is TradingRoomLoaded && state.currentTimeframe == '5'),
@@ -244,11 +264,40 @@ class _OrderPanelState extends State<_OrderPanel> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.read<TradingRoomBloc>().add(const RequestAnalysis());
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Đã gửi yêu cầu phân tích dữ liệu AI...', style: TextStyle(fontWeight: FontWeight.bold)),
+                        backgroundColor: AppColors.primary,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics, color: Colors.black),
+                  label: const Text('PHÂN TÍCH DỮ LIỆU (AI)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
               const SizedBox(height: 40),
               const Text('ACTIVE SIGNALS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
               const SizedBox(height: 16),
-              _buildSignalCard('XAUUSD', 'BUY @ ${currentPrice > 0 ? currentPrice.toStringAsFixed(3) : '...'}', '85% Prob.'),
-              _buildSignalCard('BTCUSD', 'SELL @ 64200.000', '72% Prob.'),
+              if (state is TradingRoomLoaded && state.currentSignal != null)
+                _buildSignalCard(
+                  state.currentSignal!.symbol, 
+                  '${state.currentSignal!.type} @ ${state.currentSignal!.entryPrice.toStringAsFixed(3)}', 
+                  '${state.currentSignal!.probability}% Prob.'
+                )
+              else
+                const Text('Chưa có tín hiệu nào. Hãy nhấn nút Phân Tích AI.', style: TextStyle(color: Colors.white38, fontSize: 12, fontStyle: FontStyle.italic)),
             ],
           ),
         );
@@ -330,8 +379,30 @@ class _WebTopNavbar extends StatelessWidget {
             ),
           const Text('KINETIC', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -1, color: Colors.white)),
           const SizedBox(width: 40),
-          const Expanded(
-            child: Text('Equity: \$42,050.00', style: TextStyle(color: Color(0xFFc3c6d8), fontSize: 13), overflow: TextOverflow.ellipsis),
+          Expanded(
+            child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
+              builder: (context, state) {
+                String equity = '42,050.00';
+                if (state is TradingRoomLoaded) {
+                  equity = state.account.equity.toStringAsFixed(2);
+                }
+                return Row(
+                  children: [
+                    Text('Equity: \$$equity', style: const TextStyle(color: Color(0xFFc3c6d8), fontSize: 13)),
+                    const SizedBox(width: 16),
+                    TextButton.icon(
+                      onPressed: () => _showSyncDialog(context),
+                      icon: const Icon(Icons.link, size: 14, color: AppColors.primary),
+                      label: const Text('LIÊN KẾT API SÀN', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
           const SizedBox(width: 16),
@@ -343,6 +414,56 @@ class _WebTopNavbar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showSyncDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Liên kết tài khoản MT4/MT5', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Hệ thống chỉ yêu cầu Mật khẩu chỉ đọc (Read-only password) để đồng bộ. Tuyệt đối an toàn, hệ thống KHÔNG THỂ vào lệnh hoặc rút tiền của bạn.', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+              const SizedBox(height: 16),
+              TextField(
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Số tài khoản (Login)', labelStyle: TextStyle(color: Colors.white54)),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Mật khẩu (Investor Password)', labelStyle: TextStyle(color: Colors.white54)),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Server Sàn (VD: Exness-Real)', labelStyle: TextStyle(color: Colors.white54)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Hủy', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đang gửi yêu cầu liên kết đến Server...')),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Liên Kết Ngay', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
     );
   }
 }

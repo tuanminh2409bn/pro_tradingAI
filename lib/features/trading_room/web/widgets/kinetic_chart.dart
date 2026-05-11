@@ -351,22 +351,26 @@ class _ChartPainter extends CustomPainter {
     final slY = getY(signal.slPrice);
     final tpY = getY(signal.tpPrices.first);
 
+    print('KineticChart: Drawing Signal - Entry Y: $entryY, SL Y: $slY, TP Y: $tpY, Height: ${chartRect.height}');
+
+    double expandRect = 200.0; // Allow drawing slightly off-screen to handle zoom
+
     // Entry
-    if (entryY > 0 && entryY < chartRect.height) {
+    if (entryY > -expandRect && entryY < chartRect.height + expandRect) {
       final entryPaint = Paint()..color = AppColors.primary..strokeWidth = 1.5;
       canvas.drawLine(Offset(0, entryY), Offset(chartRect.width, entryY), entryPaint);
       _drawBadge(canvas, Offset(chartRect.width - 60, entryY - 10), 'ENTRY', '${signal.probability}%', AppColors.primary);
     }
 
     // Stop Loss
-    if (slY > 0 && slY < chartRect.height) {
+    if (slY > -expandRect && slY < chartRect.height + expandRect) {
       final slPaint = Paint()..color = AppColors.bear..strokeWidth = 1.5;
       _drawDashedLine(canvas, Offset(0, slY), Offset(chartRect.width, slY), slPaint);
       _drawLabel(canvas, Offset(chartRect.width - 40, slY - 8), 'SL', AppColors.bear, Colors.white);
     }
 
     // Take Profit
-    if (tpY > 0 && tpY < chartRect.height) {
+    if (tpY > -expandRect && tpY < chartRect.height + expandRect) {
       final tpPaint = Paint()..color = const Color(0xFF3772FF)..strokeWidth = 1.5;
       _drawDashedLine(canvas, Offset(0, tpY), Offset(chartRect.width, tpY), tpPaint);
       _drawLabel(canvas, Offset(chartRect.width - 40, tpY - 8), 'TP', const Color(0xFF3772FF), Colors.white);
