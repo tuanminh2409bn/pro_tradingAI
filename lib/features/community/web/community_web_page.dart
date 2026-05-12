@@ -261,7 +261,16 @@ class _PostCard extends StatelessWidget {
                     _buildActionBtn(Icons.share, ''),
                   ],
                 ),
-                const Row(children: [CircleAvatar(radius: 10, backgroundColor: Colors.white10), SizedBox(width: -8), CircleAvatar(radius: 10, backgroundColor: Colors.white24)]),
+                const SizedBox(
+                  width: 32,
+                  height: 20,
+                  child: Stack(
+                    children: [
+                      Positioned(left: 0, child: CircleAvatar(radius: 10, backgroundColor: Colors.white10)),
+                      Positioned(left: 12, child: CircleAvatar(radius: 10, backgroundColor: Colors.white24)),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

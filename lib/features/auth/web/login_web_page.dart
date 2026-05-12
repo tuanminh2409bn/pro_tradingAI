@@ -2,6 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_cubit.dart';
+import '../../../core/widgets/language_toggle.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -43,8 +46,8 @@ class _LoginWebPageState extends State<LoginWebPage>
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill all fields'),
+        SnackBar(
+          content: Text(context.tr('fill_all_fields')),
           backgroundColor: AppColors.bear,
         ),
       );
@@ -77,16 +80,27 @@ class _LoginWebPageState extends State<LoginWebPage>
             );
           }
         },
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 900;
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 900;
 
-            if (isMobile) {
-              return _buildMobileLayout();
-            }
+                  if (isMobile) {
+                    return _buildMobileLayout();
+                  }
 
-            return _buildDesktopLayout();
-          },
+                  return _buildDesktopLayout();
+                },
+              ),
+            ),
+            const Positioned(
+              top: 24,
+              right: 24,
+              child: LanguageToggle(),
+            ),
+          ],
         ),
       ),
     );
@@ -125,13 +139,13 @@ class _LoginWebPageState extends State<LoginWebPage>
                       ],
                     ),
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(80.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(80.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           'KINETIC',
                           style: TextStyle(
                             fontSize: 100,
@@ -141,7 +155,7 @@ class _LoginWebPageState extends State<LoginWebPage>
                             height: 0.9,
                           ),
                         ),
-                        Text(
+                        const Text(
                           'QUANTUM AI TRADING ENGINE',
                           style: TextStyle(
                             fontSize: 16,
@@ -150,18 +164,18 @@ class _LoginWebPageState extends State<LoginWebPage>
                             letterSpacing: 8,
                           ),
                         ),
-                        SizedBox(height: 60),
+                        const SizedBox(height: 60),
                         _FeatureItem(
                           icon: Icons.auto_awesome,
-                          text: 'Neural-Network Driven Signals',
+                          text: context.tr('neural_network_signals'),
                         ),
                         _FeatureItem(
                           icon: Icons.speed,
-                          text: 'Zero-Latency Execution',
+                          text: context.tr('zero_latency'),
                         ),
                         _FeatureItem(
                           icon: Icons.hub,
-                          text: 'Global Liquidity Aggregation',
+                          text: context.tr('global_liquidity'),
                         ),
                       ],
                     ),
@@ -235,7 +249,7 @@ class _LoginWebPageState extends State<LoginWebPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _isRegistering ? 'CREATE ACCOUNT' : 'SYSTEM ACCESS',
+          _isRegistering ? context.tr('create_account') : context.tr('system_access'),
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -246,37 +260,37 @@ class _LoginWebPageState extends State<LoginWebPage>
         const SizedBox(height: 8),
         Text(
           _isRegistering
-              ? 'Join the next generation of trading'
-              : 'Authorize your session to continue',
+              ? context.tr('register_desc')
+              : context.tr('login_desc'),
           style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
         const SizedBox(height: 48),
         _buildTextField(
           controller: _emailController,
-          label: 'EMAIL ADDRESS',
+          label: context.tr('email_label'),
           icon: Icons.email_outlined,
         ),
         const SizedBox(height: 20),
         _buildTextField(
           controller: _passwordController,
-          label: 'ACCESS KEY / PASSWORD',
+          label: context.tr('password_label'),
           icon: Icons.lock_outline,
           isObscure: true,
         ),
         const SizedBox(height: 32),
         _buildMainAuthBtn(),
         const SizedBox(height: 24),
-        const Row(
+        Row(
           children: [
-            Expanded(child: Divider(color: Colors.white10)),
+            const Expanded(child: Divider(color: Colors.white10)),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'OR',
-                style: TextStyle(color: Colors.white24, fontSize: 10),
+                context.tr('or'),
+                style: const TextStyle(color: Colors.white24, fontSize: 10),
               ),
             ),
-            Expanded(child: Divider(color: Colors.white10)),
+            const Expanded(child: Divider(color: Colors.white10)),
           ],
         ),
         const SizedBox(height: 24),
@@ -291,8 +305,8 @@ class _LoginWebPageState extends State<LoginWebPage>
             },
             child: Text(
               _isRegistering
-                  ? 'ALREADY HAVE AN ACCOUNT? LOGIN'
-                  : 'REQUEST ACCESS KEY',
+                  ? context.tr('already_have_account')
+                  : context.tr('request_access_key'),
               style: const TextStyle(
                 color: AppColors.primary,
                 fontSize: 12,
@@ -377,7 +391,7 @@ class _LoginWebPageState extends State<LoginWebPage>
                   ),
                 )
               : Text(
-                  _isRegistering ? 'CREATE ACCOUNT' : 'SECURE LOGIN',
+                  _isRegistering ? context.tr('create_account') : context.tr('secure_login'),
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
@@ -410,8 +424,8 @@ class _LoginWebPageState extends State<LoginWebPage>
               children: [
                 Image.asset('assets/google_logo.png', height: 22),
                 const SizedBox(width: 12),
-                const Text(
-                  'CONTINUE WITH GOOGLE',
+                Text(
+                  context.tr('continue_with_google'),
                   style: TextStyle(
                     color: Color(0xFF1F1F1F),
                     fontWeight: FontWeight.w800,

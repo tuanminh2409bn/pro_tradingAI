@@ -9,6 +9,7 @@ import 'features/auth/web/login_web_page.dart';
 import 'features/auth/mobile/login_mobile_page.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_state.dart';
+import 'core/localization/locale_cubit.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/trading_repository.dart';
 import 'data/repositories/news_repository.dart';
@@ -59,13 +60,16 @@ void main() async {
         RepositoryProvider.value(value: profileRepository),
         RepositoryProvider.value(value: adminRepository),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => AuthBloc(authRepository: authRepository),
-          ),
-        ],
-        child: const ProTradingApp(),
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (context) => AuthBloc(authRepository: authRepository),
+            ),
+            BlocProvider(
+              create: (context) => LocaleCubit(),
+            ),
+          ],
+          child: const ProTradingApp(),
       ),
     ),
   );
@@ -76,33 +80,37 @@ class ProTradingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ProTrading AI',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppColors.background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.primary,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Inter',
-      ),
-      home: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state.status == AuthStatus.authenticated) {
-            return kIsWeb ? const WebDashboardShell() : const MobileDashboardShell();
-          } else if (state.status == AuthStatus.unauthenticated) {
-            return kIsWeb ? const LoginWebPage() : const LoginMobilePage();
-          }
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+    return BlocBuilder<LocaleCubit, String>(
+      builder: (context, lang) {
+        return MaterialApp(
+          title: 'ProTrading AI',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: AppColors.background,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppColors.primary,
+              brightness: Brightness.dark,
             ),
-          );
-        },
-      ),
+            useMaterial3: true,
+            fontFamily: 'Inter',
+          ),
+          home: BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              if (state.status == AuthStatus.authenticated) {
+                return kIsWeb ? const WebDashboardShell() : const MobileDashboardShell();
+              } else if (state.status == AuthStatus.unauthenticated) {
+                return kIsWeb ? const LoginWebPage() : const LoginMobilePage();
+              }
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

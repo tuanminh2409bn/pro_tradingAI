@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../logic/navigation_cubit.dart';
 import '../constants/colors.dart';
+import '../localization/app_localizations.dart';
+import 'language_toggle.dart';
 
 class WebSidebar extends StatelessWidget {
   final bool isMobile;
@@ -25,16 +27,18 @@ class WebSidebar extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 40),
-          _buildNavItem(context, Icons.show_chart, 'Trading Room', NavbarItem.tradingRoom),
-          _buildNavItem(context, Icons.auto_stories, 'Journal', NavbarItem.journal),
-          _buildNavItem(context, Icons.dynamic_feed, 'News Feed', NavbarItem.newsFeed),
-          _buildNavItem(context, Icons.history_edu, 'Backtest Dojo', NavbarItem.backtestDojo),
-          _buildNavItem(context, Icons.groups, 'Community', NavbarItem.community),
-          _buildNavItem(context, Icons.radar, 'Market Radar', NavbarItem.radar),
-          _buildNavItem(context, Icons.card_giftcard, 'Referral Hub', NavbarItem.referral),
-          _buildNavItem(context, Icons.person, 'Profile', NavbarItem.profile),
+          _buildNavItem(context, Icons.show_chart, context.tr('trading_room'), NavbarItem.tradingRoom),
+          _buildNavItem(context, Icons.auto_stories, context.tr('journal'), NavbarItem.journal),
+          _buildNavItem(context, Icons.dynamic_feed, context.tr('news_feed'), NavbarItem.newsFeed),
+          _buildNavItem(context, Icons.history_edu, context.tr('backtest_dojo'), NavbarItem.backtestDojo),
+          _buildNavItem(context, Icons.groups, context.tr('community'), NavbarItem.community),
+          _buildNavItem(context, Icons.radar, context.tr('market_radar'), NavbarItem.radar),
+          _buildNavItem(context, Icons.card_giftcard, context.tr('referral_hub'), NavbarItem.referral),
+          _buildNavItem(context, Icons.person, context.tr('profile'), NavbarItem.profile),
           const Spacer(),
-          _buildNavItem(context, Icons.admin_panel_settings, 'Admin Center', NavbarItem.admin),
+          _buildNavItem(context, Icons.admin_panel_settings, context.tr('admin_center'), NavbarItem.admin),
+          const SizedBox(height: 20),
+          const LanguageToggle(),
           const SizedBox(height: 20),
         ],
       ),

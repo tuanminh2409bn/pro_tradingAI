@@ -11,8 +11,7 @@ import websockets
 from metaapi_cloud_sdk import MetaApi
 import firebase_admin
 from firebase_admin import credentials, firestore
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -32,8 +31,8 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-ai_client = genai.Client(api_key=GEMINI_API_KEY)
+DEEPSEEK_API_KEY = "sk-81c46e39c3bf43fba0478a9108e76b76"
+ai_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -190,25 +189,22 @@ async def process_ai_analysis(doc_id, symbol, timeframe):
             master_prompt = config_record.to_dict()['ai_master_prompt']
             
         try:
-            print("Calling Gemini API...")
+            print("Calling DeepSeek API...")
             current_price = streamer.last_price
             prompt_content = f"Provide a highly probable trade setup for {symbol} at timeframe {timeframe}. The CURRENT MARKET PRICE is {current_price}. You MUST generate an entryPrice extremely close to {current_price}. For BUY, slPrice < entryPrice and tpPrices > entryPrice. For SELL, slPrice > entryPrice and tpPrices < entryPrice."
             
-            response = ai_client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[
-                    types.Content(role="user", parts=[
-                        types.Part.from_text(text=master_prompt + "\n" + prompt_content)
-                    ])
+            response = ai_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": master_prompt},
+                    {"role": "user", "content": prompt_content}
                 ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                ),
+                response_format={"type": "json_object"},
             )
-            ai_result_str = response.text
+            ai_result_str = response.choices[0].message.content
             ai_result = json.loads(ai_result_str)
         except Exception as e:
-            print(f"Gemini API Error: {e}. Using fallback simulation.")
+            print(f"DeepSeek API Error: {e}. Using fallback simulation.")
             entry_price = current_price + random.uniform(-2, 2)
             trade_type = random.choice(['BUY', 'SELL'])
             sl_price = entry_price - 5 if trade_type == 'BUY' else entry_price + 5
