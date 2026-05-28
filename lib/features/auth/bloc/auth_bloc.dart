@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../data/repositories/profile_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
+  final ProfileRepository _profileRepository;
   StreamSubscription? _userSubscription;
 
-  AuthBloc({required AuthRepository authRepository})
-      : _authRepository = authRepository,
+  AuthBloc({
+    required AuthRepository authRepository,
+    required ProfileRepository profileRepository,
+  })  : _authRepository = authRepository,
+        _profileRepository = profileRepository,
         super(const AuthState.loading()) {
     on<AuthUserChanged>(_onUserChanged);
     on<AuthLogoutRequested>(_onLogoutRequested);
@@ -22,9 +27,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  void _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) {
+  Future<void> _onUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
     if (event.user != null) {
       emit(AuthState.authenticated(event.user!));
+      // Tự động seed profile + cập nhật lastSeen sau khi login
+      try {
+        await _profileRepository.ensureProfileExists(event.user!.uid);
+      } catch (e) {
+        // Không block auth flow nếu seeding thất bại
+      }
     } else {
       emit(const AuthState.unauthenticated());
     }

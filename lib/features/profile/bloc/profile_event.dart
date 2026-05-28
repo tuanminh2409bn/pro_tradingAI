@@ -68,7 +68,20 @@ class UpdateUsernameRequested extends ProfileEvent {
 class Toggle2FARequested extends ProfileEvent {
   final bool enabled;
   const Toggle2FARequested(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
 
+class UpdatePushNotificationsRequested extends ProfileEvent {
+  final bool enabled;
+  const UpdatePushNotificationsRequested(this.enabled);
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class UpdateDataSharingRequested extends ProfileEvent {
+  final bool enabled;
+  const UpdateDataSharingRequested(this.enabled);
   @override
   List<Object?> get props => [enabled];
 }

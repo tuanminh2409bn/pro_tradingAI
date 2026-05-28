@@ -1,8 +1,12 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import '../models/news_models.dart';
 
 class NewsRepository {
   final FirebaseFirestore _firestore;
+  static const String _serverBaseUrl =
+      'https://protrading-data-engine-22073478183.asia-southeast1.run.app';
 
   NewsRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -14,31 +18,13 @@ class NewsRepository {
         .snapshots()
         .map((snapshot) {
       if (snapshot.docs.isEmpty) {
-        // Mock data if Firestore is empty
-        return [
-          const NewsArticle(
-            title: 'USD Consumer Confidence rises to 108.7, exceeding expectations.',
-            source: 'ForexFactory',
-            timeAgo: '2m ago',
-            sentimentScore: 82,
-            type: 'FOREXFACTORY',
-            impact: 'HIGH',
-          ),
-          const NewsArticle(
-            title: 'Whale alert: \$420M BTC transferred to Coinbase. Sell-side mounting.',
-            source: 'Twitter Analytics',
-            timeAgo: '12m ago',
-            sentimentScore: 14,
-            type: 'TWITTER',
-            impact: 'MEDIUM',
-          ),
-        ];
+        return <NewsArticle>[];
       }
       return snapshot.docs.map((doc) {
         final data = doc.data();
         final timestamp = data['timestamp'] as Timestamp?;
-        final timeStr = timestamp != null 
-            ? _formatTimeAgo(timestamp.toDate()) 
+        final timeStr = timestamp != null
+            ? _formatTimeAgo(timestamp.toDate())
             : 'Just now';
 
         return NewsArticle(
@@ -48,6 +34,9 @@ class NewsRepository {
           sentimentScore: (data['sentimentScore'] ?? 0).toInt(),
           type: data['type'] ?? 'ALERT',
           impact: data['impact'] ?? 'LOW',
+          summary: data['summary'] ?? '',
+          url: data['url'] ?? '',
+          imageUrl: data['imageUrl'] ?? '',
         );
       }).toList();
     });
@@ -62,19 +51,19 @@ class NewsRepository {
       final data = snapshot.data();
       if (data == null) {
         return const SentimentPulse(
-          globalScore: 71,
-          fearPercent: 12.4,
-          neutralPercent: 16.6,
-          greedPercent: 71.0,
-          phase: 'GREED',
+          globalScore: 0,
+          fearPercent: 0.0,
+          neutralPercent: 0.0,
+          greedPercent: 0.0,
+          phase: 'NEUTRAL',
         );
       }
       return SentimentPulse(
-        globalScore: (data['globalScore'] ?? 0).toInt(),
-        fearPercent: (data['fearPercent'] ?? 0).toDouble(),
-        neutralPercent: (data['neutralPercent'] ?? 0).toDouble(),
-        greedPercent: (data['greedPercent'] ?? 0).toDouble(),
-        phase: data['phase'] ?? 'NEUTRAL',
+        globalScore: (data['fearGreedIndex'] ?? data['globalScore'] ?? 0).toInt(),
+        fearPercent: (data['bearish'] ?? data['fearPercent'] ?? 0.0).toDouble(),
+        neutralPercent: (data['neutral'] ?? data['neutralPercent'] ?? 0.0).toDouble(),
+        greedPercent: (data['bullish'] ?? data['greedPercent'] ?? 0.0).toDouble(),
+        phase: data['mood'] ?? data['phase'] ?? 'NEUTRAL',
       );
     });
   }
@@ -88,15 +77,37 @@ class NewsRepository {
   }
 
   Future<String> getAISentimentAnalysis(String query) async {
-    // In a real app, this calls DeepSeek V3.2 via Cloud Functions
-    await Future.delayed(const Duration(seconds: 1));
-    
-    if (query.toLowerCase().contains('gold') || query.toLowerCase().contains('xau')) {
-      return "DeepSeek V3.2: Gold (XAUUSD) shows a strong bullish structural shift on the 4H timeframe. Liquidity pools at 2032 have been cleared. Targeted resistance: 2055.";
-    } else if (query.toLowerCase().contains('btc')) {
-      return "DeepSeek V3.2: Bitcoin is experiencing significant sell-side pressure from whale transfers. High probability of a liquidity hunt below 63.5k before any reversal.";
+    try {
+      final uri = Uri.parse('$_serverBaseUrl/api/ai/chat');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'message': 'Analyze this for trading impact: $query',
+              'symbol': 'XAUUSD',
+              'timeframe': '5',
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Handle different response formats from server
+        if (data is Map<String, dynamic>) {
+          return data['response'] ??
+              data['message'] ??
+              data['reply'] ??
+              data['content'] ??
+              data['text'] ??
+              data.toString();
+        }
+        return response.body;
+      } else {
+        return 'DeepSeek AI: Unable to analyze at the moment. Server returned status ${response.statusCode}. Please try again.';
+      }
+    } catch (e) {
+      return 'DeepSeek AI: Connection error — $e. Please check your network and try again.';
     }
-    
-    return "DeepSeek V3.2: I've analyzed the current macro environment. Market sentiment is leaning towards risk-on, but watch for the upcoming FOMC statement for volatility spikes.";
   }
 }

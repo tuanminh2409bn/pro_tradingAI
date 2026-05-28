@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 class BacktestSession extends Equatable {
+  final String? id;
   final String symbol;
   final DateTime startTime;
   final DateTime endTime;
@@ -13,6 +14,7 @@ class BacktestSession extends Equatable {
   final bool isLocked;
 
   const BacktestSession({
+    this.id,
     required this.symbol,
     required this.startTime,
     required this.endTime,
@@ -26,26 +28,35 @@ class BacktestSession extends Equatable {
   });
 
   @override
-  List<Object?> get props => [symbol, currentBalance, equity, speed, isPlaying, isLocked];
+  List<Object?> get props => [id, symbol, currentBalance, equity, speed, isPlaying, isLocked];
 }
 
 class BacktestTrade extends Equatable {
+  final String? id;
+  final String symbol;
   final String type; // 'BUY', 'SELL'
-  final double openPrice;
-  final double lotSize;
-  final double? sl;
-  final double? tp;
-  final double currentProfit;
+  final double entryPrice;
+  final double currentPrice;
+  final double volume;
+  final double profit;
+  final DateTime openTime;
+
+  // Legacy field aliases for backward compatibility
+  double get openPrice => entryPrice;
+  double get lotSize => volume;
+  double get currentProfit => profit;
 
   const BacktestTrade({
+    this.id,
+    this.symbol = '',
     required this.type,
-    required this.openPrice,
-    required this.lotSize,
-    this.sl,
-    this.tp,
-    required this.currentProfit,
+    required this.entryPrice,
+    required this.currentPrice,
+    required this.volume,
+    required this.profit,
+    required this.openTime,
   });
 
   @override
-  List<Object?> get props => [type, openPrice, currentProfit];
+  List<Object?> get props => [id, type, entryPrice, profit];
 }

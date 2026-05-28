@@ -1,15 +1,85 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/profile_models.dart';
 
 class ProfileRepository {
   final FirebaseFirestore _firestore;
-  static const String _apiUrl = 'https://protrading-data-engine-22073478183.asia-southeast1.run.app/api/account/link';
+  final FirebaseAuth _auth;
+  static const String _apiUrl =
+      'https://protrading-data-engine-22073478183.asia-southeast1.run.app/api/account/link';
 
-  ProfileRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  ProfileRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
+  /// Tự tạo profile document cho user mới nếu chưa tồn tại.
+  /// Gọi ngay sau khi đăng nhập thành công.
+  Future<void> ensureProfileExists(String userId) async {
+    final docRef = _firestore.collection('users').doc(userId);
+    final doc = await docRef.get();
+    if (doc.exists) {
+      // Cập nhật lastSeen để tính DAU
+      await docRef.update({'lastSeen': FieldValue.serverTimestamp()});
+      return;
+    }
+    // Lấy thông tin từ Firebase Auth
+    final user = _auth.currentUser;
+    final email = user?.email ?? '';
+    final displayName = user?.displayName ?? '';
+    final username = displayName.isNotEmpty
+        ? displayName.toLowerCase().replaceAll(' ', '_')
+        : email.split('@').first;
+
+    await docRef.set({
+      'username': username,
+      'email': email,
+      'displayName': displayName,
+      'tier': 'FREE',
+      'totalTrades': 0,
+      'winRate': 0.0,
+      'rank': 0,
+      'avatarUrl': user?.photoURL ?? '',
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastSeen': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Stream profile — đọc thẳng từ Firestore thật.
+  Stream<UserProfile> getUserProfile(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) {
+        // Profile chưa được seed — trả về profile trống (không mock)
+        final user = _auth.currentUser;
+        return UserProfile(
+          username: user?.email?.split('@').first ?? 'trader',
+          email: user?.email ?? '',
+          tier: 'FREE',
+          totalTrades: 0,
+          winRate: 0.0,
+          rank: 0,
+          avatarUrl: user?.photoURL ?? '',
+        );
+      }
+      return UserProfile(
+        username: data['username'] ?? '',
+        email: data['email'] ?? '',
+        tier: data['tier'] ?? 'FREE',
+        totalTrades: (data['totalTrades'] ?? 0).toInt(),
+        winRate: (data['winRate'] ?? 0).toDouble(),
+        rank: (data['rank'] ?? 0).toInt(),
+        avatarUrl: data['avatarUrl'] ?? '',
+      );
+    });
+  }
+
+  /// Stream broker accounts.
   Stream<List<BrokerAccount>> getBrokerAccounts(String userId) {
     return _firestore
         .collection('users')
@@ -30,6 +100,39 @@ class ProfileRepository {
     });
   }
 
+  /// Stream access quota.
+  Stream<AccessQuota> getAccessQuota(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('meta')
+        .doc('quota')
+        .snapshots()
+        .map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) {
+        // Quota mặc định cho user FREE (số thật, không phải 8420/10000 fake)
+        return const AccessQuota(
+          apiUsed: 0,
+          apiLimit: 1000,
+          backtestUsed: 0,
+          backtestLimit: 10,
+          storageUsed: 0.0,
+          storageLimit: 1.0,
+        );
+      }
+      return AccessQuota(
+        apiUsed: (data['apiUsed'] ?? 0).toInt(),
+        apiLimit: (data['apiLimit'] ?? 1000).toInt(),
+        backtestUsed: (data['backtestUsed'] ?? 0).toInt(),
+        backtestLimit: (data['backtestLimit'] ?? 10).toInt(),
+        storageUsed: (data['storageUsed'] ?? 0).toDouble(),
+        storageLimit: (data['storageLimit'] ?? 1).toDouble(),
+      );
+    });
+  }
+
+  /// Liên kết tài khoản broker MT4/MT5.
   Future<bool> linkBrokerAccount({
     required String userId,
     required String platform,
@@ -55,68 +158,41 @@ class ProfileRepository {
     }
   }
 
-  Stream<UserProfile> getUserProfile(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data();
-      if (data == null) {
-        return const UserProfile(
-          username: 'alex.vanguard_42',
-          email: 'premium.trader@kinetic.io',
-          tier: 'ENTERPRISE',
-          totalTrades: 1240,
-          winRate: 64.2,
-          rank: 12,
-          avatarUrl: '',
-        );
-      }
-      return UserProfile(
-        username: data['username'] ?? '',
-        email: data['email'] ?? '',
-        tier: data['tier'] ?? 'FREE',
-        totalTrades: (data['totalTrades'] ?? 0).toInt(),
-        winRate: (data['winRate'] ?? 0).toDouble(),
-        rank: (data['rank'] ?? 0).toInt(),
-        avatarUrl: data['avatarUrl'] ?? '',
-      );
-    });
-  }
-
-  Stream<AccessQuota> getAccessQuota(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('meta')
-        .doc('quota')
-        .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data();
-      if (data == null) {
-        return const AccessQuota(
-          apiUsed: 8420, apiLimit: 10000,
-          backtestUsed: 12, backtestLimit: 50,
-          storageUsed: 4.2, storageLimit: 20,
-        );
-      }
-      return AccessQuota(
-        apiUsed: (data['apiUsed'] ?? 0).toInt(),
-        apiLimit: (data['apiLimit'] ?? 1000).toInt(),
-        backtestUsed: (data['backtestUsed'] ?? 0).toInt(),
-        backtestLimit: (data['backtestLimit'] ?? 10).toInt(),
-        storageUsed: (data['storageUsed'] ?? 0).toDouble(),
-        storageLimit: (data['storageLimit'] ?? 1).toDouble(),
-      );
-    });
-  }
-
   Future<void> updateUsername(String userId, String newName) async {
-    await _firestore.collection('users').doc(userId).update({'username': newName});
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .update({'username': newName});
   }
 
   Future<void> toggle2FA(String userId, bool enabled) async {
-    // Logic to manage 2FA settings
+    await _firestore.collection('users').doc(userId).update({'2fa': enabled});
+  }
+
+  Future<void> savePreferences(String userId, {
+    bool? pushNotifications,
+    bool? dataSharing,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (pushNotifications != null) data['pushNotificationsEnabled'] = pushNotifications;
+    if (dataSharing != null) data['dataSharingEnabled'] = dataSharing;
+    if (data.isNotEmpty) {
+      await _firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
+    }
+  }
+
+  /// Đọc preferences từ Firestore khi load profile
+  Future<Map<String, bool>> getPreferences(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      final data = doc.data();
+      return {
+        'pushNotifications': (data?['pushNotificationsEnabled'] ?? true) as bool,
+        'dataSharing': (data?['dataSharingEnabled'] ?? true) as bool,
+        '2fa': (data?['2fa'] ?? false) as bool,
+      };
+    } catch (_) {
+      return {'pushNotifications': true, 'dataSharing': true, '2fa': false};
+    }
   }
 }

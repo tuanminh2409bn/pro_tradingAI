@@ -1,16 +1,170 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/colors.dart';
 import '../../../../data/models/trading_models.dart';
+import 'chart_tools_sidebar.dart';
 import 'dart:math' as math;
 
+// ─── Drawing Object Models ───────────────────────────────────
+enum DrawingType { trendLine, horizontalLine, verticalLine, rectangle, fibonacci, text, ruler }
+
+abstract class DrawingObject {
+  final String id;
+  DrawingType get type;
+  DrawingObject(this.id);
+}
+
+class TrendLineDrawing extends DrawingObject {
+  Offset p1; // canvas-fraction coords (0..1 in both axes mapped to price/index)
+  Offset p2;
+  bool isComplete;
+  TrendLineDrawing({required String id, required this.p1, required this.p2, this.isComplete = false}) : super(id);
+  @override DrawingType get type => DrawingType.trendLine;
+}
+
+class HorizontalLineDrawing extends DrawingObject {
+  double price;
+  HorizontalLineDrawing({required String id, required this.price}) : super(id);
+  @override DrawingType get type => DrawingType.horizontalLine;
+}
+
+class VerticalLineDrawing extends DrawingObject {
+  double xFraction; // 0..1 across chart width
+  VerticalLineDrawing({required String id, required this.xFraction}) : super(id);
+  @override DrawingType get type => DrawingType.verticalLine;
+}
+
+class RectangleDrawing extends DrawingObject {
+  Offset p1;
+  Offset p2;
+  bool isComplete;
+  RectangleDrawing({required String id, required this.p1, required this.p2, this.isComplete = false}) : super(id);
+  @override DrawingType get type => DrawingType.rectangle;
+}
+
+class FibonacciDrawing extends DrawingObject {
+  Offset p1;
+  Offset p2;
+  bool isComplete;
+  static const List<double> levels = [0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+  static const List<String> labels = ['0%', '23.6%', '38.2%', '50%', '61.8%', '78.6%', '100%'];
+  FibonacciDrawing({required String id, required this.p1, required this.p2, this.isComplete = false}) : super(id);
+  @override DrawingType get type => DrawingType.fibonacci;
+}
+
+class TextDrawing extends DrawingObject {
+  Offset position;
+  String text;
+  TextDrawing({required String id, required this.position, required this.text}) : super(id);
+  @override DrawingType get type => DrawingType.text;
+}
+
+class RulerDrawing extends DrawingObject {
+  Offset p1;
+  Offset p2;
+  bool isComplete;
+  RulerDrawing({required String id, required this.p1, required this.p2, this.isComplete = false}) : super(id);
+  @override DrawingType get type => DrawingType.ruler;
+}
+
+// ─── Coordinate helpers (shared between state & painter) ─────
+class _ChartCoords {
+  final List<Candle> candles;
+  final double scaleX;
+  final double offsetX;
+  final Size size;
+
+  static const double yAxisWidth = 60.0;
+  static const double xAxisHeight = 30.0;
+  static const double baseCandleWidth = 8.0;
+  static const double candleSpacing = 2.0;
+  static const double rightMargin = 120.0;
+
+  late final Rect chartRect;
+  late final double effectiveCandleWidth;
+  late final double effectiveSpacing;
+  late final double totalCandleWidth;
+  late final int startIndex;
+  late final int endIndex;
+  late final double maxPrice;
+  late final double minPrice;
+  late final double priceRange;
+
+  _ChartCoords({required this.candles, required this.scaleX, required this.offsetX, required this.size}) {
+    chartRect = Rect.fromLTWH(0, 0, size.width - yAxisWidth, size.height - xAxisHeight);
+    effectiveCandleWidth = baseCandleWidth * scaleX;
+    effectiveSpacing = candleSpacing * scaleX;
+    totalCandleWidth = effectiveCandleWidth + effectiveSpacing;
+
+    final double revAtLeft = (chartRect.width - rightMargin + offsetX) / totalCandleWidth;
+    final double revAtRight = (chartRect.width - rightMargin + offsetX - chartRect.width) / totalCandleWidth;
+
+    startIndex = (candles.length - 1 - revAtLeft.ceil() - 2).clamp(0, candles.length - 1);
+    endIndex = (candles.length - 1 - revAtRight.floor() + 2).clamp(0, candles.length - 1);
+
+    double mx = -double.infinity, mn = double.infinity;
+    for (int i = startIndex; i <= endIndex; i++) {
+      if (candles[i].high > mx) mx = candles[i].high;
+      if (candles[i].low < mn) mn = candles[i].low;
+    }
+    if (mx == -double.infinity) { mx = 100; mn = 0; }
+    double rng = mx - mn;
+    if (rng == 0) rng = 1;
+    mx += rng * 0.1;
+    mn -= rng * 0.1;
+    maxPrice = mx;
+    minPrice = mn;
+    priceRange = mx - mn;
+  }
+
+  double getY(double price) => chartRect.height - ((price - minPrice) / priceRange) * chartRect.height;
+
+  double getX(int index) {
+    int rev = candles.length - 1 - index;
+    return (chartRect.width - rightMargin) - (rev * totalCandleWidth) + offsetX;
+  }
+
+  /// Convert canvas pixel position to price
+  double pixelToPrice(double y) => maxPrice - (y / chartRect.height) * priceRange;
+
+  /// Convert canvas pixel position to x-fraction (0..1)
+  double pixelToXFraction(double x) => x / chartRect.width;
+
+  /// Convert x-fraction to pixel
+  double xFractionToPixel(double frac) => frac * chartRect.width;
+
+  /// Snap offset position to nearest OHLC if magnet mode
+  Offset snapToOHLC(Offset pos) {
+    if (candles.isEmpty) return pos;
+    double minDist = double.infinity;
+    Offset snapped = pos;
+    for (int i = startIndex; i <= endIndex; i++) {
+      final cx = getX(i);
+      final dist = (cx - pos.dx).abs();
+      if (dist < minDist) {
+        minDist = dist;
+        final c = candles[i];
+        final prices = [c.open, c.high, c.low, c.close];
+        double closestPrice = prices.reduce((a, b) => (getY(a) - pos.dy).abs() < (getY(b) - pos.dy).abs() ? a : b);
+        snapped = Offset(cx, getY(closestPrice));
+      }
+    }
+    return snapped;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// KINETIC CHART WIDGET
+// ═══════════════════════════════════════════════════════════
 class KineticChart extends StatefulWidget {
   final TradingSignal? signal;
   final List<Candle> candles;
+  final ChartTool activeTool;
 
   const KineticChart({
     super.key,
     this.signal,
     this.candles = const [],
+    this.activeTool = ChartTool.pointer,
   });
 
   @override
@@ -18,11 +172,230 @@ class KineticChart extends StatefulWidget {
 }
 
 class _KineticChartState extends State<KineticChart> {
+  // Pan / Zoom state
   double _scaleX = 1.0;
   double _offsetX = 0.0;
-
   double _previousScale = 1.0;
-  double _previousOffset = 0.0;
+  double _dragStartOffset = 0.0;
+  Offset _dragStartPoint = Offset.zero;
+
+  // Crosshair state
+  Offset? _crosshairPos;
+  bool _showCrosshair = false;
+
+  // Drawing state
+  final List<DrawingObject> _drawings = [];
+  DrawingObject? _inProgressDrawing;
+  int _drawingCounter = 0;
+
+  String _newId() => 'draw_${_drawingCounter++}';
+
+  void _zoom(double factor, Size size) {
+    setState(() {
+      final oldScale = _scaleX;
+      _scaleX = (_scaleX * factor).clamp(0.2, 10.0);
+      
+      final chartWidth = size.width - _ChartCoords.yAxisWidth;
+      final effectiveCandleWidth = _ChartCoords.baseCandleWidth * _scaleX;
+      final effectiveSpacing = _ChartCoords.candleSpacing * _scaleX;
+      final totalCandleWidth = effectiveCandleWidth + effectiveSpacing;
+      
+      final minOffset = -(chartWidth - _ChartCoords.rightMargin - 100.0);
+      final maxOffset = (widget.candles.length - 1) * totalCandleWidth;
+      
+      final centerX = (chartWidth - _ChartCoords.rightMargin) / 2;
+      _offsetX = (centerX - (centerX - _offsetX) * (_scaleX / oldScale)).clamp(minOffset, maxOffset);
+    });
+  }
+
+  // Tool flags
+  bool get _isMagnetOn => widget.activeTool == ChartTool.magnet;
+  bool get _isDrawingTool =>
+      widget.activeTool == ChartTool.trendLine ||
+      widget.activeTool == ChartTool.horizontalLine ||
+      widget.activeTool == ChartTool.verticalLine ||
+      widget.activeTool == ChartTool.rectangle ||
+      widget.activeTool == ChartTool.fibonacci ||
+      widget.activeTool == ChartTool.ruler;
+
+  Offset _processPos(Offset raw, _ChartCoords coords) {
+    if (_isMagnetOn || widget.activeTool == ChartTool.magnet) {
+      return coords.snapToOHLC(raw);
+    }
+    return raw;
+  }
+
+  void _handleTapDown(TapDownDetails d, _ChartCoords coords) {
+    final pos = _processPos(d.localPosition, coords);
+    if (!coords.chartRect.contains(pos)) return;
+
+    final tool = widget.activeTool;
+
+    if (tool == ChartTool.eraser) {
+      _eraseAt(pos, coords);
+      return;
+    }
+
+    if (tool == ChartTool.horizontalLine) {
+      final price = coords.pixelToPrice(pos.dy);
+      setState(() => _drawings.add(HorizontalLineDrawing(id: _newId(), price: price)));
+      return;
+    }
+
+    if (tool == ChartTool.verticalLine) {
+      final frac = coords.pixelToXFraction(pos.dx);
+      setState(() => _drawings.add(VerticalLineDrawing(id: _newId(), xFraction: frac)));
+      return;
+    }
+
+    if (tool == ChartTool.text) {
+      _showTextInputDialog(pos, coords);
+      return;
+    }
+
+    // Two-click tools: trendLine, rectangle, fibonacci, ruler
+    if (_isDrawingTool) {
+      if (_inProgressDrawing == null) {
+        // Start new drawing
+        DrawingObject newDrawing;
+        switch (tool) {
+          case ChartTool.trendLine:
+            newDrawing = TrendLineDrawing(id: _newId(), p1: pos, p2: pos);
+            break;
+          case ChartTool.rectangle:
+            newDrawing = RectangleDrawing(id: _newId(), p1: pos, p2: pos);
+            break;
+          case ChartTool.fibonacci:
+            newDrawing = FibonacciDrawing(id: _newId(), p1: pos, p2: pos);
+            break;
+          case ChartTool.ruler:
+            newDrawing = RulerDrawing(id: _newId(), p1: pos, p2: pos);
+            break;
+          default:
+            return;
+        }
+        setState(() => _inProgressDrawing = newDrawing);
+      } else {
+        // Complete drawing
+        _completeDragDrawing(pos);
+      }
+    }
+  }
+
+  void _completeDragDrawing(Offset pos) {
+    final d = _inProgressDrawing;
+    if (d == null) return;
+    setState(() {
+      if (d is TrendLineDrawing) { d.p2 = pos; d.isComplete = true; }
+      if (d is RectangleDrawing) { d.p2 = pos; d.isComplete = true; }
+      if (d is FibonacciDrawing) { d.p2 = pos; d.isComplete = true; }
+      if (d is RulerDrawing) { d.p2 = pos; d.isComplete = true; }
+      _drawings.add(d);
+      _inProgressDrawing = null;
+    });
+  }
+
+  void _handleMouseMove(PointerEvent e, _ChartCoords coords) {
+    final pos = e.localPosition;
+    if (!coords.chartRect.contains(pos)) {
+      if (_showCrosshair) setState(() => _showCrosshair = false);
+      return;
+    }
+
+    final snapped = _processPos(pos, coords);
+
+    setState(() {
+      _crosshairPos = snapped;
+      _showCrosshair = widget.activeTool == ChartTool.crosshair ||
+          widget.activeTool == ChartTool.pointer ||
+          _isDrawingTool;
+
+      // Update in-progress drawing second point
+      if (_inProgressDrawing != null) {
+        final d = _inProgressDrawing!;
+        if (d is TrendLineDrawing) d.p2 = snapped;
+        if (d is RectangleDrawing) d.p2 = snapped;
+        if (d is FibonacciDrawing) d.p2 = snapped;
+        if (d is RulerDrawing) d.p2 = snapped;
+      }
+    });
+  }
+
+  void _eraseAt(Offset pos, _ChartCoords coords) {
+    const hitRadius = 12.0;
+    setState(() {
+      _drawings.removeWhere((d) {
+        if (d is HorizontalLineDrawing) {
+          return (coords.getY(d.price) - pos.dy).abs() < hitRadius;
+        }
+        if (d is VerticalLineDrawing) {
+          return (coords.xFractionToPixel(d.xFraction) - pos.dx).abs() < hitRadius;
+        }
+        if (d is TrendLineDrawing) {
+          return _pointNearLine(pos, d.p1, d.p2, hitRadius);
+        }
+        if (d is RectangleDrawing) {
+          final r = Rect.fromPoints(d.p1, d.p2).inflate(hitRadius);
+          return r.contains(pos) && !Rect.fromPoints(d.p1, d.p2).deflate(hitRadius).contains(pos);
+        }
+        if (d is FibonacciDrawing) {
+          return _pointNearLine(pos, d.p1, d.p2, hitRadius);
+        }
+        if (d is RulerDrawing) {
+          return _pointNearLine(pos, d.p1, d.p2, hitRadius);
+        }
+        if (d is TextDrawing) {
+          return (d.position - pos).distance < hitRadius * 2;
+        }
+        return false;
+      });
+    });
+  }
+
+  bool _pointNearLine(Offset p, Offset a, Offset b, double radius) {
+    final ab = b - a;
+    final ap = p - a;
+    final len2 = ab.distanceSquared;
+    if (len2 == 0) return (p - a).distance < radius;
+    final t = (ap.dx * ab.dx + ap.dy * ab.dy) / len2;
+    final closest = a + ab * t.clamp(0.0, 1.0);
+    return (p - closest).distance < radius;
+  }
+
+  void _showTextInputDialog(Offset pos, _ChartCoords coords) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1d20),
+        title: const Text('Add Text Label', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Enter label text...',
+            hintStyle: TextStyle(color: Colors.white38),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary.withValues(alpha: 0.5))),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                setState(() => _drawings.add(TextDrawing(id: _newId(), position: pos, text: controller.text.trim())));
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Add', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,352 +408,858 @@ class _KineticChartState extends State<KineticChart> {
             children: [
               CircularProgressIndicator(color: AppColors.primary),
               SizedBox(height: 20),
-              Text(
-                'WAITING FOR MARKET DATA...',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2,
-                ),
-              ),
+              Text('WAITING FOR MARKET DATA...', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
               SizedBox(height: 8),
-              Text(
-                'Connecting to Global Data Engine...',
-                style: TextStyle(color: Colors.white24, fontSize: 10),
-              ),
+              Text('Connecting to Global Data Engine...', style: TextStyle(color: Colors.white24, fontSize: 10)),
             ],
           ),
         ),
       );
     }
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: const Color(0xFF0b0e11),
-      child: Stack(
-        children: [
-          // Lớp nền & Lưới + Lớp Vẽ Nến + Lớp Vẽ 5 Layer Chính
-          GestureDetector(
-            onScaleStart: (details) {
-              _previousScale = _scaleX;
-              _previousOffset = _offsetX;
-            },
-            onScaleUpdate: (details) {
-              setState(() {
-                _scaleX = (_previousScale * details.scale).clamp(0.2, 10.0);
-                _offsetX = _previousOffset + details.focalPointDelta.dx;
-              });
-            },
-            child: CustomPaint(
-              painter: _ChartPainter(
-                candles: widget.candles,
-                signal: widget.signal,
-                scaleX: _scaleX,
-                offsetX: _offsetX,
+    return LayoutBuilder(builder: (context, constraints) {
+      final size = Size(constraints.maxWidth, constraints.maxHeight);
+      final coords = _ChartCoords(candles: widget.candles, scaleX: _scaleX, offsetX: _offsetX, size: size);
+
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: const Color(0xFF0b0e11),
+        child: MouseRegion(
+          cursor: _getCursor(),
+          onHover: (e) => _handleMouseMove(e, coords),
+          onExit: (_) => setState(() { _showCrosshair = false; _crosshairPos = null; }),
+          child: Stack(
+            children: [
+              // Base chart gesture detector
+              GestureDetector(
+                onScaleStart: (d) {
+                  if (widget.activeTool == ChartTool.pointer || widget.activeTool == ChartTool.crosshair) {
+                    _previousScale = _scaleX;
+                    _dragStartOffset = _offsetX;
+                    _dragStartPoint = d.localFocalPoint;
+                  }
+                },
+                onScaleUpdate: (d) {
+                  if (widget.activeTool == ChartTool.pointer || widget.activeTool == ChartTool.crosshair) {
+                    setState(() {
+                      _scaleX = (_previousScale * d.scale).clamp(0.2, 10.0);
+                      
+                      final chartWidth = size.width - _ChartCoords.yAxisWidth;
+                      final effectiveCandleWidth = _ChartCoords.baseCandleWidth * _scaleX;
+                      final effectiveSpacing = _ChartCoords.candleSpacing * _scaleX;
+                      final totalCandleWidth = effectiveCandleWidth + effectiveSpacing;
+                      
+                      final minOffset = -(chartWidth - _ChartCoords.rightMargin - 100.0);
+                      final maxOffset = (widget.candles.length - 1) * totalCandleWidth;
+                      
+                      final double deltaX = d.localFocalPoint.dx - _dragStartPoint.dx;
+                      _offsetX = (_dragStartOffset + deltaX).clamp(minOffset, maxOffset);
+                    });
+                  }
+                },
+                onTapDown: (d) => _handleTapDown(d, coords),
+                child: CustomPaint(
+                  painter: _KineticChartPainter(
+                    candles: widget.candles,
+                    signal: widget.signal,
+                    scaleX: _scaleX,
+                    offsetX: _offsetX,
+                    drawings: [..._drawings, if (_inProgressDrawing != null) _inProgressDrawing!],
+                    crosshairPos: _showCrosshair ? _crosshairPos : null,
+                    activeTool: widget.activeTool,
+                  ),
+                  size: Size.infinite,
+                ),
               ),
-              size: Size.infinite,
-            ),
+
+              // Overlay widgets from signal (Wyckoff phase, HTF trend)
+              if (widget.signal != null) ..._buildOverlayWidgets(widget.signal!),
+
+              // Reset + Zoom + Erase All buttons
+              Positioned(
+                bottom: 40,
+                right: 80,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1a1d20).withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: 'Zoom In',
+                        child: IconButton(
+                          icon: const Text(
+                            '+',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          onPressed: () => _zoom(1.25, size),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ),
+                      Tooltip(
+                        message: 'Zoom Out',
+                        child: IconButton(
+                          icon: const Text(
+                            '−',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          onPressed: () => _zoom(0.8, size),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ),
+                      const Divider(color: Colors.white10, height: 8),
+                      Tooltip(
+                        message: 'Reset View',
+                        child: IconButton(
+                          icon: const Icon(Icons.refresh, color: Colors.white38, size: 18),
+                          onPressed: () => setState(() { _scaleX = 1.0; _offsetX = 0.0; }),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      ),
+                      if (_drawings.isNotEmpty) ...[
+                        const Divider(color: Colors.white10, height: 8),
+                        Tooltip(
+                          message: 'Clear All Drawings',
+                          child: IconButton(
+                            icon: const Icon(Icons.delete_sweep, color: AppColors.bear, size: 18),
+                            onPressed: () => setState(() { _drawings.clear(); _inProgressDrawing = null; }),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+
+              // Crosshair tooltip bubble
+              if (_showCrosshair && _crosshairPos != null)
+                _buildCrosshairTooltip(coords),
+            ],
           ),
-          // Nút reset view
-          Positioned(
-            bottom: 40,
-            right: 80,
-            child: IconButton(
-              icon: const Icon(Icons.refresh, color: Colors.white54),
-              onPressed: () {
-                setState(() {
-                  _scaleX = 1.0;
-                  _offsetX = 0.0;
-                });
-              },
-            ),
-          ),
-        ],
+        ),
+      );
+    });
+  }
+
+  MouseCursor _getCursor() {
+    switch (widget.activeTool) {
+      case ChartTool.crosshair: return SystemMouseCursors.precise;
+      case ChartTool.pointer: return SystemMouseCursors.grab;
+      case ChartTool.eraser: return SystemMouseCursors.noDrop;
+      case ChartTool.text: return SystemMouseCursors.text;
+      default: return SystemMouseCursors.click;
+    }
+  }
+
+  Widget _buildCrosshairTooltip(_ChartCoords coords) {
+    if (_crosshairPos == null) return const SizedBox.shrink();
+    final price = coords.pixelToPrice(_crosshairPos!.dy);
+    final priceStr = price.toStringAsFixed(price > 100 ? 2 : 5);
+
+    // Ruler: show delta
+    String? rulerInfo;
+    if (widget.activeTool == ChartTool.ruler && _inProgressDrawing is RulerDrawing) {
+      final r = _inProgressDrawing as RulerDrawing;
+      final p1Price = coords.pixelToPrice(r.p1.dy);
+      final delta = (price - p1Price);
+      final pct = p1Price != 0 ? (delta / p1Price * 100) : 0;
+      rulerInfo = '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(price > 100 ? 2 : 5)} (${pct.toStringAsFixed(2)}%)';
+    }
+
+    return Positioned(
+      left: (_crosshairPos!.dx + 12).clamp(0, double.infinity),
+      top: (_crosshairPos!.dy - 30).clamp(0, double.infinity),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1a1d20),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(priceStr, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            if (rulerInfo != null)
+              Text(rulerInfo, style: TextStyle(color: AppColors.primary, fontSize: 10)),
+          ],
+        ),
       ),
     );
   }
+
+  List<Widget> _buildOverlayWidgets(TradingSignal signal) {
+    final widgets = <Widget>[];
+    for (final layer in signal.layers) {
+      if (layer['layer'] == 5 && layer['type'] == 'overlay') {
+        final items = layer['items'] as List<dynamic>? ?? [];
+        for (final item in items) {
+          final itemMap = Map<String, dynamic>.from(item as Map);
+          if (itemMap['type'] == 'wyckoff_phase') {
+            widgets.add(Positioned(
+              bottom: 45, left: 20,
+              child: Text(itemMap['text'] ?? '', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.15), letterSpacing: 4)),
+            ));
+          }
+          if (itemMap['type'] == 'htf_trend') {
+            widgets.add(Positioned(
+              top: 10, left: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('HTF TREND', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 1.2)),
+                    const SizedBox(height: 6),
+                    _htfRow(itemMap['htf1_label'] ?? 'H4', itemMap['htf1_trend'] ?? ''),
+                    const SizedBox(height: 4),
+                    _htfRow(itemMap['htf2_label'] ?? 'D1', itemMap['htf2_trend'] ?? ''),
+                  ],
+                ),
+              ),
+            ));
+          }
+        }
+      }
+    }
+    return widgets;
+  }
+
+  Widget _htfRow(String label, String trend) {
+    final isBullish = trend.toLowerCase().contains('bullish');
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Text('$label: ', style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold)),
+      Icon(isBullish ? Icons.arrow_upward : Icons.arrow_downward, size: 12, color: isBullish ? AppColors.primary : AppColors.bear),
+      const SizedBox(width: 2),
+      Text(trend, style: TextStyle(color: isBullish ? AppColors.primary : AppColors.bear, fontSize: 11, fontWeight: FontWeight.w900)),
+    ]);
+  }
 }
 
-class _ChartPainter extends CustomPainter {
+// ═══════════════════════════════════════════════════════════
+// KINETIC CHART PAINTER
+// ═══════════════════════════════════════════════════════════
+class _KineticChartPainter extends CustomPainter {
   final List<Candle> candles;
   final TradingSignal? signal;
   final double scaleX;
   final double offsetX;
+  final List<DrawingObject> drawings;
+  final Offset? crosshairPos;
+  final ChartTool activeTool;
 
-  static const double yAxisWidth = 60.0;
-  static const double xAxisHeight = 30.0;
-  static const double baseCandleWidth = 8.0;
-  static const double candleSpacing = 2.0;
-
-  _ChartPainter({
+  _KineticChartPainter({
     required this.candles,
     required this.signal,
     required this.scaleX,
     required this.offsetX,
+    required this.drawings,
+    required this.crosshairPos,
+    required this.activeTool,
   });
+
+  // These are set in paint()
+  late _ChartCoords _c;
+  final List<Rect> _occupiedTextRects = [];
+
+  Offset _getNonOverlappingOffset(Offset preferredOffset, Size size, {double margin = 3.0}) {
+    Rect rect = Rect.fromLTWH(preferredOffset.dx, preferredOffset.dy, size.width, size.height);
+    bool hasOverlap = true;
+    int attempts = 0;
+    while (hasOverlap && attempts < 15) {
+      hasOverlap = false;
+      for (final r in _occupiedTextRects) {
+        if (rect.overlaps(r)) {
+          hasOverlap = true;
+          final shiftY = (r.bottom - rect.top) + margin;
+          rect = rect.translate(0, shiftY);
+          preferredOffset = Offset(preferredOffset.dx, preferredOffset.dy + shiftY);
+          break;
+        }
+      }
+      attempts++;
+    }
+    _occupiedTextRects.add(rect);
+    return preferredOffset;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (candles.isEmpty) {
-      print('KineticChart: Waiting for candles...');
-      return;
-    }
-    print('KineticChart: Attempting to paint ${candles.length} candles. Last Price: ${candles.last.close}');
-
-    final chartRect = Rect.fromLTWH(0, 0, size.width - yAxisWidth, size.height - xAxisHeight);
-    
-    // Khung vẽ chính, không lấn sang trục X và Y
+    if (candles.isEmpty) return;
+    _occupiedTextRects.clear();
+    _c = _ChartCoords(candles: candles, scaleX: scaleX, offsetX: offsetX, size: size);
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final effectiveCandleWidth = baseCandleWidth * scaleX;
-    final effectiveSpacing = candleSpacing * scaleX;
-    final totalCandleWidth = effectiveCandleWidth + effectiveSpacing;
-
-    // Tính toán số nến hiển thị
-    final maxVisibleCandles = (chartRect.width / totalCandleWidth).ceil() + 1;
-    
-    // OffsetX < 0 nghĩa là kéo sang trái. Nến mới nhất nằm ở bên phải cùng.
-    final rightOffset = offsetX; 
-    
-    // Tính toán index của nến
-    int endIndex = candles.length - 1 - (rightOffset / totalCandleWidth).floor();
-    if (endIndex >= candles.length) endIndex = candles.length - 1;
-    int startIndex = endIndex - maxVisibleCandles;
-    if (startIndex < 0) startIndex = 0;
-    if (endIndex < 0) endIndex = 0;
-
-    if (startIndex >= candles.length) return;
-
-    double maxPrice = -double.infinity;
-    double minPrice = double.infinity;
-
-    for (int i = startIndex; i <= endIndex; i++) {
-      if (candles[i].high > maxPrice) maxPrice = candles[i].high;
-      if (candles[i].low < minPrice) minPrice = candles[i].low;
-    }
-
-    if (maxPrice == -double.infinity || minPrice == double.infinity) {
-      maxPrice = 100;
-      minPrice = 0;
-    }
-
-    double priceRange = maxPrice - minPrice;
-    if (priceRange == 0) priceRange = 1;
-    
-    // Thêm padding cho Y axis
-    maxPrice += priceRange * 0.1;
-    minPrice -= priceRange * 0.1;
-    priceRange = maxPrice - minPrice;
-
-    double getY(double price) {
-      return chartRect.height - ((price - minPrice) / priceRange) * chartRect.height;
-    }
-
-    double getX(int index) {
-      int reversedIndex = candles.length - 1 - index;
-      return chartRect.width - (reversedIndex * totalCandleWidth) - (totalCandleWidth / 2) + rightOffset;
-    }
-
-    // 1. VẼ NỀN & LƯỚI (Grid)
-    _drawGrid(canvas, chartRect, maxPrice, minPrice, priceRange, getY);
+    _drawGrid(canvas);
 
     canvas.save();
-    canvas.clipRect(chartRect); // Clip riêng phần biểu đồ nến
+    canvas.clipRect(_c.chartRect);
 
-    // 2. VẼ LAYER 1 & 5 (Structures & Ghost Overlay)
-    _drawBackgroundLayers(canvas, chartRect, size, getY);
-
-    // 3. VẼ LAYER 3 (Candlestick Mapping)
-    for (int i = startIndex; i <= endIndex; i++) {
-      final candle = candles[i];
-      final x = getX(i);
-
-      if (x < -totalCandleWidth || x > chartRect.width + totalCandleWidth) continue;
-
-      final openY = getY(candle.open);
-      final closeY = getY(candle.close);
-      final highY = getY(candle.high);
-      final lowY = getY(candle.low);
-
-      // Thêm Logic "Color Mapping" Cyberpunk
-      // Giả lập logic AI trả về: Nến có biên độ bất thường thì đổi màu
-      bool isVolatile = (candle.high - candle.low) / candle.open > 0.005; // 0.5% fluctuation
-      
-      Color candleColor;
-      if (isVolatile) {
-        candleColor = candle.close >= candle.open ? const Color(0xFF8A2BE2) : const Color(0xFFBA55D3); // Nến tím
-      } else {
-        candleColor = candle.close >= candle.open ? AppColors.primary : AppColors.bear;
-      }
-      
-      final paint = Paint()
-        ..color = candleColor
-        ..strokeWidth = 1.5 * scaleX.clamp(0.5, 2.0)
-        ..style = PaintingStyle.fill;
-
-      // Vẽ râu nến (Wick)
-      canvas.drawLine(Offset(x, highY), Offset(x, lowY), paint);
-
-      // Vẽ thân nến (Body)
-      double bodyTop = math.min(openY, closeY);
-      double bodyBottom = math.max(openY, closeY);
-      double bodyHeight = math.max(1.0, bodyBottom - bodyTop);
-      
-      canvas.drawRect(
-        Rect.fromLTWH(x - (effectiveCandleWidth / 2), bodyTop, effectiveCandleWidth, bodyHeight),
-        paint,
-      );
+    // Signal layers
+    if (signal != null && signal!.layers.isNotEmpty) {
+      _renderLayer5Background(canvas, signal!.layers);
+      _renderLayer1StructureZones(canvas, signal!.layers);
     }
 
-    // 4. VẼ LAYER 2 & 4 (Execution & Traps)
+    final layer3Items = _getLayer3Items();
+    _drawCandles(canvas, layer3Items);
+
+    if (signal != null && signal!.layers.isNotEmpty) {
+      _renderLayer1StructureLabels(canvas, signal!.layers);
+      _renderLayer2Warnings(canvas, signal!.layers);
+    }
+
     if (signal != null) {
-      _drawExecutionLayers(canvas, chartRect, signal!, getY);
+      if (signal!.layers.isNotEmpty) {
+        _renderLayer4Execution(canvas, signal!.layers);
+      } else {
+        _drawLegacyExecutionLines(canvas, signal!);
+      }
     }
 
-    canvas.restore(); // Kết thúc vùng clip biểu đồ nến
+    // User drawings
+    _paintDrawings(canvas, size);
 
-    // 5. VẼ TRỤC Y (Price)
-    _drawYAxis(canvas, size, chartRect, maxPrice, minPrice, getY);
+    // Crosshair
+    if (crosshairPos != null) _paintCrosshair(canvas, size);
 
-    // 6. VẼ TRỤC X (Time)
-    _drawXAxis(canvas, size, chartRect, startIndex, endIndex, getX);
+    canvas.restore();
+
+    _drawYAxis(canvas, size);
+    _drawXAxis(canvas, size);
   }
 
-  void _drawGrid(Canvas canvas, Rect chartRect, double maxPrice, double minPrice, double priceRange, double Function(double) getY) {
-    final gridPaint = Paint()
-      ..color = const Color(0xFF434655).withOpacity(0.1)
-      ..strokeWidth = 1.0;
+  // ─── User Drawings ───────────────────────────────────────
+  void _paintDrawings(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.9)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
 
-    int gridLinesY = 8;
-    double priceStep = priceRange / gridLinesY;
-    for (int i = 0; i <= gridLinesY; i++) {
-      double price = minPrice + i * priceStep;
-      double y = getY(price);
-      canvas.drawLine(Offset(0, y), Offset(chartRect.width, y), gridPaint);
+    for (final d in drawings) {
+      switch (d.type) {
+        case DrawingType.horizontalLine:
+          _paintHorizontalLine(canvas, d as HorizontalLineDrawing, linePaint);
+          break;
+        case DrawingType.verticalLine:
+          _paintVerticalLine(canvas, d as VerticalLineDrawing, linePaint);
+          break;
+        case DrawingType.trendLine:
+          _paintTrendLine(canvas, d as TrendLineDrawing, linePaint);
+          break;
+        case DrawingType.rectangle:
+          _paintRectangle(canvas, d as RectangleDrawing, linePaint);
+          break;
+        case DrawingType.fibonacci:
+          _paintFibonacci(canvas, d as FibonacciDrawing);
+          break;
+        case DrawingType.ruler:
+          _paintRuler(canvas, d as RulerDrawing);
+          break;
+        case DrawingType.text:
+          _paintText(canvas, d as TextDrawing);
+          break;
+      }
+    }
+  }
+
+  void _paintHorizontalLine(Canvas canvas, HorizontalLineDrawing d, Paint paint) {
+    final y = _c.getY(d.price);
+    if (y < 0 || y > _c.chartRect.height) return;
+    _drawDashedLine(canvas, Offset(0, y), Offset(_c.chartRect.width, y),
+        Paint()..color = AppColors.primary..strokeWidth = 1.0..style = PaintingStyle.stroke);
+    // Price label
+    _drawLabel(canvas, Offset(_c.chartRect.width - 65, y - 9),
+        d.price.toStringAsFixed(d.price > 100 ? 2 : 5), AppColors.primary, Colors.black);
+  }
+
+  void _paintVerticalLine(Canvas canvas, VerticalLineDrawing d, Paint paint) {
+    final x = _c.xFractionToPixel(d.xFraction);
+    _drawDashedLine(canvas, Offset(x, 0), Offset(x, _c.chartRect.height), paint);
+  }
+
+  void _paintTrendLine(Canvas canvas, TrendLineDrawing d, Paint paint) {
+    // Extend line beyond endpoints (like TradingView)
+    final dx = d.p2.dx - d.p1.dx;
+    final dy = d.p2.dy - d.p1.dy;
+    if (dx.abs() < 0.001) {
+      canvas.drawLine(Offset(d.p1.dx, 0), Offset(d.p1.dx, _c.chartRect.height), paint);
+      return;
+    }
+    // Extend to chart edges
+    final slope = dy / dx;
+    final x0 = 0.0;
+    final x1 = _c.chartRect.width;
+    final y0 = d.p1.dy + slope * (x0 - d.p1.dx);
+    final y1 = d.p1.dy + slope * (x1 - d.p1.dx);
+    canvas.drawLine(Offset(x0, y0), Offset(x1, y1), paint);
+    // Anchor dots
+    canvas.drawCircle(d.p1, 4, Paint()..color = AppColors.primary);
+    canvas.drawCircle(d.p2, 4, Paint()..color = AppColors.primary);
+  }
+
+  void _paintRectangle(Canvas canvas, RectangleDrawing d, Paint paint) {
+    final rect = Rect.fromPoints(d.p1, d.p2);
+    canvas.drawRect(rect, Paint()..color = AppColors.primary.withValues(alpha: 0.08)..style = PaintingStyle.fill);
+    canvas.drawRect(rect, paint);
+  }
+
+  void _paintFibonacci(Canvas canvas, FibonacciDrawing d) {
+    final priceTop = _c.pixelToPrice(d.p1.dy);
+    final priceBottom = _c.pixelToPrice(d.p2.dy);
+    final priceRange = priceTop - priceBottom;
+
+    final fibColors = [
+      Colors.white38, const Color(0xFFF0E68C), const Color(0xFFFF9800),
+      AppColors.primary, const Color(0xFFFF5252), AppColors.bear, Colors.white54,
+    ];
+
+    for (int i = 0; i < FibonacciDrawing.levels.length; i++) {
+      final level = FibonacciDrawing.levels[i];
+      final price = priceTop - (priceRange * level);
+      final y = _c.getY(price);
+      if (y < 0 || y > _c.chartRect.height) continue;
+
+      final color = fibColors[i % fibColors.length];
+      canvas.drawLine(
+        Offset(math.min(d.p1.dx, d.p2.dx), y),
+        Offset(_c.chartRect.width, y),
+        Paint()..color = color.withValues(alpha: 0.7)..strokeWidth = 1.0,
+      );
+
+      // Fill between levels
+      if (i < FibonacciDrawing.levels.length - 1) {
+        final nextLevel = FibonacciDrawing.levels[i + 1];
+        final nextPrice = priceTop - (priceRange * nextLevel);
+        final nextY = _c.getY(nextPrice);
+        canvas.drawRect(
+          Rect.fromLTRB(math.min(d.p1.dx, d.p2.dx), y, _c.chartRect.width, nextY.clamp(0.0, _c.chartRect.height)),
+          Paint()..color = color.withValues(alpha: 0.03)..style = PaintingStyle.fill,
+        );
+      }
+
+      // Label
+      _drawText(canvas, '${FibonacciDrawing.labels[i]}  ${price.toStringAsFixed(price > 100 ? 2 : 5)}',
+          Offset(_c.chartRect.width - 110, y - 8), color, 9, fontWeight: FontWeight.bold);
     }
 
-    double xStep = chartRect.width / 6;
+    // Anchor handles
+    canvas.drawCircle(d.p1, 4, Paint()..color = const Color(0xFFF0E68C));
+    canvas.drawCircle(d.p2, 4, Paint()..color = const Color(0xFFF0E68C));
+  }
+
+  void _paintRuler(Canvas canvas, RulerDrawing d) {
+    final p1Price = _c.pixelToPrice(d.p1.dy);
+    final p2Price = _c.pixelToPrice(d.p2.dy);
+    final delta = p2Price - p1Price;
+    final pct = p1Price != 0 ? (delta / p1Price * 100) : 0;
+    final sign = delta >= 0 ? '+' : '';
+
+    // Main ruler line
+    canvas.drawLine(d.p1, d.p2, Paint()..color = const Color(0xFFF0E68C).withValues(alpha: 0.9)..strokeWidth = 1.5);
+
+    // Horizontal dashes at endpoints
+    canvas.drawLine(Offset(d.p1.dx - 8, d.p1.dy), Offset(d.p1.dx + 8, d.p1.dy),
+        Paint()..color = const Color(0xFFF0E68C)..strokeWidth = 2);
+    canvas.drawLine(Offset(d.p2.dx - 8, d.p2.dy), Offset(d.p2.dx + 8, d.p2.dy),
+        Paint()..color = const Color(0xFFF0E68C)..strokeWidth = 2);
+
+    // Measurement label
+    final midX = (d.p1.dx + d.p2.dx) / 2;
+    final midY = (d.p1.dy + d.p2.dy) / 2;
+    final label = '$sign${delta.toStringAsFixed(delta.abs() > 100 ? 2 : 5)} ($sign${pct.toStringAsFixed(2)}%)';
+    _drawLabel(canvas, Offset(midX - 60, midY - 10), label, const Color(0xFFF0E68C).withValues(alpha: 0.9), Colors.black);
+  }
+
+  void _paintText(Canvas canvas, TextDrawing d) {
+    _drawText(canvas, d.text, d.position, AppColors.primary, 13, fontWeight: FontWeight.bold);
+  }
+
+  void _paintCrosshair(Canvas canvas, Size size) {
+    if (crosshairPos == null) return;
+    final x = crosshairPos!.dx;
+    final y = crosshairPos!.dy;
+    final crossPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.35)
+      ..strokeWidth = 1.0;
+
+    // Vertical line
+    canvas.drawLine(Offset(x, 0), Offset(x, _c.chartRect.height), crossPaint);
+    // Horizontal line
+    canvas.drawLine(Offset(0, y), Offset(_c.chartRect.width, y), crossPaint);
+
+    // Price tag on Y-axis
+    final price = _c.pixelToPrice(y);
+    final priceStr = price.toStringAsFixed(price > 100 ? 2 : 5);
+    final tp = TextPainter(
+      text: TextSpan(text: priceStr, style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    canvas.drawRect(
+      Rect.fromLTWH(_c.chartRect.width, y - 10, _ChartCoords.yAxisWidth, 20),
+      Paint()..color = Colors.white.withValues(alpha: 0.6),
+    );
+    tp.paint(canvas, Offset(_c.chartRect.width + 4, y - 7));
+  }
+
+  // ─── (All original painting methods preserved below) ─────
+
+  void _drawGrid(Canvas canvas) {
+    final gridPaint = Paint()..color = const Color(0xFF434655).withValues(alpha: 0.1)..strokeWidth = 1.0;
+    const gridLinesY = 8;
+    final priceStep = _c.priceRange / gridLinesY;
+    for (int i = 0; i <= gridLinesY; i++) {
+      final price = _c.minPrice + i * priceStep;
+      canvas.drawLine(Offset(0, _c.getY(price)), Offset(_c.chartRect.width, _c.getY(price)), gridPaint);
+    }
+    final xStep = _c.chartRect.width / 6;
     for (int i = 0; i <= 6; i++) {
-      double x = i * xStep;
-      canvas.drawLine(Offset(x, 0), Offset(x, chartRect.height), gridPaint);
+      final x = i * xStep;
+      canvas.drawLine(Offset(x, 0), Offset(x, _c.chartRect.height), gridPaint);
     }
   }
 
-  void _drawYAxis(Canvas canvas, Size size, Rect chartRect, double maxPrice, double minPrice, double Function(double) getY) {
-    final bgPaint = Paint()..color = const Color(0xFF0b0e11);
-    canvas.drawRect(Rect.fromLTWH(chartRect.width, 0, yAxisWidth, size.height), bgPaint);
+  void _renderLayer5Background(Canvas canvas, List<Map<String, dynamic>> layers) {
+    for (final layer in layers) {
+      if (layer['layer'] != 5) continue;
+      final items = _getItems(layer);
+      for (final item in items) {
+        final type = item['type'] ?? '';
+        if (type == 'ghost_box') {
+          final priceTop = (item['price_top'] as num?)?.toDouble();
+          final priceBottom = (item['price_bottom'] as num?)?.toDouble();
+          if (priceTop == null || priceBottom == null) continue;
+          final zoneType = item['zone_type'] ?? 'danger';
+          final color = zoneType == 'danger' ? AppColors.bear : AppColors.primary;
+          final label = item['label'] ?? '';
+          final top = _c.getY(priceTop);
+          final bottom = _c.getY(priceBottom);
+          canvas.drawRect(Rect.fromLTRB(0, top, _c.chartRect.width, bottom), Paint()..color = color.withValues(alpha: 0.05)..style = PaintingStyle.fill);
+          _drawDashedRect(canvas, Rect.fromLTRB(10, top, _c.chartRect.width - 10, bottom), Paint()..color = color.withValues(alpha: 0.25)..style = PaintingStyle.stroke..strokeWidth = 1.0);
+          _drawLabel(canvas, Offset(15, top + 5), '#$label', color.withValues(alpha: 0.4), Colors.white70);
+        }
+        if (type == 'news_column') {
+          canvas.drawRect(Rect.fromLTWH(_c.chartRect.width - 40, 0, 40, _c.chartRect.height),
+              Paint()..color = AppColors.bear.withValues(alpha: 0.08)..style = PaintingStyle.fill);
+          _drawLabel(canvas, Offset(_c.chartRect.width - 38, 8), item['text'] ?? 'NEWS', AppColors.bear.withValues(alpha: 0.5), Colors.white);
+        }
+      }
+    }
+  }
 
-    canvas.drawLine(Offset(chartRect.width, 0), Offset(chartRect.width, chartRect.height), Paint()..color = Colors.white10);
+  void _renderLayer1StructureZones(Canvas canvas, List<Map<String, dynamic>> layers) {
+    for (final layer in layers) {
+      if (layer['layer'] != 1) continue;
+      final items = _getItems(layer);
+      for (final item in items) {
+        final color = _parseColor(item['color'] ?? 'green_opacity');
+        if (item.containsKey('price_top') && item.containsKey('price_bottom')) {
+          final top = _c.getY((item['price_top'] as num).toDouble());
+          final bottom = _c.getY((item['price_bottom'] as num).toDouble());
+          final left = _getXFromTime(item['time_start'] as int? ?? 0);
+          final right = _getXFromTime(item['time_end'] as int? ?? 0);
+          canvas.drawRect(Rect.fromLTRB(left, top, right, bottom), Paint()..color = color.withValues(alpha: 0.08)..style = PaintingStyle.fill);
+          canvas.drawRect(Rect.fromLTRB(left, top, right, bottom), Paint()..color = color.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1.0);
+        } else if (item.containsKey('price_y')) {
+          final y = _c.getY((item['price_y'] as num).toDouble());
+          final x = _getXFromTime(item['time_x'] as int? ?? 0);
+          _drawDashedLine(canvas, Offset(x, y), Offset(_c.chartRect.width, y), Paint()..color = color..strokeWidth = 1.0);
+        }
+      }
+    }
+  }
 
-    int gridLinesY = 8;
-    double priceStep = (maxPrice - minPrice) / gridLinesY;
+  void _renderLayer1StructureLabels(Canvas canvas, List<Map<String, dynamic>> layers) {
+    for (final layer in layers) {
+      if (layer['layer'] != 1) continue;
+      final items = _getItems(layer);
+      for (final item in items) {
+        final label = item['label'] ?? '';
+        final color = _parseColor(item['color'] ?? 'green_opacity');
+        if (item.containsKey('price_top') && item.containsKey('price_bottom')) {
+          final top = _c.getY((item['price_top'] as num).toDouble());
+          final left = _getXFromTime(item['time_start'] as int? ?? 0);
+          _drawLabel(canvas, Offset(left + 4, top + 3), label, color.withValues(alpha: 0.6), Colors.white);
+        } else if (item.containsKey('price_y')) {
+          final y = _c.getY((item['price_y'] as num).toDouble());
+          final x = _getXFromTime(item['time_x'] as int? ?? 0);
+          _drawLabel(canvas, Offset(x + 2, y - 12), label, color, Colors.black);
+        }
+      }
+    }
+  }
+
+  void _renderLayer2Warnings(Canvas canvas, List<Map<String, dynamic>> layers) {
+    for (final layer in layers) {
+      if (layer['layer'] != 2) continue;
+      for (final item in _getItems(layer)) {
+        final color = _parseColor(item['color'] ?? 'yellow');
+        final x = _getXFromTime(item['time_x'] as int? ?? 0);
+        final y = _c.getY((item['price_y'] as num?)?.toDouble() ?? 0);
+        _drawText(canvas, _getIconString(item['icon'] ?? 'arrow'), Offset(x - 8, y - 20), color, 16, fontWeight: FontWeight.bold);
+        _drawLabel(canvas, Offset(x - 4, y + 4), item['text'] ?? '', color.withValues(alpha: 0.7), Colors.white);
+      }
+    }
+  }
+
+  Map<int, Map<String, dynamic>> _getLayer3Items() {
+    final overrides = <int, Map<String, dynamic>>{};
+    if (signal == null) return overrides;
+    for (final layer in signal!.layers) {
+      if (layer['layer'] != 3) continue;
+      for (final item in _getItems(layer)) {
+        overrides[item['candle_time'] as int? ?? 0] = Map<String, dynamic>.from(item);
+      }
+    }
+    return overrides;
+  }
+
+  void _drawCandles(Canvas canvas, Map<int, Map<String, dynamic>> layer3) {
+    for (int i = _c.startIndex; i <= _c.endIndex; i++) {
+      final candle = candles[i];
+      final x = _c.getX(i);
+      if (x < -_c.totalCandleWidth || x > _c.chartRect.width + _c.totalCandleWidth) continue;
+      final openY = _c.getY(candle.open);
+      final closeY = _c.getY(candle.close);
+      final highY = _c.getY(candle.high);
+      final lowY = _c.getY(candle.low);
+      final override = layer3[candle.timestamp.millisecondsSinceEpoch ~/ 1000];
+      Color candleColor;
+      String? labelBottom;
+      if (override != null) {
+        candleColor = _parseColor(override['fill_color'] ?? 'purple');
+        labelBottom = override['label_bottom'];
+      } else {
+        bool isVolatile = (candle.high - candle.low) / candle.open > 0.005;
+        candleColor = isVolatile
+            ? (candle.close >= candle.open ? const Color(0xFF8A2BE2) : const Color(0xFFBA55D3))
+            : (candle.close >= candle.open ? AppColors.primary : AppColors.bear);
+      }
+      final paint = Paint()..color = candleColor..strokeWidth = 1.5 * scaleX.clamp(0.5, 2.0)..style = PaintingStyle.fill;
+      canvas.drawLine(Offset(x, highY), Offset(x, lowY), paint);
+      final bodyTop = math.min(openY, closeY);
+      final bodyHeight = math.max(1.0, math.max(openY, closeY) - bodyTop);
+      canvas.drawRect(Rect.fromLTWH(x - (_c.effectiveCandleWidth / 2), bodyTop, _c.effectiveCandleWidth, bodyHeight), paint);
+      if (labelBottom != null) _drawText(canvas, labelBottom, Offset(x - 10, lowY + 4), candleColor, 8, fontWeight: FontWeight.bold);
+    }
+  }
+
+  void _renderLayer4Execution(Canvas canvas, List<Map<String, dynamic>> layers) {
+    final List<_RightLabel> labels = [];
+    for (final layer in layers) {
+      if (layer['layer'] != 4) continue;
+      final entryLine = layer['entry_line'];
+      if (entryLine != null) {
+        final double price = (entryLine['price'] as num).toDouble();
+        final y = _c.getY(price);
+        final color = _parseColor(entryLine['color'] ?? 'cyan');
+        canvas.drawLine(Offset(0, y), Offset(_c.chartRect.width, y), Paint()..color = color..strokeWidth = 1.5);
+        labels.add(_RightLabel(
+          text: '${price.toStringAsFixed(price > 100 ? 2 : 5)} (${signal?.probability}%)',
+          targetY: y,
+          bgColor: color,
+          textColor: Colors.black,
+          isBadge: true,
+          badgeTitle: 'ENTRY',
+        ));
+      }
+      final slLine = layer['sl_line'];
+      if (slLine != null) {
+        final double price = (slLine['price'] as num).toDouble();
+        final y = _c.getY(price);
+        _drawDashedLine(canvas, Offset(0, y), Offset(_c.chartRect.width, y), Paint()..color = AppColors.bear..strokeWidth = 1.5);
+        labels.add(_RightLabel(
+          text: 'SL: ${price.toStringAsFixed(price > 100 ? 2 : 5)}',
+          targetY: y,
+          bgColor: AppColors.bear,
+          textColor: Colors.white,
+        ));
+      }
+      final tpLines = layer['tp_lines'] as List<dynamic>? ?? [];
+      for (final tp in tpLines) {
+        final tpMap = Map<String, dynamic>.from(tp as Map);
+        final double price = (tpMap['price'] as num).toDouble();
+        final y = _c.getY(price);
+        final label = tpMap['label'] ?? 'TP';
+        _drawDashedLine(canvas, Offset(0, y), Offset(_c.chartRect.width, y), Paint()..color = const Color(0xFF3772FF)..strokeWidth = 1.0);
+        labels.add(_RightLabel(
+          text: '$label: ${price.toStringAsFixed(price > 100 ? 2 : 5)}',
+          targetY: y,
+          bgColor: const Color(0xFF3772FF),
+          textColor: Colors.white,
+        ));
+      }
+      final curves = layer['curves'] as List<dynamic>? ?? [];
+      for (final curve in curves) {
+        _drawBezierCurve(canvas, Map<String, dynamic>.from(curve as Map));
+      }
+    }
+
+    _resolveOverlap(labels);
+
+    for (final label in labels) {
+      if (label.isBadge) {
+        _drawRightAlignedBadge(canvas, _c.chartRect.width - 6, label.actualY - 10, label.badgeTitle ?? 'ENTRY', label.text, label.bgColor);
+      } else {
+        _drawRightAlignedLabel(canvas, _c.chartRect.width - 6, label.actualY - 8, label.text, label.bgColor, label.textColor);
+      }
+    }
+  }
+
+  void _drawLegacyExecutionLines(Canvas canvas, TradingSignal signal) {
+    final List<_RightLabel> labels = [];
+    final entryPrice = signal.entryPrice;
+    final entryY = _c.getY(entryPrice);
+    canvas.drawLine(Offset(0, entryY), Offset(_c.chartRect.width, entryY), Paint()..color = AppColors.primary..strokeWidth = 1.5);
+    labels.add(_RightLabel(
+      text: '${entryPrice.toStringAsFixed(entryPrice > 100 ? 2 : 5)} (${signal.probability}%)',
+      targetY: entryY,
+      bgColor: AppColors.primary,
+      textColor: Colors.black,
+      isBadge: true,
+      badgeTitle: 'ENTRY',
+    ));
+    
+    final slPrice = signal.slPrice;
+    final slY = _c.getY(slPrice);
+    _drawDashedLine(canvas, Offset(0, slY), Offset(_c.chartRect.width, slY), Paint()..color = AppColors.bear..strokeWidth = 1.5);
+    labels.add(_RightLabel(
+      text: 'SL: ${slPrice.toStringAsFixed(slPrice > 100 ? 2 : 5)}',
+      targetY: slY,
+      bgColor: AppColors.bear,
+      textColor: Colors.white,
+    ));
+    
+    if (signal.tpPrices.isNotEmpty) {
+      final tpPrice = signal.tpPrices.first;
+      final tpY = _c.getY(tpPrice);
+      _drawDashedLine(canvas, Offset(0, tpY), Offset(_c.chartRect.width, tpY), Paint()..color = const Color(0xFF3772FF)..strokeWidth = 1.5);
+      labels.add(_RightLabel(
+        text: 'TP: ${tpPrice.toStringAsFixed(tpPrice > 100 ? 2 : 5)}',
+        targetY: tpY,
+        bgColor: const Color(0xFF3772FF),
+        textColor: Colors.white,
+      ));
+    }
+
+    _resolveOverlap(labels);
+
+    for (final label in labels) {
+      if (label.isBadge) {
+        _drawRightAlignedBadge(canvas, _c.chartRect.width - 6, label.actualY - 10, label.badgeTitle ?? 'ENTRY', label.text, label.bgColor);
+      } else {
+        _drawRightAlignedLabel(canvas, _c.chartRect.width - 6, label.actualY - 8, label.text, label.bgColor, label.textColor);
+      }
+    }
+  }
+
+  void _resolveOverlap(List<_RightLabel> labels) {
+    if (labels.isEmpty) return;
+    labels.sort((a, b) => a.targetY.compareTo(b.targetY));
+    const minSpacing = 28.0;
+    for (int i = 1; i < labels.length; i++) {
+      if (labels[i].actualY < labels[i - 1].actualY + minSpacing) {
+        labels[i].actualY = labels[i - 1].actualY + minSpacing;
+      }
+    }
+    final maxHeight = _c.chartRect.height - 15.0;
+    if (labels.last.actualY > maxHeight) {
+      labels.last.actualY = maxHeight;
+      for (int i = labels.length - 2; i >= 0; i--) {
+        if (labels[i].actualY > labels[i + 1].actualY - minSpacing) {
+          labels[i].actualY = labels[i + 1].actualY - minSpacing;
+        }
+      }
+    }
+  }
+
+  void _drawRightAlignedLabel(Canvas canvas, double rightX, double y, String text, Color bgColor, Color textColor) {
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final startX = rightX - tp.width - 10;
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(startX - 6, y - 4, tp.width + 12, tp.height + 8), const Radius.circular(4)),
+        Paint()..color = bgColor);
+    tp.paint(canvas, Offset(startX, y));
+  }
+
+  void _drawRightAlignedBadge(Canvas canvas, double rightX, double y, String title, String value, Color color) {
+    final tp = TextPainter(
+      text: TextSpan(text: '$title | $value', style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final startX = rightX - tp.width - 14;
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(startX - 8, y - 6, tp.width + 16, tp.height + 12), const Radius.circular(6)),
+        Paint()..color = color);
+    tp.paint(canvas, Offset(startX, y));
+  }
+
+  void _drawYAxis(Canvas canvas, Size size) {
+    canvas.drawRect(Rect.fromLTWH(_c.chartRect.width, 0, _ChartCoords.yAxisWidth, size.height), Paint()..color = const Color(0xFF0b0e11));
+    canvas.drawLine(Offset(_c.chartRect.width, 0), Offset(_c.chartRect.width, _c.chartRect.height), Paint()..color = Colors.white10);
+    const gridLinesY = 8;
+    final priceStep = _c.priceRange / gridLinesY;
     for (int i = 0; i <= gridLinesY; i++) {
-      double price = minPrice + i * priceStep;
-      double y = getY(price);
-      
-      _drawText(canvas, price.toStringAsFixed(3), Offset(chartRect.width + 5, y - 6), Colors.white54, 10);
+      final price = _c.minPrice + i * priceStep;
+      _drawText(canvas, price.toStringAsFixed(price > 100 ? 2 : 5), Offset(_c.chartRect.width + 5, _c.getY(price) - 6), Colors.white54, 11);
     }
-    
-    // Current price indicator
     if (candles.isNotEmpty) {
-      double lastPrice = candles.last.close;
-      double lastY = getY(lastPrice);
-      Color pColor = candles.last.close >= candles.last.open ? AppColors.primary : AppColors.bear;
-      
-      canvas.drawRect(Rect.fromLTWH(chartRect.width, lastY - 10, yAxisWidth, 20), Paint()..color = pColor);
-      _drawText(canvas, lastPrice.toStringAsFixed(3), Offset(chartRect.width + 5, lastY - 6), Colors.white, 10, fontWeight: FontWeight.bold);
-      
-      final dashedPaint = Paint()..color = pColor..strokeWidth = 1.0;
-      _drawDashedLine(canvas, Offset(0, lastY), Offset(chartRect.width, lastY), dashedPaint);
+      final lastPrice = candles.last.close;
+      final lastY = _c.getY(lastPrice);
+      final pColor = candles.last.close >= candles.last.open ? AppColors.primary : AppColors.bear;
+      canvas.drawRect(Rect.fromLTWH(_c.chartRect.width, lastY - 11, _ChartCoords.yAxisWidth, 22), Paint()..color = pColor);
+      _drawText(canvas, lastPrice.toStringAsFixed(lastPrice > 100 ? 2 : 5), Offset(_c.chartRect.width + 5, lastY - 7), Colors.white, 11, fontWeight: FontWeight.bold);
+      _drawDashedLine(canvas, Offset(0, lastY), Offset(_c.chartRect.width, lastY), Paint()..color = pColor..strokeWidth = 1.0);
     }
   }
 
-  void _drawXAxis(Canvas canvas, Size size, Rect chartRect, int startIndex, int endIndex, double Function(int) getX) {
-    final bgPaint = Paint()..color = const Color(0xFF0b0e11);
-    canvas.drawRect(Rect.fromLTWH(0, chartRect.height, size.width, xAxisHeight), bgPaint);
-
-    canvas.drawLine(Offset(0, chartRect.height), Offset(chartRect.width, chartRect.height), Paint()..color = Colors.white10);
-
-    int step = ((endIndex - startIndex) / 5).ceil();
+  void _drawXAxis(Canvas canvas, Size size) {
+    canvas.drawRect(Rect.fromLTWH(0, _c.chartRect.height, size.width, _ChartCoords.xAxisHeight), Paint()..color = const Color(0xFF0b0e11));
+    canvas.drawLine(Offset(0, _c.chartRect.height), Offset(_c.chartRect.width, _c.chartRect.height), Paint()..color = Colors.white10);
+    int step = ((_c.endIndex - _c.startIndex) / 5).ceil();
     if (step < 1) step = 1;
-
-    for (int i = startIndex; i <= endIndex; i += step) {
-      double x = getX(i);
-      if (x < 0 || x > chartRect.width) continue;
-      
-      DateTime time = candles[i].timestamp;
-      String hh = time.hour.toString().padLeft(2, '0');
-      String mm = time.minute.toString().padLeft(2, '0');
-      
-      _drawText(canvas, '$hh:$mm', Offset(x - 15, chartRect.height + 8), Colors.white54, 10);
-      
-      canvas.drawLine(Offset(x, chartRect.height), Offset(x, chartRect.height + 4), Paint()..color = Colors.white54);
+    for (int i = _c.startIndex; i <= _c.endIndex; i += step) {
+      final x = _c.getX(i);
+      if (x < 0 || x > _c.chartRect.width) continue;
+      final time = candles[i].timestamp;
+      final label = '${time.day.toString().padLeft(2, '0')}/${time.month.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: const TextStyle(color: Colors.white54, fontSize: 10)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(x - tp.width / 2, _c.chartRect.height + 8));
+      canvas.drawLine(Offset(x, _c.chartRect.height), Offset(x, _c.chartRect.height + 4), Paint()..color = Colors.white54);
     }
   }
 
-  void _drawBackgroundLayers(Canvas canvas, Rect chartRect, Size size, double Function(double) getY) {
-    // Red Zone (Ghost Overlay - Phase Tracker) Layer 5
-    final redZonePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [AppColors.bear.withOpacity(0.15), Colors.transparent],
-      ).createShader(Rect.fromLTWH(chartRect.width * 0.5, 0, chartRect.width * 0.3, chartRect.height * 0.4));
-    
-    canvas.drawRect(Rect.fromLTWH(chartRect.width * 0.5, 0, chartRect.width * 0.3, chartRect.height * 0.4), redZonePaint);
-    _drawLabel(canvas, Offset(chartRect.width * 0.5 + 10, 20), 'DANGER ZONE - HIGH VOL', AppColors.bear.withOpacity(0.5), Colors.white);
-    
-    // Liquidity Trap Box (Solid Box Layer 1)
-    final trapPaint = Paint()
-      ..color = const Color(0xFFF0E68C).withOpacity(0.05)
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(chartRect.width * 0.2, chartRect.height * 0.7, chartRect.width * 0.2, chartRect.height * 0.2), trapPaint);
-    
-    final trapBorderPaint = Paint()
-      ..color = const Color(0xFFF0E68C).withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawRect(Rect.fromLTWH(chartRect.width * 0.2, chartRect.height * 0.7, chartRect.width * 0.2, chartRect.height * 0.2), trapBorderPaint);
-    _drawLabel(canvas, Offset(chartRect.width * 0.2 + 5, chartRect.height * 0.7 + 5), '\$\$\$ LIQUIDITY', const Color(0xFFF0E68C).withOpacity(0.8), Colors.black);
-  }
-
-  void _drawExecutionLayers(Canvas canvas, Rect chartRect, TradingSignal signal, double Function(double) getY) {
-    final entryY = getY(signal.entryPrice);
-    final slY = getY(signal.slPrice);
-    final tpY = getY(signal.tpPrices.first);
-
-    print('KineticChart: Drawing Signal - Entry Y: $entryY, SL Y: $slY, TP Y: $tpY, Height: ${chartRect.height}');
-
-    double expandRect = 200.0; // Allow drawing slightly off-screen to handle zoom
-
-    // Entry
-    if (entryY > -expandRect && entryY < chartRect.height + expandRect) {
-      final entryPaint = Paint()..color = AppColors.primary..strokeWidth = 1.5;
-      canvas.drawLine(Offset(0, entryY), Offset(chartRect.width, entryY), entryPaint);
-      _drawBadge(canvas, Offset(chartRect.width - 60, entryY - 10), 'ENTRY', '${signal.probability}%', AppColors.primary);
-    }
-
-    // Stop Loss
-    if (slY > -expandRect && slY < chartRect.height + expandRect) {
-      final slPaint = Paint()..color = AppColors.bear..strokeWidth = 1.5;
-      _drawDashedLine(canvas, Offset(0, slY), Offset(chartRect.width, slY), slPaint);
-      _drawLabel(canvas, Offset(chartRect.width - 40, slY - 8), 'SL', AppColors.bear, Colors.white);
-    }
-
-    // Take Profit
-    if (tpY > -expandRect && tpY < chartRect.height + expandRect) {
-      final tpPaint = Paint()..color = const Color(0xFF3772FF)..strokeWidth = 1.5;
-      _drawDashedLine(canvas, Offset(0, tpY), Offset(chartRect.width, tpY), tpPaint);
-      _drawLabel(canvas, Offset(chartRect.width - 40, tpY - 8), 'TP', const Color(0xFF3772FF), Colors.white);
-    }
-  }
-
+  // ─── Drawing Helpers ─────────────────────────────────────
   void _drawDashedLine(Canvas canvas, Offset p1, Offset p2, Paint paint) {
-    const dashWidth = 5.0;
-    const dashSpace = 5.0;
-    double distance = (p2 - p1).distance;
+    const dashWidth = 5.0, dashSpace = 5.0;
+    final distance = (p2 - p1).distance;
     double currentDist = 0;
     while (currentDist < distance) {
       canvas.drawLine(
@@ -392,54 +1271,151 @@ class _ChartPainter extends CustomPainter {
     }
   }
 
-  void _drawLabel(Canvas canvas, Offset offset, String text, Color bgColor, Color textColor) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(color: textColor, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-
-    final rect = Rect.fromLTWH(offset.dx - 4, offset.dy - 2, textPainter.width + 8, textPainter.height + 4);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), Paint()..color = bgColor);
-    textPainter.paint(canvas, offset);
+  void _drawDashedRect(Canvas canvas, Rect rect, Paint paint) {
+    _drawDashedLine(canvas, rect.topLeft, rect.topRight, paint);
+    _drawDashedLine(canvas, rect.topRight, rect.bottomRight, paint);
+    _drawDashedLine(canvas, rect.bottomRight, rect.bottomLeft, paint);
+    _drawDashedLine(canvas, rect.bottomLeft, rect.topLeft, paint);
   }
 
-  void _drawBadge(Canvas canvas, Offset offset, String title, String prob, Color color) {
-    // Vẽ Probability Badge Layer 4
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: '$title | $prob',
-        style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5),
-      ),
+  void _drawLabel(Canvas canvas, Offset offset, String text, Color bgColor, Color textColor) {
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
       textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-
-    final rect = Rect.fromLTWH(offset.dx - 6, offset.dy - 4, textPainter.width + 12, textPainter.height + 8);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), Paint()..color = color);
-    textPainter.paint(canvas, offset);
+    )..layout();
+    final size = Size(tp.width + 8, tp.height + 4);
+    final resolvedOffset = _getNonOverlappingOffset(Offset(offset.dx - 4, offset.dy - 2), size);
+    canvas.drawRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(resolvedOffset.dx, resolvedOffset.dy, size.width, size.height), const Radius.circular(4)),
+        Paint()..color = bgColor);
+    tp.paint(canvas, Offset(resolvedOffset.dx + 4, resolvedOffset.dy + 2));
   }
 
   void _drawText(Canvas canvas, String text, Offset offset, Color color, double fontSize, {FontWeight fontWeight = FontWeight.normal}) {
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(color: color, fontSize: fontSize, fontWeight: fontWeight),
-      ),
+    TextPainter(
+      text: TextSpan(text: text, style: TextStyle(color: color, fontSize: fontSize, fontWeight: fontWeight)),
       textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(canvas, offset);
+    )..layout()..paint(canvas, offset);
+  }
+
+  void _drawBezierCurve(Canvas canvas, Map<String, dynamic> curveData) {
+    final points = curveData['points'] as List<dynamic>? ?? [];
+    if (points.length < 3) return;
+    final color = _parseHexColor(curveData['color'] ?? '#00FFFF');
+    final mappedPoints = points.map((p) {
+      final pm = Map<String, dynamic>.from(p as Map);
+      return Offset(_getXFromTime((pm['x_time'] as num).toInt()), _c.getY((pm['y_price'] as num).toDouble()));
+    }).toList();
+    final path = Path()..moveTo(mappedPoints[0].dx, mappedPoints[0].dy);
+    if (mappedPoints.length == 3) {
+      path.quadraticBezierTo(mappedPoints[1].dx, mappedPoints[1].dy, mappedPoints[2].dx, mappedPoints[2].dy);
+    } else if (mappedPoints.length >= 4) {
+      path.cubicTo(mappedPoints[1].dx, mappedPoints[1].dy, mappedPoints[2].dx, mappedPoints[2].dy, mappedPoints[3].dx, mappedPoints[3].dy);
+    }
+    final dashedPath = _dashPath(path);
+    canvas.drawPath(dashedPath, Paint()..color = color.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 4.0..maskFilter = const MaskFilter.blur(BlurStyle.solid, 3.0));
+    canvas.drawPath(dashedPath, Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    
+    final midIdx = mappedPoints.length ~/ 2;
+    final labelText = curveData['id'] ?? '';
+    final tp = TextPainter(
+      text: TextSpan(text: labelText, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final preferredOffset = Offset(mappedPoints[midIdx].dx + 4, mappedPoints[midIdx].dy - 14);
+    final resolvedOffset = _getNonOverlappingOffset(preferredOffset, tp.size);
+    tp.paint(canvas, resolvedOffset);
+  }
+
+  Path _dashPath(Path source) {
+    final result = Path();
+    for (final metric in source.computeMetrics()) {
+      double distance = 0;
+      const dashLen = 6.0, gapLen = 4.0;
+      while (distance < metric.length) {
+        final end = math.min(distance + dashLen, metric.length);
+        result.addPath(metric.extractPath(distance, end), Offset.zero);
+        distance = end + gapLen;
+      }
+    }
+    return result;
+  }
+
+  double _getXFromTime(int timestamp) {
+    for (int i = 0; i < candles.length; i++) {
+      if (candles[i].timestamp.millisecondsSinceEpoch ~/ 1000 >= timestamp) return _c.getX(i);
+    }
+    if (candles.isNotEmpty) {
+      final lastTime = candles.last.timestamp.millisecondsSinceEpoch ~/ 1000;
+      final diffSec = timestamp - lastTime;
+      final avgInterval = candles.length > 1
+          ? (candles.last.timestamp.millisecondsSinceEpoch - candles.first.timestamp.millisecondsSinceEpoch) / (candles.length - 1) / 1000
+          : 300;
+      return _c.getX(candles.length - 1) + (diffSec / avgInterval) * _c.totalCandleWidth;
+    }
+    return _c.chartRect.width;
+  }
+
+  Color _parseColor(String name) {
+    switch (name.toLowerCase()) {
+      case 'green_opacity': case 'green': return AppColors.primary;
+      case 'red_opacity': case 'red': return AppColors.bear;
+      case 'cyan': return const Color(0xFF00FFFF);
+      case 'yellow': return const Color(0xFFF0E68C);
+      case 'purple': return const Color(0xFF8A2BE2);
+      case 'white': return Colors.white;
+      case 'blue': return const Color(0xFF3772FF);
+      case 'orange': return Colors.orange;
+      default:
+        if (name.startsWith('#')) return _parseHexColor(name);
+        return Colors.white;
+    }
+  }
+
+  Color _parseHexColor(String hex) {
+    hex = hex.replaceAll('#', '');
+    if (hex.length == 6) hex = 'FF$hex';
+    return Color(int.parse(hex, radix: 16));
+  }
+
+  String _getIconString(String iconType) {
+    switch (iconType.toLowerCase()) {
+      case 'dollar': return '\$\$\$';
+      case 'skull': return '☠';
+      case 'arrow': case 'down_arrow': return '↓';
+      case 'up_arrow': return '↑';
+      case 'warning': return '⚠';
+      default: return '●';
+    }
+  }
+
+  List<Map<String, dynamic>> _getItems(Map<String, dynamic> layer) {
+    final items = layer['items'];
+    if (items == null) return [];
+    return (items as List<dynamic>).map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter oldDelegate) {
-    return oldDelegate.candles != candles || 
-           oldDelegate.signal != signal || 
-           oldDelegate.scaleX != scaleX || 
-           oldDelegate.offsetX != offsetX;
-  }
+  bool shouldRepaint(covariant _KineticChartPainter oldDelegate) => true;
 }
+
+// ─── Helper classes for Right-Aligned Price Labels ──────────
+class _RightLabel {
+  final String text;
+  final double targetY;
+  final Color bgColor;
+  final Color textColor;
+  final bool isBadge;
+  final String? badgeTitle;
+  double actualY;
+
+  _RightLabel({
+    required this.text,
+    required this.targetY,
+    required this.bgColor,
+    required this.textColor,
+    this.isBadge = false,
+    this.badgeTitle,
+  }) : actualY = targetY;
+}
+

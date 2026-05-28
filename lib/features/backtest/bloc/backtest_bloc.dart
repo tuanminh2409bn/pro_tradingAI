@@ -27,10 +27,11 @@ class BacktestBloc extends Bloc<BacktestEvent, BacktestState> {
         startTime: DateTime.now().subtract(const Duration(days: 30)),
         endTime: DateTime.now(),
         balance: event.initialBalance,
+        userId: event.userId ?? 'anonymous',
       );
 
       _tradesSubscription?.cancel();
-      _tradesSubscription = _backtestRepository.getActiveTrades('current').listen(
+      _tradesSubscription = _backtestRepository.getActiveTrades(session.id ?? 'current').listen(
         (trades) => add(UpdateBacktestTrades(trades)),
       );
 

@@ -49,7 +49,7 @@ class _TradingRoomMobilePageState extends State<TradingRoomMobilePage> {
                     return Text(
                       '\$$equity',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -102,7 +102,7 @@ class _TradingRoomMobilePageState extends State<TradingRoomMobilePage> {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                 ),
                 child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
                   builder: (context, state) {
@@ -192,7 +192,7 @@ class _TradingRoomMobilePageState extends State<TradingRoomMobilePage> {
                         ),
                         Text(
                           '5/5 ACTIVE',
-                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 8),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 8),
                         ),
                       ],
                     ),
@@ -258,9 +258,9 @@ class _TradingRoomMobilePageState extends State<TradingRoomMobilePage> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.black26,
+        color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.black26,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: isActive ? AppColors.primary.withOpacity(0.3) : Colors.white10),
+        border: Border.all(color: isActive ? AppColors.primary.withValues(alpha: 0.3) : Colors.white10),
       ),
       child: Center(
         child: Text(

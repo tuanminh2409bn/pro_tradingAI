@@ -25,7 +25,6 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
       _newsSubscription?.cancel();
       _pulseSubscription?.cancel();
 
-      // For News, we can show public news even without a userId
       _newsSubscription = _newsRepository.getNewsFeed().listen(
         (articles) => add(UpdateNewsFeed(articles)),
         onError: (e) => print('NewsBloc: NewsFeed error: $e'),
@@ -36,18 +35,18 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
         onError: (e) => print('NewsBloc: SentimentPulse error: $e'),
       );
 
-      // Emit initial Loaded state with default data
+      // Emit initial Loaded state with defaults while streams load
       emit(const NewsLoaded(
         articles: [],
         pulse: SentimentPulse(
-          globalScore: 71,
-          fearPercent: 12.4,
-          neutralPercent: 16.6,
-          greedPercent: 71.0,
-          phase: 'GREED',
+          globalScore: 0,
+          fearPercent: 0.0,
+          neutralPercent: 0.0,
+          greedPercent: 0.0,
+          phase: 'LOADING',
         ),
         chatMessages: [
-          {'text': 'Hello Trader. I\'ve scanned the macro data. How can I assist?', 'isAi': true}
+          {'text': 'Hello Trader. I am connected to DeepSeek AI. Ask me anything about market sentiment, news impact, or trading analysis.', 'isAi': true}
         ],
       ));
     } catch (e) {
@@ -89,7 +88,13 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
           isAiThinking: false,
         ));
       } catch (e) {
-        emit(currentState.copyWith(isAiThinking: false));
+        final errorMessages = List<Map<String, dynamic>>.from(updatedMessages)
+          ..add({'text': 'Error connecting to DeepSeek AI: ${e.toString()}', 'isAi': true});
+        
+        emit(currentState.copyWith(
+          chatMessages: errorMessages,
+          isAiThinking: false,
+        ));
       }
     }
   }

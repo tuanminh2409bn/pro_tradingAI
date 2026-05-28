@@ -7,46 +7,22 @@ class CommunityRepository {
   CommunityRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Stream bài viết cộng đồng — dữ liệu thật từ Firestore.
+  /// Nếu chưa có bài viết nào → trả về list rỗng, UI sẽ hiển thị empty state.
   Stream<List<CommunityPost>> getCommunityFeed() {
     return _firestore
         .collection('community')
         .orderBy('timestamp', descending: true)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        // Mock data for demo
-        return const [
-          CommunityPost(
-            userName: 'Alex Volkov',
-            avatarUrl: '',
-            timeAgo: '2 hours ago',
-            content: 'Strong rejection at the 2038 level. Entering long with tight SL. Market flow looks bullish.',
-            tradeInfo: 'XAUUSD Long',
-            profit: 12450.0,
-            isProfit: true,
-            likes: 142,
-            comments: 28,
-            isVerified: true,
-          ),
-          CommunityPost(
-            userName: 'Sarah Quant',
-            avatarUrl: '',
-            timeAgo: '5 hours ago',
-            content: 'BTC is hitting major liquidity zones. Watch for a fakeout above 65k.',
-            tradeInfo: 'BTCUSD Short',
-            profit: -2120.50,
-            isProfit: false,
-            likes: 84,
-            comments: 12,
-          ),
-        ];
-      }
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return CommunityPost(
+          id: doc.id,
           userName: data['userName'] ?? 'Anonymous',
           avatarUrl: data['avatarUrl'] ?? '',
-          timeAgo: data['timeAgo'] ?? 'Just now',
+          timeAgo: _formatTimeAgo(data['timestamp']),
           content: data['content'] ?? '',
           tradeInfo: data['tradeInfo'] ?? '',
           profit: (data['profit'] ?? 0).toDouble(),
@@ -60,20 +36,14 @@ class CommunityRepository {
     });
   }
 
+  /// Stream bảng xếp hạng — dữ liệu thật từ Firestore.
   Stream<List<LeaderboardEntry>> getLeaderboard() {
     return _firestore
         .collection('leaderboard')
         .orderBy('performance', descending: true)
-        .limit(10)
+        .limit(20)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return const [
-          LeaderboardEntry(rank: 1, name: 'MacroKing', avatarUrl: '', performance: 24.5, volume: '1.2M'),
-          LeaderboardEntry(rank: 2, name: 'YieldFarmer', avatarUrl: '', performance: 18.2, volume: '850K'),
-          LeaderboardEntry(rank: 3, name: 'ScalpQueen', avatarUrl: '', performance: 15.1, volume: '2.1M'),
-        ];
-      }
       return snapshot.docs.asMap().entries.map((entry) {
         final data = entry.value.data();
         return LeaderboardEntry(
@@ -87,6 +57,7 @@ class CommunityRepository {
     });
   }
 
+  /// Đăng bài viết mới lên community feed.
   Future<void> createPost(CommunityPost post) async {
     await _firestore.collection('community').add({
       'userName': post.userName,
@@ -95,10 +66,32 @@ class CommunityRepository {
       'tradeInfo': post.tradeInfo,
       'profit': post.profit,
       'isProfit': post.isProfit,
-      'likes': post.likes,
-      'comments': post.comments,
+      'likes': 0,
+      'comments': 0,
       'isVerified': post.isVerified,
       'timestamp': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Like một bài viết.
+  Future<void> likePost(String postId) async {
+    await _firestore.collection('community').doc(postId).update({
+      'likes': FieldValue.increment(1),
+    });
+  }
+
+  /// Chuyển Firestore Timestamp thành chuỗi "X hours ago".
+  String _formatTimeAgo(dynamic timestamp) {
+    if (timestamp == null) return 'Just now';
+    try {
+      final dt = (timestamp as dynamic).toDate() as DateTime;
+      final diff = DateTime.now().difference(dt);
+      if (diff.inMinutes < 1) return 'Just now';
+      if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+      if (diff.inDays < 1) return '${diff.inHours}h ago';
+      return '${diff.inDays}d ago';
+    } catch (_) {
+      return 'Just now';
+    }
   }
 }

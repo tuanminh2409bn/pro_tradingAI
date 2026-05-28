@@ -59,12 +59,92 @@ class ChangeTimeframe extends TradingRoomEvent {
 class ExecuteTrade extends TradingRoomEvent {
   final String type; // 'BUY' or 'SELL'
   final double lotSize;
-  const ExecuteTrade({required this.type, required this.lotSize});
+  final double entryPrice;
+  final double slPrice;
+  final List<double> tpPrices;
+  const ExecuteTrade({
+    required this.type, 
+    required this.lotSize,
+    this.entryPrice = 0.0,
+    this.slPrice = 0.0,
+    this.tpPrices = const [],
+  });
   
   @override
-  List<Object?> get props => [type, lotSize];
+  List<Object?> get props => [type, lotSize, entryPrice, slPrice, tpPrices];
 }
 
 class RequestAnalysis extends TradingRoomEvent {
   const RequestAnalysis();
+}
+
+// ─── New Events for Production ───
+
+class CancelAnalysisSpinner extends TradingRoomEvent {
+  const CancelAnalysisSpinner();
+}
+
+class ChangeTradingMode extends TradingRoomEvent {
+  final TradingMode mode;
+  const ChangeTradingMode(this.mode);
+
+  @override
+  List<Object?> get props => [mode];
+}
+
+class SaveRiskConfig extends TradingRoomEvent {
+  final RiskConfig config;
+  const SaveRiskConfig(this.config);
+
+  @override
+  List<Object?> get props => [config];
+}
+
+class ClosePosition extends TradingRoomEvent {
+  final String positionId;
+  const ClosePosition(this.positionId);
+
+  @override
+  List<Object?> get props => [positionId];
+}
+
+class SendAIMessage extends TradingRoomEvent {
+  final String message;
+  const SendAIMessage(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+
+class ReceiveAIResponse extends TradingRoomEvent {
+  final String response;
+  const ReceiveAIResponse(this.response);
+
+  @override
+  List<Object?> get props => [response];
+}
+
+class UpdatePositions extends TradingRoomEvent {
+  final List<Position> positions;
+  const UpdatePositions(this.positions);
+
+  @override
+  List<Object?> get props => [positions];
+}
+
+class TradeExecuted extends TradingRoomEvent {
+  final Position position;
+  const TradeExecuted(this.position);
+
+  @override
+  List<Object?> get props => [position];
+}
+
+class TradeClosed extends TradingRoomEvent {
+  final String positionId;
+  final double profit;
+  const TradeClosed(this.positionId, this.profit);
+
+  @override
+  List<Object?> get props => [positionId, profit];
 }

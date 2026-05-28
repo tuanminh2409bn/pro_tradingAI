@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
-import 'dart:ui';
 import '../../../core/constants/colors.dart';
 import '../../../data/models/radar_models.dart';
 import '../../../data/repositories/radar_repository.dart';
@@ -82,7 +81,7 @@ class RadarWebPage extends StatelessWidget {
   Widget _buildFilterHeader(BuildContext context, RadarLoaded state) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      decoration: BoxDecoration(color: AppColors.surface.withOpacity(0.3), border: const Border(bottom: BorderSide(color: Colors.white10))),
+      decoration: BoxDecoration(color: AppColors.surface.withValues(alpha: 0.3), border: const Border(bottom: BorderSide(color: Colors.white10))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -116,7 +115,7 @@ class RadarWebPage extends StatelessWidget {
   Widget _buildFilterChip(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withOpacity(0.2))),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: 0.2))),
       child: Row(children: [Icon(icon, color: color, size: 14), const SizedBox(width: 8), Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white70))]),
     );
   }
@@ -135,10 +134,10 @@ class _RadarAssetCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isSelected ? mainColor.withOpacity(0.05) : AppColors.surface,
+        color: isSelected ? mainColor.withValues(alpha: 0.05) : AppColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected ? mainColor : (isHighVol ? mainColor.withOpacity(0.3) : Colors.white.withOpacity(0.05)),
+          color: isSelected ? mainColor : (isHighVol ? mainColor.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.05)),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -164,7 +163,7 @@ class _RadarAssetCard extends StatelessWidget {
           if (asset.hasAiConfirmation)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.primary.withOpacity(0.2))),
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.primary.withValues(alpha: 0.2))),
               child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.psychology, size: 10, color: AppColors.primary), SizedBox(width: 4), Text('DEEPSEEK CONFIRMED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.primary))]),
             ),
         ],
@@ -183,7 +182,7 @@ class _RadarDetailSidebar extends StatelessWidget {
 
     return Container(
       width: 320,
-      decoration: BoxDecoration(color: AppColors.surface.withOpacity(0.5), border: const Border(left: BorderSide(color: Colors.white10))),
+      decoration: BoxDecoration(color: AppColors.surface.withValues(alpha: 0.5), border: const Border(left: BorderSide(color: Colors.white10))),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

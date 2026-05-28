@@ -45,12 +45,11 @@ class AuthRepository {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         return await _firebaseAuth.signInWithPopup(googleProvider);
       } else {
-        // Native Google Sign In (Using authenticate() for version 7.2.0)
-        final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
-        if (googleUser == null) return null;
+        // Native Google Sign In
+        final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-        
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
         final OAuthCredential credential = GoogleAuthProvider.credential(
           idToken: googleAuth.idToken,
         );

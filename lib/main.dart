@@ -22,6 +22,7 @@ import 'data/repositories/profile_repository.dart';
 import 'data/repositories/admin_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'core/constants/colors.dart';
+import 'core/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,7 +64,10 @@ void main() async {
         child: MultiBlocProvider(
           providers: [
             BlocProvider(
-              create: (context) => AuthBloc(authRepository: authRepository),
+              create: (context) => AuthBloc(
+                authRepository: authRepository,
+                profileRepository: profileRepository,
+              ),
             ),
             BlocProvider(
               create: (context) => LocaleCubit(),
@@ -95,19 +99,27 @@ class ProTradingApp extends StatelessWidget {
             useMaterial3: true,
             fontFamily: 'Inter',
           ),
-          home: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
+          home: BlocListener<AuthBloc, AuthState>(
+            listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
-                return kIsWeb ? const WebDashboardShell() : const MobileDashboardShell();
-              } else if (state.status == AuthStatus.unauthenticated) {
-                return kIsWeb ? const LoginWebPage() : const LoginMobilePage();
+                FCMService().initialize(state.user?.uid);
               }
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                ),
-              );
             },
+            child: BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                if (state.status == AuthStatus.authenticated) {
+                  FCMService().initialize(state.user?.uid);
+                  return kIsWeb ? const WebDashboardShell() : const MobileDashboardShell();
+                } else if (state.status == AuthStatus.unauthenticated) {
+                  return kIsWeb ? const LoginWebPage() : const LoginMobilePage();
+                }
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

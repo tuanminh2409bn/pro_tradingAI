@@ -123,7 +123,7 @@ class BacktestWebPage extends StatelessWidget {
   Widget _buildPlaybackControls(BuildContext context, BacktestSession session) {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0xFF0b0e11), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withOpacity(0.05))),
+      decoration: BoxDecoration(color: const Color(0xFF0b0e11), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
       child: Row(
         children: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.first_page, size: 18, color: Colors.white54)),
@@ -132,7 +132,7 @@ class BacktestWebPage extends StatelessWidget {
             onTap: () => context.read<BacktestBloc>().add(TogglePlayback()),
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 15)]),
+              decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 15)]),
               child: Icon(session.isPlaying ? Icons.pause : Icons.play_arrow, size: 24, color: Colors.black),
             ),
           ),
@@ -158,9 +158,9 @@ class BacktestWebPage extends StatelessWidget {
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: isActive ? AppColors.primary.withOpacity(0.2) : Colors.transparent),
+          border: Border.all(color: isActive ? AppColors.primary.withValues(alpha: 0.2) : Colors.transparent),
         ),
         child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isActive ? AppColors.primary : Colors.white38)),
       ),
@@ -234,7 +234,7 @@ class BacktestWebPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(8),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         children: [
@@ -248,7 +248,7 @@ class BacktestWebPage extends StatelessWidget {
   Widget _buildActiveTradeItem(String title, String profit, bool isPositive) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.02), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.02), borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.white10)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -287,7 +287,7 @@ class BacktestWebPage extends StatelessWidget {
 
   Widget _buildDisciplineLockOverlay() {
     return Container(
-      color: Colors.black.withOpacity(0.8),
+      color: Colors.black.withValues(alpha: 0.8),
       child: Center(
         child: Container(
           width: 400,

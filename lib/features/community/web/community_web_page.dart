@@ -108,7 +108,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withOpacity(0.2))), child: const Icon(Icons.person, color: Colors.white24)),
+              Container(width: 48, height: 48, decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withValues(alpha: 0.2))), child: const Icon(Icons.person, color: Colors.white24)),
               const SizedBox(width: 16),
               Expanded(
                 child: TextField(
@@ -117,7 +117,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Share your setup from the Trading Room...',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                     fillColor: const Color(0xFF0b0e11),
                     filled: true,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -165,7 +165,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
   Widget _buildPostToolBtn(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)),
       child: Row(
         children: [
           Icon(icon, size: 16, color: Colors.white54),
@@ -198,7 +198,7 @@ class _PostCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface, 
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
@@ -241,14 +241,14 @@ class _PostCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     image: post.chartImageUrl != null ? DecorationImage(image: NetworkImage(post.chartImageUrl!), fit: BoxFit.cover) : null,
                   ),
-                  child: post.chartImageUrl == null ? Center(child: Icon(Icons.show_chart, color: post.isProfit ? AppColors.primary.withOpacity(0.1) : AppColors.bear.withOpacity(0.1), size: 64)) : null,
+                  child: post.chartImageUrl == null ? Center(child: Icon(Icons.show_chart, color: post.isProfit ? AppColors.primary.withValues(alpha: 0.1) : AppColors.bear.withValues(alpha: 0.1), size: 64)) : null,
                 ),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            color: Colors.white.withOpacity(0.02),
+            color: Colors.white.withValues(alpha: 0.02),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -323,7 +323,7 @@ class _LeaderboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withOpacity(0.05))),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
       child: Column(
         children: [
           const Padding(padding: EdgeInsets.all(20), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('LEADERBOARD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white)), Text('TOP RANKINGS', style: TextStyle(fontSize: 8, color: AppColors.primary, fontWeight: FontWeight.bold))])),
@@ -337,7 +337,7 @@ class _LeaderboardCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.02))),
+        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.02))),
       ),
       child: Row(
         children: [
@@ -378,7 +378,7 @@ class _AchievementsCard extends StatelessWidget {
     );
   }
   Widget _buildBadge(IconData icon, Color color) {
-    return Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white.withOpacity(0.05), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 24));
+    return Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 24));
   }
 }
 

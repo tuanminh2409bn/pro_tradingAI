@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 class CommunityPost extends Equatable {
+  final String? id;
   final String userName;
   final String avatarUrl;
   final String timeAgo;
@@ -14,6 +15,7 @@ class CommunityPost extends Equatable {
   final bool isVerified;
 
   const CommunityPost({
+    this.id,
     required this.userName,
     required this.avatarUrl,
     required this.timeAgo,
@@ -28,7 +30,7 @@ class CommunityPost extends Equatable {
   });
 
   @override
-  List<Object?> get props => [userName, timeAgo, content, profit, likes];
+  List<Object?> get props => [id, userName, timeAgo, content, profit, likes];
 }
 
 class LeaderboardEntry extends Equatable {

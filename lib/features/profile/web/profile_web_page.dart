@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../auth/bloc/auth_state.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_cubit.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../data/repositories/profile_repository.dart';
 import '../bloc/profile_bloc.dart';
@@ -46,16 +49,18 @@ class ProfileWebPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildHeader(isMobile),
+                              _buildHeader(context, isMobile),
                               const SizedBox(height: 32),
                               if (isMobile) ...[
-                                _buildProfileInfoCard(state.profile),
+                                _buildProfileInfoCard(context, state.profile),
                                 const SizedBox(height: 24),
                                 _buildBrokerAccountsCard(context, state.brokerAccounts),
                                 const SizedBox(height: 24),
-                                _buildQuotaGrid(state.quota, isMobile),
+                                _buildQuotaGrid(context, state.quota, isMobile),
                                 const SizedBox(height: 24),
-                                _buildSecurityCard(state.is2FAEnabled),
+                                _buildSecurityCard(context, state),
+                                const SizedBox(height: 24),
+                                const _PreferencesCard(),
                               ] else
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,9 +69,11 @@ class ProfileWebPage extends StatelessWidget {
                                       flex: 1,
                                       child: Column(
                                         children: [
-                                          _buildProfileInfoCard(state.profile),
+                                          _buildProfileInfoCard(context, state.profile),
                                           const SizedBox(height: 24),
                                           _buildBrokerAccountsCard(context, state.brokerAccounts),
+                                          const SizedBox(height: 24),
+                                          const _PreferencesCard(),
                                         ],
                                       ),
                                     ),
@@ -75,9 +82,9 @@ class ProfileWebPage extends StatelessWidget {
                                       flex: 1,
                                       child: Column(
                                         children: [
-                                          _buildQuotaGrid(state.quota, isMobile),
+                                          _buildQuotaGrid(context, state.quota, isMobile),
                                           const SizedBox(height: 24),
-                                          _buildSecurityCard(state.is2FAEnabled),
+                                          _buildSecurityCard(context, state),
                                         ],
                                       ),
                                     ),
@@ -89,7 +96,7 @@ class ProfileWebPage extends StatelessWidget {
                       ),
                     ],
                   );
-                }
+                },
               );
             }
             return const SizedBox.shrink();
@@ -99,53 +106,117 @@ class ProfileWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(bool isMobile) {
+  Widget _buildHeader(BuildContext context, bool isMobile) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Security & Profile',
-          style: TextStyle(fontSize: isMobile ? 24 : 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
+          context.tr('profile_title'),
+          style: TextStyle(
+            fontSize: isMobile ? 24 : 32,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+            letterSpacing: -1,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Manage your identity, broker accounts and API quotas.',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: isMobile ? 12 : 14),
+          context.tr('profile_subtitle'),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.5),
+            fontSize: isMobile ? 12 : 14,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildProfileInfoCard(UserProfile profile) {
+  Widget _buildProfileInfoCard(BuildContext context, UserProfile profile) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         children: [
           Row(
             children: [
+              // Real avatar with fallback
               CircleAvatar(
                 radius: 40,
-                backgroundColor: AppColors.primary.withOpacity(0.1),
-                child: const Icon(Icons.person, color: AppColors.primary, size: 40),
+                backgroundImage: profile.avatarUrl.isNotEmpty ? NetworkImage(profile.avatarUrl) : null,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                child: profile.avatarUrl.isEmpty
+                    ? const Icon(Icons.person, color: AppColors.primary, size: 40)
+                    : null,
               ),
               const SizedBox(width: 24),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(profile.username, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                    // Username with edit button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            profile.username,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 14, color: Colors.white38),
+                          onPressed: () => _showEditUsernameDialog(context, profile.username),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
-                    Text(profile.email, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+                    Text(
+                      profile.email,
+                      style: const TextStyle(color: Colors.white38, fontSize: 13),
+                    ),
                     const SizedBox(height: 12),
+                    // Tier badge
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                      child: Text(profile.tier, style: const TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        profile.tier,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // User ID badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'ID: ${userId?.substring(0, 8).toUpperCase() ?? "--------"}',
+                        style: const TextStyle(
+                          color: Colors.white24,
+                          fontSize: 9,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -158,10 +229,154 @@ class ProfileWebPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSimpleStat('TRADES', '${profile.totalTrades}'),
-              _buildSimpleStat('WIN RATE', '${profile.winRate}%'),
-              _buildSimpleStat('RANK', '#${profile.rank}'),
+              _buildSimpleStat(context.tr('profile_trades'), '${profile.totalTrades}'),
+              _buildSimpleStat(context.tr('profile_win_rate'), '${profile.winRate}%'),
+              _buildSimpleStat(context.tr('profile_rank'), '#${profile.rank}'),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditUsernameDialog(BuildContext context, String current) {
+    final ctrl = TextEditingController(text: current);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(context.tr('profile_edit_username'), style: const TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: context.tr('profile_new_username'),
+            labelStyle: const TextStyle(color: Colors.white54),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.tr('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (ctrl.text.trim().isNotEmpty) {
+                context.read<ProfileBloc>().add(UpdateUsernameRequested(ctrl.text.trim()));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.tr('profile_username_updated')),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
+            },
+            child: Text(context.tr('profile_save')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final currentCtrl = TextEditingController();
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(context.tr('profile_change_key'), style: const TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_current_password'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: newCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_new_password'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmCtrl,
+              obscureText: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_confirm_password'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.tr('cancel')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () async {
+              if (newCtrl.text != confirmCtrl.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.tr('profile_password_mismatch')),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              if (newCtrl.text.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(context.tr('profile_password_short')),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null && user.email != null) {
+                  final cred = EmailAuthProvider.credential(
+                    email: user.email!,
+                    password: currentCtrl.text,
+                  );
+                  await user.reauthenticateWithCredential(cred);
+                  await user.updatePassword(newCtrl.text);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(context.tr('profile_password_changed')),
+                        backgroundColor: AppColors.primary,
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            child: Text(context.tr('profile_change_btn')),
           ),
         ],
       ),
@@ -174,7 +389,7 @@ class ProfileWebPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,11 +397,26 @@ class ProfileWebPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('BROKER ACCOUNTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
+              Text(
+                context.tr('profile_broker_accounts'),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white54,
+                  letterSpacing: 1,
+                ),
+              ),
               TextButton.icon(
                 onPressed: () => _showLinkAccountDialog(context),
                 icon: const Icon(Icons.add, size: 16, color: AppColors.primary),
-                label: const Text('LINK NEW', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold)),
+                label: Text(
+                  context.tr('profile_link_new'),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -195,7 +425,10 @@ class ProfileWebPage extends StatelessWidget {
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text('No accounts linked yet.', style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12)),
+                child: Text(
+                  context.tr('profile_no_accounts'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
+                ),
               ),
             )
           else
@@ -210,7 +443,7 @@ class ProfileWebPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: Colors.white.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -221,7 +454,14 @@ class ProfileWebPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${acc.platform.toUpperCase()} - ${acc.login}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(
+                  '${acc.platform.toUpperCase()} - ${acc.login}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
                 Text(acc.server, style: const TextStyle(color: Colors.white38, fontSize: 11)),
               ],
             ),
@@ -229,7 +469,9 @@ class ProfileWebPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: acc.status == 'CONNECTED' ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+              color: acc.status == 'CONNECTED'
+                  ? Colors.green.withValues(alpha: 0.1)
+                  : Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -256,14 +498,20 @@ class ProfileWebPage extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Link Broker Account', style: TextStyle(color: Colors.white)),
+        title: Text(
+          context.tr('profile_link_broker_title'),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
               value: 'mt4',
               dropdownColor: AppColors.surface,
-              decoration: const InputDecoration(labelText: 'Platform', labelStyle: TextStyle(color: Colors.white54)),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_platform'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
               style: const TextStyle(color: Colors.white),
               items: const [
                 DropdownMenuItem(value: 'mt4', child: Text('MT4')),
@@ -273,24 +521,58 @@ class ProfileWebPage extends StatelessWidget {
             ),
             TextField(
               controller: serverController,
-              decoration: const InputDecoration(labelText: 'Broker Server (e.g. Exness-Real10)', labelStyle: TextStyle(color: Colors.white54)),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_broker_server'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
               style: const TextStyle(color: Colors.white),
             ),
             TextField(
               controller: loginController,
-              decoration: const InputDecoration(labelText: 'Login ID', labelStyle: TextStyle(color: Colors.white54)),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_login_id'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
               style: const TextStyle(color: Colors.white),
             ),
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Trading Password', labelStyle: TextStyle(color: Colors.white54)),
+              decoration: InputDecoration(
+                labelText: context.tr('profile_trading_password'),
+                labelStyle: const TextStyle(color: Colors.white54),
+              ),
               style: const TextStyle(color: Colors.white),
+            ),
+            // Security warning banner
+            Container(
+              margin: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.security, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      context.tr('profile_security_notice'),
+                      style: const TextStyle(color: Colors.green, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CANCEL')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.tr('cancel')),
+          ),
           ElevatedButton(
             onPressed: () {
               context.read<ProfileBloc>().add(LinkBrokerAccountRequested(
@@ -301,10 +583,10 @@ class ProfileWebPage extends StatelessWidget {
               ));
               Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Linking request sent. Check status in a few moments.')),
+                SnackBar(content: Text(context.tr('profile_link_sent'))),
               );
             },
-            child: const Text('LINK ACCOUNT'),
+            child: Text(context.tr('profile_link_account')),
           ),
         ],
       ),
@@ -321,7 +603,7 @@ class ProfileWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildQuotaGrid(AccessQuota quota, bool isMobile) {
+  Widget _buildQuotaGrid(BuildContext context, AccessQuota quota, bool isMobile) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -329,22 +611,22 @@ class ProfileWebPage extends StatelessWidget {
       mainAxisSpacing: 16,
       childAspectRatio: 4,
       children: [
-        _buildQuotaCard('API REQUESTS', quota.apiUsed, quota.apiLimit, AppColors.primary),
-        _buildQuotaCard('BACKTEST SESSIONS', quota.backtestUsed, quota.backtestLimit, AppColors.secondary),
-        _buildQuotaCard('NEURAL STORAGE', quota.storageUsed.toInt(), quota.storageLimit.toInt(), AppColors.accent),
+        _buildQuotaCard(context.tr('profile_api_requests'), quota.apiUsed, quota.apiLimit, AppColors.primary),
+        _buildQuotaCard(context.tr('profile_backtest_sessions'), quota.backtestUsed, quota.backtestLimit, AppColors.secondary),
+        _buildQuotaCard(context.tr('profile_neural_storage'), quota.storageUsed.toInt(), quota.storageLimit.toInt(), AppColors.accent),
       ],
     );
   }
 
   Widget _buildQuotaCard(String label, int used, int limit, Color color) {
     double progress = used / limit;
-progress = progress.clamp(0.0, 1.0);
+    progress = progress.clamp(0.0, 1.0);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,36 +635,70 @@ progress = progress.clamp(0.0, 1.0);
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
-              Text('$used / $limit', style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white54,
+                  letterSpacing: 1,
+                ),
+              ),
+              Text(
+                '$used / $limit',
+                style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(value: progress, color: color, backgroundColor: Colors.white.withOpacity(0.03), minHeight: 4),
+          LinearProgressIndicator(
+            value: progress,
+            color: color,
+            backgroundColor: Colors.white.withValues(alpha: 0.03),
+            minHeight: 4,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSecurityCard(bool is2FA) {
+  Widget _buildSecurityCard(BuildContext context, ProfileLoaded state) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('SECURITY SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
+          Text(
+            context.tr('profile_security_settings'),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Colors.white54,
+              letterSpacing: 1,
+            ),
+          ),
           const SizedBox(height: 24),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.phonelink_lock, color: AppColors.primary),
-            title: const Text('Two-Factor Authentication', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: const Text('Protect your account with 2FA.', style: TextStyle(color: Colors.white38, fontSize: 12)),
-            trailing: Switch(value: is2FA, onChanged: (v) {}, activeColor: AppColors.primary),
+            title: Text(
+              context.tr('profile_2fa_title'),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
+            subtitle: Text(
+              context.tr('profile_2fa_subtitle'),
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            ),
+            trailing: Switch(
+              value: state.is2FAEnabled,
+              onChanged: (v) => context.read<ProfileBloc>().add(Toggle2FARequested(v)),
+              activeColor: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 8),
           const Divider(color: Colors.white10),
@@ -390,14 +706,129 @@ progress = progress.clamp(0.0, 1.0);
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.key, color: Colors.white38),
-            title: const Text('Change Access Key', style: TextStyle(color: Colors.white, fontSize: 14)),
+            title: Text(
+              context.tr('profile_change_key'),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+            ),
             trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+            onTap: () => _showChangePasswordDialog(context),
           ),
         ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Preferences Card — BLoC-driven (reads from ProfileBloc & LocaleCubit)
+// ---------------------------------------------------------------------------
+
+class _PreferencesCard extends StatelessWidget {
+  const _PreferencesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProfileBloc, ProfileState>(
+      builder: (context, profileState) {
+        final loaded = profileState is ProfileLoaded ? profileState : null;
+        final pushEnabled = loaded?.pushNotificationsEnabled ?? true;
+        final dataEnabled = loaded?.dataSharingEnabled ?? true;
+
+        return BlocBuilder<LocaleCubit, String>(
+          builder: (context, lang) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('profile_preferences'),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white54,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Push Notifications
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+                    title: Text(
+                      context.tr('profile_push_notifications'),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      context.tr('profile_push_notifications_subtitle'),
+                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
+                    trailing: Switch(
+                      value: pushEnabled,
+                      onChanged: (v) => context.read<ProfileBloc>().add(UpdatePushNotificationsRequested(v)),
+                      activeColor: AppColors.primary,
+                    ),
+                  ),
+                  const Divider(color: Colors.white10),
+                  // Language
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.language, color: Colors.white54),
+                    title: Text(
+                      context.tr('profile_language'),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    trailing: DropdownButton<String>(
+                      value: lang,
+                      dropdownColor: AppColors.surface,
+                      underline: const SizedBox(),
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      items: [
+                        DropdownMenuItem(value: 'vi', child: Text(context.tr('profile_language_vi'))),
+                        DropdownMenuItem(value: 'en', child: Text(context.tr('profile_language_en'))),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) context.read<LocaleCubit>().setLanguage(v);
+                      },
+                    ),
+                  ),
+                  const Divider(color: Colors.white10),
+                  // Data Sharing
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.share, color: Colors.white54),
+                    title: Text(
+                      context.tr('profile_data_sharing'),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    subtitle: Text(
+                      context.tr('profile_data_sharing_subtitle'),
+                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
+                    trailing: Switch(
+                      value: dataEnabled,
+                      onChanged: (v) => context.read<ProfileBloc>().add(UpdateDataSharingRequested(v)),
+                      activeColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Top Navigation Bar
+// ---------------------------------------------------------------------------
 
 class _WebTopNavbar extends StatelessWidget {
   final VoidCallback? onMenuPressed;
@@ -408,7 +839,10 @@ class _WebTopNavbar extends StatelessWidget {
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(color: Color(0xFF111417), border: Border(bottom: BorderSide(color: Colors.white10))),
+      decoration: const BoxDecoration(
+        color: Color(0xFF111417),
+        border: Border(bottom: BorderSide(color: Colors.white10)),
+      ),
       child: Row(
         children: [
           if (onMenuPressed != null)
@@ -416,14 +850,29 @@ class _WebTopNavbar extends StatelessWidget {
               onPressed: onMenuPressed,
               icon: const Icon(Icons.menu, color: Colors.white, size: 20),
             ),
-          const Text('KINETIC', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -1, color: Colors.white)),
+          const Text(
+            'KINETIC',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(width: 40),
           Expanded(
             child: BlocBuilder<AuthBloc, AuthState>(
               builder: (context, authState) {
-                // In a real app, this would use a dedicated Bloc for global account info
-                // For now we just show a placeholder or link it to Profile state if available
-                return const Text('KINETIC QUANT SYSTEM ONLINE', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1));
+                final isAuth = authState.status == AuthStatus.authenticated;
+                return Text(
+                  isAuth ? context.tr('profile_system_online') : context.tr('profile_connecting'),
+                  style: TextStyle(
+                    color: isAuth ? AppColors.primary : Colors.orange,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                );
               },
             ),
           ),

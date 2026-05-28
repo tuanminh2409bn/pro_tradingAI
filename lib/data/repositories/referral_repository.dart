@@ -7,48 +7,54 @@ class ReferralRepository {
   ReferralRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// Stream thống kê referral — tự tạo document nếu chưa tồn tại.
   Stream<ReferralStats> getReferralStats(String userId) {
     return _firestore
         .collection('referrals')
         .doc(userId)
         .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data();
-      if (data == null) {
-        return const ReferralStats(
-          totalEarnings: 12840.42,
-          f1Count: 24,
-          f2Count: 118,
-          referralLink: 'kinetic.io/ref/trader_4291',
+        .asyncMap((snapshot) async {
+      if (!snapshot.exists || snapshot.data() == null) {
+        // Tự tạo referral document cho user mới
+        final newStats = {
+          'totalEarnings': 0.0,
+          'f1Count': 0,
+          'f2Count': 0,
+          'referralLink': 'protrading.ai/ref/${userId.substring(0, 8)}',
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+        await _firestore.collection('referrals').doc(userId).set(newStats);
+        return ReferralStats(
+          totalEarnings: 0.0,
+          f1Count: 0,
+          f2Count: 0,
+          referralLink: 'protrading.ai/ref/${userId.substring(0, 8)}',
         );
       }
+      final data = snapshot.data()!;
       return ReferralStats(
         totalEarnings: (data['totalEarnings'] ?? 0).toDouble(),
         f1Count: (data['f1Count'] ?? 0).toInt(),
         f2Count: (data['f2Count'] ?? 0).toInt(),
-        referralLink: data['referralLink'] ?? '',
+        referralLink: data['referralLink'] ?? 'protrading.ai/ref/${userId.substring(0, 8)}',
       );
     });
   }
 
+  /// Stream danh sách thành viên đã giới thiệu.
   Stream<List<MemberNode>> getNetwork(String userId) {
     return _firestore
         .collection('referrals')
         .doc(userId)
         .collection('network')
+        .orderBy('earningsContribution', descending: true)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return const [
-          MemberNode(id: '1', name: 'ELENA_V', avatarUrl: '', earningsContribution: 4200.0, level: 'F1'),
-          MemberNode(id: '2', name: 'MARCUS_K', avatarUrl: '', earningsContribution: 2100.0, level: 'F1'),
-        ];
-      }
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return MemberNode(
           id: doc.id,
-          name: data['name'] ?? '',
+          name: data['name'] ?? 'Trader',
           avatarUrl: data['avatarUrl'] ?? '',
           earningsContribution: (data['earningsContribution'] ?? 0).toDouble(),
           level: data['level'] ?? 'F1',
@@ -57,21 +63,16 @@ class ReferralRepository {
     });
   }
 
+  /// Stream lịch sử giao dịch hoa hồng.
   Stream<List<RewardTransaction>> getRewardHistory(String userId) {
     return _firestore
         .collection('referrals')
         .doc(userId)
         .collection('transactions')
         .orderBy('date', descending: true)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return [
-          RewardTransaction(title: 'F1 Trading Commission - Marcus_K', date: DateTime.now().subtract(const Duration(days: 1)), amount: 142.50, status: 'COMPLETED', type: 'COMMISSION'),
-          RewardTransaction(title: 'F2 Network Activity Bonus', date: DateTime.now().subtract(const Duration(days: 2)), amount: 840.12, status: 'COMPLETED', type: 'BONUS'),
-          RewardTransaction(title: 'Withdrawal to Wallet (...4x91)', date: DateTime.now().subtract(const Duration(days: 4)), amount: -1500.00, status: 'COMPLETED', type: 'WITHDRAWAL'),
-        ];
-      }
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return RewardTransaction(
@@ -85,7 +86,18 @@ class ReferralRepository {
     });
   }
 
+  /// Tạo yêu cầu rút tiền.
   Future<void> requestWithdrawal(String userId, double amount) async {
-    // Logic to create a withdrawal request
+    await _firestore
+        .collection('admin')
+        .doc('requests')
+        .collection('pending')
+        .add({
+      'userId': userId,
+      'type': 'WITHDRAWAL',
+      'amount': '\$${amount.toStringAsFixed(2)}',
+      'status': 'PENDING',
+      'date': FieldValue.serverTimestamp(),
+    });
   }
 }

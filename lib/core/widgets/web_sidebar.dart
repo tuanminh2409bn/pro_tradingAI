@@ -1,32 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../logic/navigation_cubit.dart';
-import '../constants/colors.dart';
 import '../localization/app_localizations.dart';
+import '../constants/colors.dart';
 import 'language_toggle.dart';
 
-class WebSidebar extends StatelessWidget {
+class WebSidebar extends StatefulWidget {
   final bool isMobile;
   const WebSidebar({super.key, this.isMobile = false});
 
   @override
+  State<WebSidebar> createState() => _WebSidebarState();
+}
+
+class _WebSidebarState extends State<WebSidebar> {
+  bool _isCollapsed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: isMobile ? double.infinity : 260,
+    final bool isMobile = widget.isMobile;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      width: isMobile ? double.infinity : (_isCollapsed ? 70 : 260),
       color: const Color(0xFF191c1f),
       child: Column(
         children: [
-          const SizedBox(height: 40),
-          const Text(
-            'KINETIC',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -1,
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!_isCollapsed)
+                  const Text(
+                    'KINETIC',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1,
+                    ),
+                  )
+                else
+                  const Text(
+                    'K',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                if (!isMobile) ...[
+                  const SizedBox(height: 12),
+                  Tooltip(
+                    message: _isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
+                    child: IconButton(
+                      icon: Icon(
+                        _isCollapsed
+                            ? Icons.chevron_right
+                            : Icons.chevron_left,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                      onPressed: () => setState(() => _isCollapsed = !_isCollapsed),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                      ),
+                      hoverColor: Colors.white12,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
           _buildNavItem(context, Icons.show_chart, context.tr('trading_room'), NavbarItem.tradingRoom),
           _buildNavItem(context, Icons.auto_stories, context.tr('journal'), NavbarItem.journal),
           _buildNavItem(context, Icons.dynamic_feed, context.tr('news_feed'), NavbarItem.newsFeed),
@@ -38,7 +89,7 @@ class WebSidebar extends StatelessWidget {
           const Spacer(),
           _buildNavItem(context, Icons.admin_panel_settings, context.tr('admin_center'), NavbarItem.admin),
           const SizedBox(height: 20),
-          const LanguageToggle(),
+          LanguageToggle(isCollapsed: _isCollapsed && !isMobile),
           const SizedBox(height: 20),
         ],
       ),
@@ -46,6 +97,7 @@ class WebSidebar extends StatelessWidget {
   }
 
   Widget _buildNavItem(BuildContext context, IconData icon, String label, NavbarItem item) {
+    final bool isMobile = widget.isMobile;
     return BlocBuilder<NavigationCubit, NavbarItem>(
       builder: (context, currentItem) {
         final isActive = currentItem == item;
@@ -55,26 +107,39 @@ class WebSidebar extends StatelessWidget {
             if (isMobile) Navigator.pop(context); // Close drawer on mobile
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: (_isCollapsed && !isMobile) ? 0 : 20,
+              vertical: 12,
+            ),
+            width: double.infinity,
+            alignment: (_isCollapsed && !isMobile) ? Alignment.center : Alignment.centerLeft,
             decoration: BoxDecoration(
               color: isActive ? const Color(0xFF1d2023) : Colors.transparent,
               border: isActive ? const Border(right: BorderSide(color: Color(0xFF3772FF), width: 2)) : null,
             ),
-            child: Row(
-              children: [
-                Icon(icon, color: isActive ? const Color(0xFF3772FF) : const Color(0xFFc3c6d8), size: 20),
-                const SizedBox(width: 12),
-                Text(
-                  label.toUpperCase(),
-                  style: TextStyle(
-                    color: isActive ? Colors.white : const Color(0xFFc3c6d8),
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
+            child: (_isCollapsed && !isMobile)
+                ? Tooltip(
+                    message: label.toUpperCase(),
+                    child: Icon(icon, color: isActive ? const Color(0xFF3772FF) : const Color(0xFFc3c6d8), size: 20),
+                  )
+                : Row(
+                    children: [
+                      Icon(icon, color: isActive ? const Color(0xFF3772FF) : const Color(0xFFc3c6d8), size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          label.toUpperCase(),
+                          style: TextStyle(
+                            color: isActive ? Colors.white : const Color(0xFFc3c6d8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         );
       },

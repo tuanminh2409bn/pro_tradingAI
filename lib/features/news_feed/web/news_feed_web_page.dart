@@ -1,14 +1,16 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../data/models/news_models.dart';
 import '../../../data/repositories/news_repository.dart';
 import '../bloc/news_bloc.dart';
 import '../bloc/news_event.dart';
 import '../bloc/news_state.dart';
-import 'dart:math' as math;
+
 
 class NewsFeedWebPage extends StatefulWidget {
   final String? userId;
@@ -54,42 +56,53 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final isMobile = constraints.maxWidth < 900;
-                        return SingleChildScrollView(
-                          padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildHeader(isMobile),
-                              const SizedBox(height: 32),
-                              if (isMobile) ...[
+                        if (isMobile) {
+                          // Mobile: single scrollable column
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeader(isMobile),
+                                const SizedBox(height: 24),
                                 _buildSentimentPulse(state.pulse),
                                 const SizedBox(height: 24),
                                 _buildNewsGrid(state.articles, isMobile),
                                 const SizedBox(height: 24),
-                                _buildAIChatCard(state),
-                              ] else
-                                Row(
+                                _buildAIChatCard(context, state),
+                              ],
+                            ),
+                          );
+                        }
+                        // Desktop: left column scrolls, right chat panel is sticky
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // LEFT: Scrollable news content
+                            Expanded(
+                              flex: 2,
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(32.0),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      flex: 2,
-                                      child: Column(
-                                        children: [
-                                          _buildSentimentPulse(state.pulse),
-                                          const SizedBox(height: 24),
-                                          _buildNewsGrid(state.articles, isMobile),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 24),
-                                    Expanded(
-                                      flex: 1,
-                                      child: _buildAIChatCard(state),
-                                    ),
+                                    _buildHeader(isMobile),
+                                    const SizedBox(height: 32),
+                                    _buildSentimentPulse(state.pulse),
+                                    const SizedBox(height: 24),
+                                    _buildNewsGrid(state.articles, isMobile),
+                                    const SizedBox(height: 32),
                                   ],
                                 ),
-                            ],
-                          ),
+                              ),
+                            ),
+                            // RIGHT: Sticky AI chat panel
+                            Container(
+                              width: 360,
+                              padding: const EdgeInsets.fromLTRB(0, 24, 24, 24),
+                              child: _buildAIChatCard(context, state),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -105,77 +118,112 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
   }
 
   Widget _buildHeader(bool isMobile) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Market Intelligence',
-          style: TextStyle(fontSize: isMobile ? 24 : 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Real-time news sentiment and DeepSeek AI analysis.',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: isMobile ? 12 : 14),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSentimentPulse(SentimentPulse pulse) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
-      ),
-      child: Column(
+    return Builder(
+      builder: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('GLOBAL SENTIMENT PULSE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                child: Text(pulse.phase, style: const TextStyle(color: AppColors.primary, fontSize: 9, fontWeight: FontWeight.bold)),
-              ),
-            ],
+          Text(
+            context.tr('news_page_title'),
+            style: TextStyle(fontSize: isMobile ? 24 : 32, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -1),
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Text('${pulse.globalScore}', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.white)),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('MARKET MOOD: NEUTRAL-BULLISH', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4),
-                    Text('Sentiment has improved by 14% over the last 24h as BTC holds support.', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _SentimentBar(label: 'FEAR', value: pulse.fearPercent / 100, color: AppColors.bear),
-              const SizedBox(width: 8),
-              _SentimentBar(label: 'NEUTRAL', value: pulse.neutralPercent / 100, color: Colors.white24),
-              const SizedBox(width: 8),
-              _SentimentBar(label: 'GREED', value: pulse.greedPercent / 100, color: AppColors.primary),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            context.tr('news_page_desc'),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: isMobile ? 12 : 14),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildSentimentPulse(SentimentPulse pulse) {
+    return Builder(
+      builder: (context) {
+        String moodText;
+        if (pulse.greedPercent > 60) {
+          moodText = context.tr('news_bullish');
+        } else if (pulse.fearPercent > 60) {
+          moodText = context.tr('news_bearish');
+        } else if (pulse.greedPercent > pulse.fearPercent) {
+          moodText = context.tr('news_neutral_bullish');
+        } else {
+          moodText = context.tr('news_neutral_bearish');
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(context.tr('news_sentiment_title'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 1)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(pulse.phase, style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Text('${pulse.globalScore}', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.white)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(moodText, style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${context.tr("news_fear")}: ${pulse.fearPercent.toStringAsFixed(1)}% | ${context.tr("news_neutral")}: ${pulse.neutralPercent.toStringAsFixed(1)}% | ${context.tr("news_greed")}: ${pulse.greedPercent.toStringAsFixed(1)}%',
+                          style: const TextStyle(color: Colors.white38, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  _SentimentBar(label: context.tr('news_fear'), value: pulse.fearPercent / 100, color: AppColors.bear),
+                  const SizedBox(width: 8),
+                  _SentimentBar(label: context.tr('news_neutral'), value: pulse.neutralPercent / 100, color: Colors.white24),
+                  const SizedBox(width: 8),
+                  _SentimentBar(label: context.tr('news_greed'), value: pulse.greedPercent / 100, color: AppColors.primary),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildNewsGrid(List<NewsArticle> articles, bool isMobile) {
+    if (articles.isEmpty) {
+      return Builder(
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(40),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Center(
+            child: Text(context.tr('news_no_articles'), style: const TextStyle(color: Colors.white24, fontSize: 13)),
+          ),
+        ),
+      );
+    }
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -183,7 +231,7 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
         crossAxisCount: isMobile ? 1 : 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        mainAxisExtent: 110,
+        mainAxisExtent: 235,
       ),
       itemCount: articles.length,
       itemBuilder: (context, index) {
@@ -193,26 +241,26 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
     );
   }
 
-  Widget _buildAIChatCard(NewsLoaded state) {
+  Widget _buildAIChatCard(BuildContext context, NewsLoaded state) {
     return Container(
-      height: 600,
+      height: double.infinity,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
             ),
             child: const Row(
               children: [
                 Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
                 SizedBox(width: 12),
-                Text('DEEPSEEK V3.2 ANALYST', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1)),
+                Text('DEEPSEEK V3.2 ANALYST', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1)),
               ],
             ),
           ),
@@ -223,7 +271,7 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
               itemBuilder: (context, index) {
                 final msg = state.chatMessages[index];
                 final isAi = msg['isAi'] as bool;
-                return _ChatMessage(text: msg['text'], isAi: isAi);
+                return _ChatMessage(text: msg['text'] as String, isAi: isAi);
               },
             ),
           ),
@@ -234,39 +282,43 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
             ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _chatController,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Ask about market sentiment...',
-                      hintStyle: const TextStyle(color: Colors.white24),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.03),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Builder(
+              builder: (innerContext) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _chatController,
+                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: context.tr('news_ai_placeholder'),
+                          hintStyle: const TextStyle(color: Colors.white24, fontSize: 15),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.03),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onSubmitted: (val) {
+                          if (val.trim().isNotEmpty) {
+                            innerContext.read<NewsBloc>().add(AskAIAnalyst(val));
+                            _chatController.clear();
+                          }
+                        },
+                      ),
                     ),
-                    onSubmitted: (val) {
-                      if (val.trim().isNotEmpty) {
-                        context.read<NewsBloc>().add(AskAIAnalyst(val));
-                        _chatController.clear();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  onPressed: () {
-                    if (_chatController.text.trim().isNotEmpty) {
-                      context.read<NewsBloc>().add(AskAIAnalyst(_chatController.text));
-                      _chatController.clear();
-                    }
-                  },
-                  icon: const Icon(Icons.send, color: AppColors.primary, size: 20),
-                ),
-              ],
+                    const SizedBox(width: 12),
+                    IconButton(
+                      onPressed: () {
+                        if (_chatController.text.trim().isNotEmpty) {
+                          innerContext.read<NewsBloc>().add(AskAIAnalyst(_chatController.text));
+                          _chatController.clear();
+                        }
+                      },
+                      icon: const Icon(Icons.send, color: AppColors.primary, size: 20),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -287,9 +339,9 @@ class _SentimentBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 8, color: Colors.white38, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 11, color: Colors.white38, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          LinearProgressIndicator(value: value, color: color, backgroundColor: Colors.white.withOpacity(0.05), minHeight: 4),
+          LinearProgressIndicator(value: value, color: color, backgroundColor: Colors.white.withValues(alpha: 0.05), minHeight: 4),
         ],
       ),
     );
@@ -300,34 +352,282 @@ class _NewsCard extends StatelessWidget {
   final NewsArticle article;
   const _NewsCard({required this.article});
 
+  static const String _backendUrl =
+      'https://protrading-data-engine-22073478183.asia-southeast1.run.app';
+
+  /// Route external image URLs through our backend proxy to bypass CORS.
+  String _proxyImage(String url) {
+    if (url.isEmpty) {
+      return 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80';
+    }
+    // Unsplash already has CORS headers — no need to proxy
+    if (url.contains('unsplash.com')) return url;
+    final encoded = Uri.encodeComponent(url);
+    return '$_backendUrl/api/image-proxy?url=$encoded';
+  }
+
+  void _showArticleDetail(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final imageSrc = _proxyImage(article.imageUrl);
+        
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+          child: Container(
+            width: 600,
+            constraints: const BoxConstraints(maxHeight: 700),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 24,
+                  spreadRadius: 4,
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image header with Close button
+                  Stack(
+                    children: [
+                      Image.network(
+                        imageSrc,
+                        height: 240,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 240,
+                            color: Colors.grey.shade900,
+                            child: const Center(
+                              child: Icon(Icons.broken_image, color: Colors.white24, size: 48),
+                            ),
+                          );
+                        },
+                      ),
+                      // Gradient overlay
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.3),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.8),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Close button
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: CircleAvatar(
+                          backgroundColor: Colors.black54,
+                          radius: 16,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 16),
+                            onPressed: () => Navigator.pop(context),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                      // Meta info tags
+                      Positioned(
+                        bottom: 16,
+                        left: 16,
+                        right: 16,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                article.source.toUpperCase(),
+                                style: const TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              article.timeAgo,
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Detailed body content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            article.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(color: Colors.white10),
+                          const SizedBox(height: 16),
+                          Text(
+                            article.summary.isNotEmpty
+                                ? article.summary
+                                : 'No description available for this article.',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Footer Actions
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF15181b),
+                      border: Border(top: BorderSide(color: Colors.white10)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('CLOSE', style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 16),
+                        if (article.url.isNotEmpty)
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.open_in_new, size: 16, color: Colors.black),
+                            label: const Text('READ FULL ARTICLE', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                            onPressed: () {
+                              // Use dart:html window.open() — the only 100% reliable
+                              // method to open external URLs on Flutter Web.
+                              html.window.open(article.url, '_blank');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.03)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Text(article.source, style: const TextStyle(fontSize: 9, color: AppColors.primary, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              Text(article.timeAgo, style: const TextStyle(fontSize: 9, color: Colors.white24)),
+    final imageSrc = _proxyImage(article.imageUrl);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _showArticleDetail(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.02),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            article.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Article Image
+                Image.network(
+                  imageSrc,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 140,
+                      color: Colors.grey.shade900,
+                      child: const Center(
+                        child: Icon(Icons.image_not_supported, color: Colors.white12, size: 32),
+                      ),
+                    );
+                  },
+                ),
+                // Article Content
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            article.source,
+                            style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          Text(
+                            article.timeAgo,
+                            style: const TextStyle(fontSize: 12, color: Colors.white24),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        article.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -347,7 +647,7 @@ class _ChatMessage extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 12,
-            backgroundColor: isAi ? AppColors.primary.withOpacity(0.2) : Colors.white12,
+            backgroundColor: isAi ? AppColors.primary.withValues(alpha: 0.2) : Colors.white12,
             child: Icon(isAi ? Icons.smart_toy : Icons.person, size: 12, color: isAi ? AppColors.primary : Colors.white70),
           ),
           const SizedBox(width: 12),
@@ -355,12 +655,12 @@ class _ChatMessage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isAi ? Colors.white.withOpacity(0.03) : AppColors.primary.withOpacity(0.05),
+                color: isAi ? Colors.white.withValues(alpha: 0.03) : AppColors.primary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 text,
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, height: 1.5),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14, height: 1.5),
               ),
             ),
           ),
@@ -389,7 +689,7 @@ class _WebTopNavbar extends StatelessWidget {
             ),
           const Text('KINETIC', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -1, color: Colors.white)),
           const SizedBox(width: 40),
-          const Expanded(child: Text('Equity: \$42,050.00', style: TextStyle(color: Color(0xFFc3c6d8), fontSize: 13), overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(context.tr('news_page_title'), style: const TextStyle(color: Color(0xFFc3c6d8), fontSize: 13), overflow: TextOverflow.ellipsis)),
           const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
           const SizedBox(width: 16),
           const Icon(Icons.notifications, color: Color(0xFFc3c6d8), size: 18),

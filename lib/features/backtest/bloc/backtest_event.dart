@@ -11,10 +11,11 @@ abstract class BacktestEvent extends Equatable {
 class StartBacktestSession extends BacktestEvent {
   final String symbol;
   final double initialBalance;
-  const StartBacktestSession(this.symbol, this.initialBalance);
+  final String? userId;
+  const StartBacktestSession(this.symbol, this.initialBalance, {this.userId});
 
   @override
-  List<Object?> get props => [symbol, initialBalance];
+  List<Object?> get props => [symbol, initialBalance, userId];
 }
 
 class TogglePlayback extends BacktestEvent {}

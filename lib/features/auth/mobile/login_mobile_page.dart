@@ -110,7 +110,7 @@ class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProv
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
@@ -158,7 +158,7 @@ class MobileBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.primary.withOpacity(0.05)
+      ..color = AppColors.primary.withValues(alpha: 0.05)
       ..style = PaintingStyle.fill;
 
     // Draw some moving "data bubbles"
@@ -172,7 +172,7 @@ class MobileBackgroundPainter extends CustomPainter {
 
     // Draw faint grid
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.02)
+      ..color = Colors.white.withValues(alpha: 0.02)
       ..strokeWidth = 0.5;
 
     for (double i = 0; i < size.width; i += 40) {

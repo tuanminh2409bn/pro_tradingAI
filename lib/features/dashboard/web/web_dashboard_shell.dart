@@ -12,7 +12,6 @@ import '../../referral/web/referral_web_page.dart';
 import '../../profile/web/profile_web_page.dart';
 import '../../admin/web/admin_web_page.dart';
 import '../../auth/bloc/auth_bloc.dart';
-import '../../auth/bloc/auth_state.dart';
 
 class WebDashboardShell extends StatelessWidget {
   const WebDashboardShell({super.key});

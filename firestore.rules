@@ -1,7 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 1. Public Data: Tin tức, tín hiệu, phân tích (Ai cũng có thể đọc)
+
+    // ─── Helper functions ───
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // ─── 1. Public Data (đọc tự do) ───
     match /news/{document=**} {
       allow read: if true;
     }
@@ -15,32 +24,88 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // 2. User Private Data: Chỉ chủ sở hữu mới có quyền đọc/ghi
+    // ─── 2. Radar (public read — backend ghi bằng Admin SDK) ───
+    match /radar/{symbol} {
+      allow read: if true;
+      // Chỉ backend (Admin SDK) mới có quyền ghi → không cần rule write
+    }
+
+    // ─── 3. User Private Data ───
     match /accounts/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
+    }
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
     }
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
+    }
+
+    // ─── 4. Referrals ───
+    match /referrals/{userId} {
+      allow read, write: if isOwner(userId);
     }
     match /referrals/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
+
+    // ─── 5. Trades ───
     match /trades/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
-    // 3. Admin: Tạm thời cho phép đọc nếu đã đăng nhập
-    match /admin/{document=**} {
-      allow read: if request.auth != null;
+    // ─── 6. Backtest Sessions ───
+    match /backtest_sessions/{sessionId} {
+      // Cho phép user đọc/ghi session của chính họ
+      allow read, write: if isAuth() && (
+        resource == null ||
+        resource.data.userId == request.auth.uid
+      );
+      // Khi tạo mới: userId phải khớp với auth.uid
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+    }
+    match /backtest_sessions/{sessionId}/trades/{tradeId} {
+      allow read, write: if isAuth();
     }
 
-    // 4. Community & Social: Cho phép mọi người đọc, chỉ người dùng mới có thể đăng bài
-    match /community/{document=**} {
+    // ─── 7. Admin ───
+    match /admin/{document} {
+      allow read: if isAuth();
+    }
+    match /admin/{document}/{subCol}/{subDoc} {
+      allow read: if isAuth();
+    }
+    match /admin/requests/pending/{reqId} {
+      // User có thể tạo withdrawal request
+      allow create: if isAuth();
+      allow read: if isAuth();
+    }
+
+    // ─── 8. Community & Social ───
+    match /community/{postId} {
       allow read: if true;
-      allow create: if request.auth != null;
+      allow create: if isAuth();
+      // Chỉ chủ bài viết mới được sửa/xóa
+      allow update: if isAuth() && (
+        // Cho phép like (chỉ update field likes)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) ||
+        resource.data.userId == request.auth.uid
+      );
+      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
     match /leaderboard/{document=**} {
       allow read: if true;
+    }
+
+    // ─── 9. Admin Settings (AI Config) ───
+    match /AdminSettings/{document=**} {
+      allow read: if isAuth();
+      // Backend ghi bằng Admin SDK, hoặc admin user
+    }
+
+    // ─── 10. Broadcasts ───
+    match /broadcasts/{document=**} {
+      allow read: if isAuth();
     }
   }
 }

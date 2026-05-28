@@ -7,6 +7,9 @@ class NewsArticle extends Equatable {
   final int sentimentScore;
   final String type; // 'FOREXFACTORY', 'TWITTER', 'ALERT'
   final String impact; // 'HIGH', 'MEDIUM', 'LOW'
+  final String summary;
+  final String url;
+  final String imageUrl;
 
   const NewsArticle({
     required this.title,
@@ -15,10 +18,23 @@ class NewsArticle extends Equatable {
     required this.sentimentScore,
     required this.type,
     this.impact = 'LOW',
+    this.summary = '',
+    this.url = '',
+    this.imageUrl = '',
   });
 
   @override
-  List<Object?> get props => [title, source, timeAgo, sentimentScore, type, impact];
+  List<Object?> get props => [
+        title,
+        source,
+        timeAgo,
+        sentimentScore,
+        type,
+        impact,
+        summary,
+        url,
+        imageUrl,
+      ];
 }
 
 class SentimentPulse extends Equatable {

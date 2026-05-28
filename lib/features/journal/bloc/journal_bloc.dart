@@ -38,10 +38,22 @@ class JournalBloc extends Bloc<JournalEvent, JournalState> {
         );
       }
 
-      // Emit initial Loaded state immediately with mock/empty data
+      // Emit initial Loaded state with empty data while streams load
       emit(const JournalLoaded(
         trades: [],
-        stats: JournalStats(totalProfit: 0.0, winRate: 0.0, profitFactor: 0.0, rrRatio: '0:0', equityData: []),
+        stats: JournalStats(
+          totalProfit: 0.0,
+          winRate: 0.0,
+          profitFactor: 0.0,
+          rrRatio: '0:0',
+          equityData: [],
+          totalTrades: 0,
+          bestTrade: 0.0,
+          worstTrade: 0.0,
+          avgProfit: 0.0,
+          aiInsight: 'Loading trade data...',
+          heatmapData: [],
+        ),
       ));
     } catch (e) {
       emit(JournalError(e.toString()));

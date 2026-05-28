@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
-import '../../../core/localization/locale_cubit.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -134,7 +133,7 @@ class _LoginWebPageState extends State<LoginWebPage>
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                       colors: [
-                        AppColors.background.withOpacity(0.4),
+                        AppColors.background.withValues(alpha: 0.4),
                         AppColors.background,
                       ],
                     ),
@@ -221,7 +220,7 @@ class _LoginWebPageState extends State<LoginWebPage>
             },
           ),
         ),
-        Container(color: AppColors.background.withOpacity(0.8)),
+        Container(color: AppColors.background.withValues(alpha: 0.8)),
         Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -230,7 +229,7 @@ class _LoginWebPageState extends State<LoginWebPage>
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
@@ -346,11 +345,11 @@ class _LoginWebPageState extends State<LoginWebPage>
           decoration: InputDecoration(
             prefixIcon: Icon(
               icon,
-              color: AppColors.primary.withOpacity(0.5),
+              color: AppColors.primary.withValues(alpha: 0.5),
               size: 20,
             ),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.03),
+            fillColor: Colors.white.withValues(alpha: 0.03),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Colors.white10),
@@ -459,11 +458,11 @@ class NeuralPlexusPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.primary.withOpacity(0.2)
+      ..color = AppColors.primary.withValues(alpha: 0.2)
       ..strokeWidth = 0.5;
 
     final glowPaint = Paint()
-      ..color = AppColors.primary.withOpacity(0.4)
+      ..color = AppColors.primary.withValues(alpha: 0.4)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
     final List<Offset> scaledNodes = nodes.map((n) {
@@ -480,7 +479,7 @@ class NeuralPlexusPainter extends CustomPainter {
       for (int j = i + 1; j < nodeCount; j++) {
         double dist = (scaledNodes[i] - scaledNodes[j]).distance;
         if (dist < 150) {
-          paint.color = AppColors.primary.withOpacity((1 - dist / 150) * 0.15);
+          paint.color = AppColors.primary.withValues(alpha: (1 - dist / 150) * 0.15);
           canvas.drawLine(scaledNodes[i], scaledNodes[j], paint);
         }
       }
@@ -490,7 +489,7 @@ class NeuralPlexusPainter extends CustomPainter {
       canvas.drawCircle(
         scaledNodes[i],
         nodeRadii[i],
-        paint..color = AppColors.primary.withOpacity(0.5),
+        paint..color = AppColors.primary.withValues(alpha: 0.5),
       );
       if (i % 5 == 0) {
         canvas.drawCircle(scaledNodes[i], nodeRadii[i] + 2, glowPaint);
@@ -519,7 +518,7 @@ class _FeatureItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: AppColors.primary, size: 20),

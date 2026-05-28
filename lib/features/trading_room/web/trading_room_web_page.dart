@@ -9,33 +9,63 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../data/repositories/trading_repository.dart';
 import 'widgets/kinetic_chart.dart';
+import 'widgets/execution_panel.dart';
+import 'widgets/terminal_panel.dart';
+import 'widgets/ai_chat_panel.dart';
+import 'widgets/live_data_bar.dart';
+import 'widgets/chart_tools_sidebar.dart';
+import 'widgets/input_constraint_modal.dart';
 
-class TradingRoomWebPage extends StatelessWidget {
+class TradingRoomWebPage extends StatefulWidget {
   final String? userId;
   final VoidCallback? onMenuPressed;
   const TradingRoomWebPage({super.key, this.userId, this.onMenuPressed});
+
+  @override
+  State<TradingRoomWebPage> createState() => _TradingRoomWebPageState();
+}
+
+class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
+  ChartTool _activeTool = ChartTool.pointer;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
           TradingRoomBloc(tradingRepository: context.read<TradingRepository>())
-            ..add(LoadTradingData(userId: userId)),
+            ..add(LoadTradingData(userId: widget.userId)),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = constraints.maxWidth < 900;
-
-            return Column(
-              children: [
-                _WebTopNavbar(onMenuPressed: onMenuPressed),
-                Expanded(
-                  child: isMobile
-                      ? _buildMobileLayout(context)
-                      : _buildDesktopLayout(context),
-                ),
-              ],
+        body: BlocConsumer<TradingRoomBloc, TradingRoomState>(
+          listenWhen: (prev, curr) {
+            if (prev is TradingRoomLoading && curr is TradingRoomLoaded) {
+              return !curr.isRiskConfigured;
+            }
+            return false;
+          },
+          listener: (context, state) {
+            if (state is TradingRoomLoaded && !state.isRiskConfigured) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                InputConstraintModal.show(context);
+              });
+            }
+          },
+          builder: (context, state) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 900;
+                return Column(
+                  children: [
+                    _WebTopNavbar(onMenuPressed: widget.onMenuPressed),
+                    const LiveDataBar(),
+                    Expanded(
+                      child: isMobile
+                          ? _buildMobileLayout(context)
+                          : _buildDesktopLayout(context),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -44,43 +74,38 @@ class TradingRoomWebPage extends StatelessWidget {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 8,
-            child: Column(
-              children: [
-                const _AssetHeader(),
-                const SizedBox(height: 16),
-                Expanded(child: _buildChartContainer()),
-              ],
-            ),
+    return Row(
+      children: [
+        // Left: Chart Tools Sidebar — now connected
+        ChartToolsSidebar(
+          activeTool: _activeTool,
+          onToolChanged: (tool) => setState(() => _activeTool = tool),
+        ),
+        // Center: Chart + Terminal
+        Expanded(
+          child: Column(
+            children: [
+              const _SubTabBar(),
+              Expanded(child: _buildChartContainer()),
+              const SizedBox(height: 220, child: TerminalPanel()),
+            ],
           ),
-          const SizedBox(width: 16),
-          const Expanded(flex: 3, child: _OrderPanel()),
-        ],
-      ),
+        ),
+        // Right: Execution Panel + AI Chat
+        const SizedBox(width: 380, child: _ResizableRightPanel()),
+      ],
     );
   }
 
   Widget _buildMobileLayout(BuildContext context) {
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const _AssetHeader(),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 400, // Fixed height for chart on mobile
-              child: _buildChartContainer(),
-            ),
-            const SizedBox(height: 16),
-            const _OrderPanel(), // Order panel stays below chart on mobile
-          ],
-        ),
+      child: Column(
+        children: [
+          SizedBox(height: 400, child: _buildChartContainer()),
+          const ExecutionPanel(),
+          const SizedBox(height: 250, child: TerminalPanel()),
+          const SizedBox(height: 300, child: AIChatPanel()),
+        ],
       ),
     );
   }
@@ -90,8 +115,7 @@ class TradingRoomWebPage extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
       ),
       child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
         builder: (context, state) {
@@ -99,116 +123,141 @@ class TradingRoomWebPage extends StatelessWidget {
             return KineticChart(
               candles: state.candles,
               signal: state.currentSignal,
+              activeTool: _activeTool,
             );
           }
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
+          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
         },
       ),
     );
   }
 }
 
-class _AssetHeader extends StatelessWidget {
-  const _AssetHeader();
+// ─── All Symbols Data ───
+const _symbolGroups = [
+  _SymbolGroup(name: '🏆 Metals', symbols: [
+    _Symbol('XAUUSD', '🥇 Gold / USD',     'XAUUSD'),
+    _Symbol('XAGUSD', '🥈 Silver / USD',   'XAGUSD'),
+    _Symbol('XPTUSD', 'Platinum / USD',    'XPTUSD'),
+    _Symbol('XPDUSD', 'Palladium / USD',   'XPDUSD'),
+  ]),
+  _SymbolGroup(name: '📈 Forex Majors', symbols: [
+    _Symbol('EURUSD', '💶 EUR / USD',      'EURUSD'),
+    _Symbol('GBPUSD', '💷 GBP / USD',      'GBPUSD'),
+    _Symbol('USDJPY', '💴 USD / JPY',      'USDJPY'),
+    _Symbol('USDCHF', '🇨🇭 USD / CHF',     'USDCHF'),
+    _Symbol('AUDUSD', '🇦🇺 AUD / USD',     'AUDUSD'),
+    _Symbol('USDCAD', '🇨🇦 USD / CAD',     'USDCAD'),
+    _Symbol('NZDUSD', '🇳🇿 NZD / USD',     'NZDUSD'),
+  ]),
+  _SymbolGroup(name: '📊 Forex Minors', symbols: [
+    _Symbol('EURGBP', 'EUR / GBP',         'EURGBP'),
+    _Symbol('EURJPY', 'EUR / JPY',         'EURJPY'),
+    _Symbol('GBPJPY', '💷 GBP / JPY',      'GBPJPY'),
+    _Symbol('EURAUD', 'EUR / AUD',         'EURAUD'),
+    _Symbol('GBPAUD', 'GBP / AUD',         'GBPAUD'),
+    _Symbol('AUDNZD', 'AUD / NZD',         'AUDNZD'),
+    _Symbol('CADCHF', 'CAD / CHF',         'CADCHF'),
+    _Symbol('AUDCAD', 'AUD / CAD',         'AUDCAD'),
+    _Symbol('AUDCHF', 'AUD / CHF',         'AUDCHF'),
+    _Symbol('NZDJPY', 'NZD / JPY',         'NZDJPY'),
+  ]),
+  _SymbolGroup(name: '🛢️ Commodities', symbols: [
+    _Symbol('USOIL',  '🛢️ WTI Crude Oil',  'WTI'),
+    _Symbol('UKOIL',  '🛢️ Brent Crude',    'BRENT'),
+    _Symbol('NGAS',   '🔥 Natural Gas',    'NGAS'),
+    _Symbol('CORN',   '🌽 Corn',           'CORN'),
+    _Symbol('WHEAT',  '🌾 Wheat',          'WHEAT'),
+    _Symbol('SOYBN',  '🫘 Soybeans',       'SOYBN'),
+    _Symbol('COPPER', '🔶 Copper',         'COPPER'),
+  ]),
+  _SymbolGroup(name: '📉 Indices', symbols: [
+    _Symbol('US30',   '🗽 Dow Jones 30',   'US30'),
+    _Symbol('US500',  '🇺🇸 S&P 500',       'US500'),
+    _Symbol('US100',  '💻 Nasdaq 100',     'US100'),
+    _Symbol('UK100',  '🇬🇧 FTSE 100',      'UK100'),
+    _Symbol('DE40',   '🇩🇪 DAX 40',        'DE40'),
+    _Symbol('JP225',  '🇯🇵 Nikkei 225',    'JP225'),
+    _Symbol('FR40',   '🇫🇷 CAC 40',        'FR40'),
+    _Symbol('AU200',  '🇦🇺 ASX 200',       'AU200'),
+    _Symbol('HK50',   '🇭🇰 Hang Seng 50',  'HK50'),
+    _Symbol('CHINA50','🇨🇳 China A50',     'CHINA50'),
+  ]),
+  _SymbolGroup(name: '₿ Crypto', symbols: [
+    _Symbol('BTCUSD', '₿ Bitcoin / USD',   'BTC'),
+    _Symbol('ETHUSD', '⟠ Ethereum / USD',  'ETH'),
+    _Symbol('BNBUSD', '🟡 BNB / USD',      'BNB'),
+    _Symbol('SOLUSD', '◎ Solana / USD',    'SOL'),
+    _Symbol('XRPUSD', '🔷 XRP / USD',      'XRP'),
+    _Symbol('ADAUSD', '🔵 Cardano / USD',  'ADA'),
+    _Symbol('DOTUSD', 'Polkadot / USD',    'DOT'),
+    _Symbol('LINKUSD','🔗 Chainlink / USD','LINK'),
+  ]),
+];
+
+class _SymbolGroup {
+  final String name;
+  final List<_Symbol> symbols;
+  const _SymbolGroup({required this.name, required this.symbols});
+}
+
+class _Symbol {
+  final String value;   // sent to bloc (e.g. XAUUSD)
+  final String label;   // displayed in UI
+  final String short;   // short ticker for tab
+  const _Symbol(this.value, this.label, this.short);
+}
+
+// ─── Sub Tab Bar ───
+class _SubTabBar extends StatelessWidget {
+  const _SubTabBar();
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TradingRoomBloc, TradingRoomState>(
       builder: (context, state) {
         String symbol = 'XAUUSD';
-        double price = 0.0;
+        String timeframe = 'M5';
         if (state is TradingRoomLoaded) {
           symbol = state.currentSymbol;
-          if (state.candles.isNotEmpty) price = state.candles.last.close;
+          timeframe = _formatTimeframe(state.currentTimeframe);
         }
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          height: 36,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
+            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
           ),
           child: Row(
             children: [
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: symbol,
-                  dropdownColor: AppColors.surface,
-                  icon: const Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.white54,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      context.read<TradingRoomBloc>().add(
-                        UpdateSymbol(newValue),
-                      );
-                    }
-                  },
-                  items: [
-                    DropdownMenuItem(
-                      value: 'XAUUSD',
-                      child: Text(context.tr('xauusd_label')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'EURUSD',
-                      child: Text(context.tr('eurusd_label')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'BTCUSD',
-                      child: Text(context.tr('btcusd_label')),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Icon(Icons.trending_up, color: AppColors.primary, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                price > 0 ? '\$${price.toStringAsFixed(3)}' : context.tr('loading'),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
-              ),
+              _SubTab(label: context.tr('tr_tab_label'), isActive: true, activeColor: AppColors.primary),
+              const SizedBox(width: 2),
+              _SubTab(label: '$symbol $timeframe', isActive: false, activeColor: AppColors.secondary, isSymbolTab: true),
               const Spacer(),
-              _buildTimeframeBtn(
-                context,
-                '1M',
-                '1',
-                isActive:
-                    state is TradingRoomLoaded && state.currentTimeframe == '1',
-              ),
-              _buildTimeframeBtn(
-                context,
-                '5M',
-                '5',
-                isActive:
-                    state is TradingRoomLoaded && state.currentTimeframe == '5',
-              ),
-              _buildTimeframeBtn(
-                context,
-                '15M',
-                '15',
-                isActive:
-                    state is TradingRoomLoaded &&
-                    state.currentTimeframe == '15',
-              ),
-              _buildTimeframeBtn(
-                context,
-                '1H',
-                '60',
-                isActive:
-                    state is TradingRoomLoaded &&
-                    state.currentTimeframe == '60',
+              // Symbol selector button
+              Tooltip(
+                message: 'Change Symbol',
+                child: InkWell(
+                  onTap: () => _showSymbolDialog(context),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.swap_horiz, color: Colors.white54, size: 14),
+                        const SizedBox(width: 4),
+                        Text('Symbol', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -217,304 +266,82 @@ class _AssetHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeframeBtn(
-    BuildContext context,
-    String label,
-    String value, {
-    bool isActive = false,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        context.read<TradingRoomBloc>().add(ChangeTimeframe(value));
-      },
-      child: Container(
-        margin: const EdgeInsets.only(left: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isActive ? AppColors.primary : Colors.white10,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? AppColors.primary : Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+  void _showSymbolDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (ctx) => _SymbolSearchDialog(
+        onSelected: (value) {
+          context.read<TradingRoomBloc>().add(UpdateSymbol(value));
+          Navigator.pop(ctx);
+        },
       ),
     );
   }
+
+  String _formatTimeframe(String tf) {
+    switch (tf) {
+      case '1': return 'M1';
+      case '5': return 'M5';
+      case '15': return 'M15';
+      case '60': return 'H1';
+      case '240': return 'H4';
+      case '1D': return 'D1';
+      case '1W': return 'W1';
+      default: return 'M$tf';
+    }
+  }
 }
 
-class _OrderPanel extends StatefulWidget {
-  const _OrderPanel();
+class _SubTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final bool isSymbolTab;
 
-  @override
-  State<_OrderPanel> createState() => _OrderPanelState();
-}
-
-class _OrderPanelState extends State<_OrderPanel> {
-  final TextEditingController _lotController = TextEditingController(
-    text: '0.10',
-  );
-
-  @override
-  void dispose() {
-    _lotController.dispose();
-    super.dispose();
-  }
-
-  void _handleTrade(BuildContext context, String type) {
-    final lot = double.tryParse(_lotController.text) ?? 0.10;
-    context.read<TradingRoomBloc>().add(ExecuteTrade(type: type, lotSize: lot));
-
-    final msg = context.tr('order_executed').replaceAll('{type}', type).replaceAll('{lot}', lot.toString());
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: type == 'BUY' ? AppColors.primary : AppColors.bear,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+  const _SubTab({
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    this.isSymbolTab = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TradingRoomBloc, TradingRoomState>(
-      builder: (context, state) {
-        double currentPrice = 0.0;
-        if (state is TradingRoomLoaded && state.candles.isNotEmpty) {
-          currentPrice = state.candles.last.close;
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.05)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.tr('execution_engine'),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white54,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 24),
-              _buildInputLabel(context.tr('lot_size')),
-              TextField(
-                controller: _lotController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                decoration: const InputDecoration(
-                  hintText: '0.10',
-                  hintStyle: TextStyle(color: Colors.white24),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white10),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTradeBtn(
-                      context,
-                      context.tr('sell'),
-                      AppColors.bear,
-                      currentPrice,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTradeBtn(
-                      context,
-                      context.tr('buy'),
-                      AppColors.primary,
-                      currentPrice,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.read<TradingRoomBloc>().add(
-                      const RequestAnalysis(),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          context.tr('analyzing_request'),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.analytics, color: Colors.black),
-                  label: Text(
-                    context.tr('analyze_data'),
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-              Text(
-                context.tr('active_signals'),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white54,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (state is TradingRoomLoaded && state.currentSignal != null)
-                _buildSignalCard(
-                  state.currentSignal!.symbol,
-                  '${state.currentSignal!.type} @ ${state.currentSignal!.entryPrice.toStringAsFixed(3)}',
-                  '${state.currentSignal!.probability}% Prob.',
-                )
-              else
-                Text(
-                  context.tr('no_signals'),
-                  style: const TextStyle(
-                    color: Colors.white38,
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInputLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 9,
-        color: Colors.white38,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _buildTradeBtn(
-    BuildContext context,
-    String label,
-    Color color,
-    double price,
-  ) {
-    return GestureDetector(
-      onTap: () => _handleTrade(context, label),
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.5)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1,
-                fontSize: 14,
-              ),
-            ),
-            if (price > 0)
-              Text(
-                price.toStringAsFixed(3),
-                style: TextStyle(
-                  color: color.withOpacity(0.7),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSignalCard(String symbol, String desc, String prob) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
-        borderRadius: BorderRadius.circular(8),
+        color: isActive ? activeColor.withValues(alpha: 0.08) : Colors.transparent,
+        border: Border(
+          bottom: BorderSide(
+            color: isActive ? activeColor : Colors.transparent,
+            width: 2,
+          ),
+        ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                symbol,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+          if (isSymbolTab) ...[
+            Container(
+              width: 6, height: 6,
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.5), blurRadius: 4),
+                ],
               ),
-              Text(
-                desc,
-                style: const TextStyle(color: Colors.white54, fontSize: 10),
-              ),
-            ],
-          ),
+            ),
+          ],
           Text(
-            prob,
-            style: const TextStyle(
-              color: AppColors.primary,
+            label,
+            style: TextStyle(
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              fontSize: 10,
+              color: isActive ? activeColor : Colors.white54,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -523,6 +350,7 @@ class _OrderPanelState extends State<_OrderPanel> {
   }
 }
 
+// ─── Top Navbar ───
 class _WebTopNavbar extends StatelessWidget {
   final VoidCallback? onMenuPressed;
   const _WebTopNavbar({this.onMenuPressed});
@@ -530,8 +358,8 @@ class _WebTopNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: const BoxDecoration(
         color: Color(0xFF111417),
         border: Border(bottom: BorderSide(color: Colors.white10)),
@@ -541,71 +369,108 @@ class _WebTopNavbar extends StatelessWidget {
           if (onMenuPressed != null)
             IconButton(
               onPressed: onMenuPressed,
-              icon: const Icon(Icons.menu, color: Colors.white, size: 20),
+              icon: const Icon(Icons.menu, color: Colors.white, size: 18),
             ),
-          const Text(
-            'KINETIC',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
-              color: Colors.white,
+          // Logo
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.1),
+                  AppColors.secondary.withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.hexagon, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'PROTRADING AI',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 40),
-          Expanded(
-            child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
-              builder: (context, state) {
-                String equity = '42,050.00';
-                if (state is TradingRoomLoaded) {
-                  equity = state.account.equity.toStringAsFixed(2);
-                }
-                return Row(
+          const SizedBox(width: 24),
+          // Account Status
+          BlocBuilder<TradingRoomBloc, TradingRoomState>(
+            builder: (context, state) {
+              String status = context.tr('tr_connecting');
+              Color statusColor = AppColors.accent;
+              if (state is TradingRoomLoaded) {
+                status = context.tr('tr_live');
+                statusColor = AppColors.primary;
+              }
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${context.tr('equity')}: \$$equity',
-                      style: const TextStyle(
-                        color: Color(0xFFc3c6d8),
-                        fontSize: 13,
+                    Container(
+                      width: 8, height: 8,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: statusColor.withValues(alpha: 0.5), blurRadius: 4),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    TextButton.icon(
-                      onPressed: () => _showSyncDialog(context),
-                      icon: const Icon(
-                        Icons.link,
-                        size: 14,
-                        color: AppColors.primary,
-                      ),
-                      label: Text(
-                        context.tr('link_api'),
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                    const SizedBox(width: 6),
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ],
-                );
-              },
+                ),
+              );
+            },
+          ),
+          const Spacer(),
+          // Link API Button
+          TextButton.icon(
+            onPressed: () => _showSyncDialog(context),
+            icon: Icon(Icons.link, size: 16, color: AppColors.primary),
+            label: Text(
+              context.tr('tr_link_api'),
+              style: const TextStyle(
+                color: AppColors.primary,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             ),
           ),
-          const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 16),
-          const Icon(Icons.notifications, color: Color(0xFFc3c6d8), size: 18),
+          const SizedBox(width: 8),
+          const Icon(Icons.notifications_none, color: Colors.white38, size: 18),
           const SizedBox(width: 8),
           IconButton(
             onPressed: () =>
                 context.read<AuthBloc>().add(AuthLogoutRequested()),
-            icon: const Icon(Icons.logout, color: AppColors.bear, size: 18),
+            icon: const Icon(Icons.logout, color: AppColors.bear, size: 16),
+            tooltip: context.tr('tr_logout_tooltip'),
           ),
         ],
       ),
@@ -619,7 +484,7 @@ class _WebTopNavbar extends StatelessWidget {
         return AlertDialog(
           backgroundColor: AppColors.surface,
           title: Text(
-            context.tr('link_broker_title'),
+            context.tr('tr_link_broker_title'),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -630,14 +495,14 @@ class _WebTopNavbar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                context.tr('link_broker_desc'),
+                context.tr('tr_link_broker_desc'),
                 style: const TextStyle(color: AppColors.primary, fontSize: 12),
               ),
               const SizedBox(height: 16),
               TextField(
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: context.tr('account_number'),
+                  labelText: context.tr('tr_account_number'),
                   labelStyle: const TextStyle(color: Colors.white54),
                 ),
               ),
@@ -646,7 +511,7 @@ class _WebTopNavbar extends StatelessWidget {
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: context.tr('investor_password'),
+                  labelText: context.tr('tr_investor_password'),
                   labelStyle: const TextStyle(color: Colors.white54),
                 ),
               ),
@@ -654,7 +519,7 @@ class _WebTopNavbar extends StatelessWidget {
               TextField(
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: context.tr('broker_server'),
+                  labelText: context.tr('tr_broker_server'),
                   labelStyle: const TextStyle(color: Colors.white54),
                 ),
               ),
@@ -664,7 +529,7 @@ class _WebTopNavbar extends StatelessWidget {
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                context.tr('cancel'),
+                context.tr('tr_cancel'),
                 style: const TextStyle(color: Colors.white54),
               ),
             ),
@@ -672,14 +537,14 @@ class _WebTopNavbar extends StatelessWidget {
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.tr('sending_link_request'))),
+                  SnackBar(content: Text(context.tr('tr_link_sending'))),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
               ),
               child: Text(
-                context.tr('link_now'),
+                context.tr('tr_link_now'),
                 style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -689,6 +554,245 @@ class _WebTopNavbar extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+// ─── Resizable Right Panel (Execution + AI Chat) ───
+class _ResizableRightPanel extends StatefulWidget {
+  const _ResizableRightPanel();
+
+  @override
+  State<_ResizableRightPanel> createState() => _ResizableRightPanelState();
+}
+
+class _ResizableRightPanelState extends State<_ResizableRightPanel> {
+  double _execFraction = 0.60;
+  bool _isDragging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalHeight = constraints.maxHeight;
+        final execHeight = (totalHeight * _execFraction).clamp(
+          totalHeight * 0.30,
+          totalHeight * 0.85,
+        );
+        final chatHeight = totalHeight - execHeight - 6;
+
+        return Column(
+          children: [
+            SizedBox(height: execHeight, child: const ExecutionPanel()),
+            // Drag Handle
+            GestureDetector(
+              onVerticalDragStart: (_) => setState(() => _isDragging = true),
+              onVerticalDragEnd: (_) => setState(() => _isDragging = false),
+              onVerticalDragUpdate: (details) {
+                setState(() {
+                  final delta = details.delta.dy / totalHeight;
+                  _execFraction = (_execFraction + delta).clamp(0.30, 0.85);
+                });
+              },
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeUpDown,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 12,
+                  color: _isDragging
+                      ? AppColors.primary.withValues(alpha: 0.25)
+                      : Colors.white.withValues(alpha: 0.05),
+                  child: Center(
+                    child: Container(
+                      width: 60,
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: _isDragging
+                            ? AppColors.primary
+                            : Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(1.5),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: chatHeight, child: const AIChatPanel()),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Symbol Search Dialog ─────────────────────────────────
+class _SymbolSearchDialog extends StatefulWidget {
+  final ValueChanged<String> onSelected;
+  const _SymbolSearchDialog({required this.onSelected});
+
+  @override
+  State<_SymbolSearchDialog> createState() => _SymbolSearchDialogState();
+}
+
+class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  List<_Symbol> get _filtered {
+    if (_query.isEmpty) return [];
+    final q = _query.toUpperCase();
+    return _symbolGroups
+        .expand((g) => g.symbols)
+        .where((s) => s.value.contains(q) || s.label.toUpperCase().contains(q) || s.short.contains(q))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSearching = _query.isNotEmpty;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 60),
+      child: Container(
+        width: 560,
+        height: 620,
+        decoration: BoxDecoration(
+          color: const Color(0xFF131722),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, color: AppColors.primary, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        hintText: 'Search symbol... (XAUUSD, Gold, BTC)',
+                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      onChanged: (v) => setState(() => _query = v.trim()),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.4), size: 18),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: isSearching
+                  ? _buildSearchResults()
+                  : _buildGroupedList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchResults() {
+    final results = _filtered;
+    if (results.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, color: Colors.white.withValues(alpha: 0.2), size: 40),
+            const SizedBox(height: 12),
+            Text('No symbol found for "$_query"', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, i) => _buildSymbolTile(results[i]),
+    );
+  }
+
+  Widget _buildGroupedList() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _symbolGroups.length,
+      itemBuilder: (context, gi) {
+        final group = _symbolGroups[gi];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+              child: Text(group.name, style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            ),
+            ...group.symbols.map((s) => _buildSymbolTile(s)),
+            if (gi < _symbolGroups.length - 1)
+              Divider(color: Colors.white.withValues(alpha: 0.04), height: 1),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSymbolTile(_Symbol s) {
+    return InkWell(
+      onTap: () => widget.onSelected(s.value),
+      hoverColor: AppColors.primary.withValues(alpha: 0.07),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: Row(
+          children: [
+            // Ticker badge
+            Container(
+              width: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+              ),
+              child: Text(
+                s.short,
+                style: const TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text(s.value, style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11)),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.15), size: 12),
+          ],
+        ),
+      ),
     );
   }
 }
