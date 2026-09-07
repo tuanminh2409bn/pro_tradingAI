@@ -20,9 +20,9 @@ class AdminWebPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => AdminBloc(
-        adminRepository: context.read<AdminRepository>(),
-      )..add(LoadAdminData()),
+      create: (context) =>
+          AdminBloc(adminRepository: context.read<AdminRepository>())
+            ..add(LoadAdminData()),
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: BlocBuilder<AdminBloc, AdminState>(
@@ -101,10 +101,7 @@ class AdminWebPage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 24),
-                              const Expanded(
-                                flex: 5,
-                                child: _RadarConfig(),
-                              ),
+                              const Expanded(flex: 5, child: _RadarConfig()),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -161,7 +158,11 @@ class AdminWebPage extends StatelessWidget {
         ),
         Row(
           children: [
-            _buildHeaderStat('SYSTEM STATUS', 'ACTIVE - 60 FPS', AppColors.primary),
+            _buildHeaderStat(
+              'SYSTEM STATUS',
+              'ACTIVE - 60 FPS',
+              AppColors.primary,
+            ),
             const SizedBox(width: 16),
             _buildHeaderStat(
               'PENDING ALERTS',
@@ -266,9 +267,7 @@ class AdminWebPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    tradingEnabled
-                        ? Icons.power_settings_new
-                        : Icons.power_off,
+                    tradingEnabled ? Icons.power_settings_new : Icons.power_off,
                     color: tradingEnabled ? AppColors.bear : Colors.green,
                     size: 24,
                   ),
@@ -360,13 +359,12 @@ class AdminWebPage extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  currentlyEnabled ? AppColors.bear : Colors.green,
+              backgroundColor: currentlyEnabled ? AppColors.bear : Colors.green,
             ),
             onPressed: () {
-              context
-                  .read<AdminBloc>()
-                  .add(ToggleKillSwitch(!currentlyEnabled));
+              context.read<AdminBloc>().add(
+                ToggleKillSwitch(!currentlyEnabled),
+              );
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -375,8 +373,9 @@ class AdminWebPage extends StatelessWidget {
                         ? 'Trading PAUSED — Kill switch activated!'
                         : 'Trading RESUMED!',
                   ),
-                  backgroundColor:
-                      currentlyEnabled ? AppColors.bear : Colors.green,
+                  backgroundColor: currentlyEnabled
+                      ? AppColors.bear
+                      : Colors.green,
                 ),
               );
             },
@@ -400,10 +399,18 @@ class AdminWebPage extends StatelessWidget {
     final displayServices = services.isNotEmpty
         ? services
         : const [
-            ServiceStatus(name: 'WebSocket Server', isOnline: true, latencyMs: 12),
+            ServiceStatus(
+              name: 'WebSocket Server',
+              isOnline: true,
+              latencyMs: 12,
+            ),
             ServiceStatus(name: 'MetaApi Cloud', isOnline: true, latencyMs: 45),
             ServiceStatus(name: 'DeepSeek AI', isOnline: true, latencyMs: 230),
-            ServiceStatus(name: 'Firebase', isOnline: true, latencyMs: 8),
+            ServiceStatus(
+              name: 'Analysis Cache',
+              isOnline: false,
+              latencyMs: 0,
+            ),
           ];
 
     return Container(
@@ -454,8 +461,7 @@ class AdminWebPage extends StatelessWidget {
                         children: [
                           Icon(
                             Icons.circle,
-                            color:
-                                svc.isOnline ? Colors.green : AppColors.bear,
+                            color: svc.isOnline ? Colors.green : AppColors.bear,
                             size: 8,
                           ),
                           const SizedBox(width: 6),
@@ -591,15 +597,19 @@ class AdminWebPage extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () => context
-                    .read<AdminBloc>()
-                    .add(HandleRequest(req.userId, true)),
-                icon: const Icon(Icons.check, color: AppColors.primary, size: 18),
+                onPressed: () => context.read<AdminBloc>().add(
+                  HandleRequest(req.userId, true),
+                ),
+                icon: const Icon(
+                  Icons.check,
+                  color: AppColors.primary,
+                  size: 18,
+                ),
               ),
               IconButton(
-                onPressed: () => context
-                    .read<AdminBloc>()
-                    .add(HandleRequest(req.userId, false)),
+                onPressed: () => context.read<AdminBloc>().add(
+                  HandleRequest(req.userId, false),
+                ),
                 icon: const Icon(Icons.close, color: AppColors.bear, size: 18),
               ),
             ],
@@ -791,14 +801,14 @@ class _GlobalRiskCardState extends State<_GlobalRiskCard> {
               borderRadius: BorderRadius.circular(8),
               onTap: () {
                 context.read<AdminBloc>().add(
-                      SaveGlobalRisk(
-                        GlobalRiskConfig(
-                          maxLeverage: _leverage,
-                          newsGuardEnabled: _newsGuard,
-                          maxDrawdownPct: _maxDrawdown,
-                        ),
-                      ),
-                    );
+                  SaveGlobalRisk(
+                    GlobalRiskConfig(
+                      maxLeverage: _leverage,
+                      newsGuardEnabled: _newsGuard,
+                      maxDrawdownPct: _maxDrawdown,
+                    ),
+                  ),
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Risk config saved!'),
@@ -952,11 +962,11 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: (dataPoints.reduce(
-                            (a, b) => a > b ? a : b,
-                          ) /
-                          4)
-                      .clamp(1, 1000000),
+                  horizontalInterval:
+                      (dataPoints.reduce((a, b) => a > b ? a : b) / 4).clamp(
+                        1,
+                        1000000,
+                      ),
                   getDrawingHorizontalLine: (_) => FlLine(
                     color: Colors.white.withValues(alpha: 0.05),
                     strokeWidth: 1,
@@ -1028,10 +1038,10 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
                       show: true,
                       getDotPainter: (spot, percent, bar, index) =>
                           FlDotCirclePainter(
-                        radius: 3,
-                        color: activeColor,
-                        strokeWidth: 0,
-                      ),
+                            radius: 3,
+                            color: activeColor,
+                            strokeWidth: 0,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
@@ -1060,10 +1070,7 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
                 val: '+${widget.stats.growth}%',
                 color: AppColors.primary,
               ),
-              _StatItem(
-                label: 'SESSIONS',
-                val: '${widget.stats.dau} / min',
-              ),
+              _StatItem(label: 'SESSIONS', val: '${widget.stats.dau} / min'),
               _StatItem(
                 label: 'LATENCY',
                 val: '${widget.stats.latency}ms',
@@ -1213,9 +1220,9 @@ class _RadarConfigState extends State<_RadarConfig> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                context
-                    .read<AdminBloc>()
-                    .add(SaveRadarConfig(_watchlist, _sensitivity));
+                context.read<AdminBloc>().add(
+                  SaveRadarConfig(_watchlist, _sensitivity),
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Radar config saved!'),
@@ -1242,10 +1249,7 @@ class _RadarConfigState extends State<_RadarConfig> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'Add Symbol',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Add Symbol', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: _addCtrl,
           style: const TextStyle(color: Colors.white),
@@ -1314,10 +1318,7 @@ class _TierSelectorState extends State<_TierSelector> {
           ),
           DropdownMenuItem(value: 'FREE', child: Text('FREE Tier')),
           DropdownMenuItem(value: 'VIP', child: Text('VIP Tier')),
-          DropdownMenuItem(
-            value: 'ENTERPRISE',
-            child: Text('Enterprise'),
-          ),
+          DropdownMenuItem(value: 'ENTERPRISE', child: Text('Enterprise')),
         ],
         onChanged: (v) {
           if (v != null) {
@@ -1401,8 +1402,7 @@ class _SignalBlastPanelState extends State<_SignalBlastPanel> {
                 ),
                 const SizedBox(height: 8),
                 _TierSelector(
-                  onChanged: (tier) =>
-                      setState(() => _selectedTier = tier),
+                  onChanged: (tier) => setState(() => _selectedTier = tier),
                 ),
               ],
             ),
@@ -1446,14 +1446,12 @@ class _SignalBlastPanelState extends State<_SignalBlastPanel> {
                   onTap: () {
                     if (_controller.text.isNotEmpty) {
                       context.read<AdminBloc>().add(
-                            BroadcastRequested(_controller.text, _selectedTier),
-                          );
+                        BroadcastRequested(_controller.text, _selectedTier),
+                      );
                       _controller.clear();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            'Broadcast sent to $_selectedTier!',
-                          ),
+                          content: Text('Broadcast sent to $_selectedTier!'),
                           backgroundColor: AppColors.primary,
                         ),
                       );
@@ -1524,11 +1522,7 @@ class _GlobalAccessCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
-                child: Icon(
-                  Icons.public,
-                  color: AppColors.secondary,
-                  size: 80,
-                ),
+                child: Icon(Icons.public, color: AppColors.secondary, size: 80),
               ),
             ),
           ),
@@ -1680,10 +1674,7 @@ class _AIConfigCard extends StatefulWidget {
   final AIConfig? aiConfig;
   final bool isSaving;
 
-  const _AIConfigCard({
-    required this.aiConfig,
-    required this.isSaving,
-  });
+  const _AIConfigCard({required this.aiConfig, required this.isSaving});
 
   @override
   State<_AIConfigCard> createState() => _AIConfigCardState();
@@ -1831,8 +1822,10 @@ class _AIConfigCardState extends State<_AIConfigCard> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide:
-                    const BorderSide(color: AppColors.primary, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
               ),
               hintText: 'Enter the AI master prompt...',
               hintStyle: TextStyle(
@@ -1880,12 +1873,13 @@ class _AIConfigCardState extends State<_AIConfigCard> {
                     : () {
                         if (_promptController.text.trim().isNotEmpty) {
                           context.read<AdminBloc>().add(
-                                SaveAIConfig(_promptController.text.trim()),
-                              );
+                            SaveAIConfig(_promptController.text.trim()),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content:
-                                  Text('AI Configuration saved successfully!'),
+                              content: Text(
+                                'AI Configuration saved successfully!',
+                              ),
                               backgroundColor: AppColors.primary,
                               behavior: SnackBarBehavior.floating,
                               duration: Duration(seconds: 2),

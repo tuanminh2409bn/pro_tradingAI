@@ -11,7 +11,7 @@ abstract class TradingRoomEvent extends Equatable {
 class LoadTradingData extends TradingRoomEvent {
   final String? userId;
   const LoadTradingData({this.userId});
-  
+
   @override
   List<Object?> get props => [userId];
 }
@@ -19,7 +19,7 @@ class LoadTradingData extends TradingRoomEvent {
 class UpdateSymbol extends TradingRoomEvent {
   final String symbol;
   const UpdateSymbol(this.symbol);
-  
+
   @override
   List<Object?> get props => [symbol];
 }
@@ -30,6 +30,14 @@ class UpdateCandles extends TradingRoomEvent {
 
   @override
   List<Object?> get props => [candles];
+}
+
+class UpdateSymbolPrices extends TradingRoomEvent {
+  final Map<String, double> prices;
+  const UpdateSymbolPrices(this.prices);
+
+  @override
+  List<Object?> get props => [prices];
 }
 
 class UpdateAccount extends TradingRoomEvent {
@@ -63,13 +71,13 @@ class ExecuteTrade extends TradingRoomEvent {
   final double slPrice;
   final List<double> tpPrices;
   const ExecuteTrade({
-    required this.type, 
+    required this.type,
     required this.lotSize,
     this.entryPrice = 0.0,
     this.slPrice = 0.0,
     this.tpPrices = const [],
   });
-  
+
   @override
   List<Object?> get props => [type, lotSize, entryPrice, slPrice, tpPrices];
 }
@@ -100,6 +108,14 @@ class SaveRiskConfig extends TradingRoomEvent {
   List<Object?> get props => [config];
 }
 
+class UpdateRiskConfigLoaded extends TradingRoomEvent {
+  final RiskConfig? config;
+  const UpdateRiskConfigLoaded(this.config);
+
+  @override
+  List<Object?> get props => [config];
+}
+
 class ClosePosition extends TradingRoomEvent {
   final String positionId;
   const ClosePosition(this.positionId);
@@ -118,10 +134,11 @@ class SendAIMessage extends TradingRoomEvent {
 
 class ReceiveAIResponse extends TradingRoomEvent {
   final String response;
-  const ReceiveAIResponse(this.response);
+  final bool isFallback;
+  const ReceiveAIResponse(this.response, {this.isFallback = false});
 
   @override
-  List<Object?> get props => [response];
+  List<Object?> get props => [response, isFallback];
 }
 
 class UpdatePositions extends TradingRoomEvent {
@@ -147,4 +164,35 @@ class TradeClosed extends TradingRoomEvent {
 
   @override
   List<Object?> get props => [positionId, profit];
+}
+
+// ─── Chat History Events ───
+
+class LoadChatHistory extends TradingRoomEvent {
+  const LoadChatHistory();
+}
+
+class ChatHistoryLoaded extends TradingRoomEvent {
+  final List<ChatMessage> messages;
+  const ChatHistoryLoaded(this.messages);
+
+  @override
+  List<Object?> get props => [messages];
+}
+
+class ClearChatHistory extends TradingRoomEvent {
+  const ClearChatHistory();
+}
+
+/// Day 6 — inject Layer-5 news_column Red Zone from HIGH-impact headline.
+class ApplyNewsRedZone extends TradingRoomEvent {
+  final String label;
+  const ApplyNewsRedZone(this.label);
+
+  @override
+  List<Object?> get props => [label];
+}
+
+class ClearNewsRedZone extends TradingRoomEvent {
+  const ClearNewsRedZone();
 }

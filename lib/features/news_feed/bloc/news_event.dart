@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../data/models/news_models.dart';
+import '../../../data/models/trading_models.dart';
 
 abstract class NewsEvent extends Equatable {
   const NewsEvent();
@@ -10,10 +11,11 @@ abstract class NewsEvent extends Equatable {
 
 class LoadNewsData extends NewsEvent {
   final String? userId;
-  const LoadNewsData({this.userId});
+  final String? welcomeMessage;
+  const LoadNewsData({this.userId, this.welcomeMessage});
 
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [userId, welcomeMessage];
 }
 
 class UpdateNewsFeed extends NewsEvent {
@@ -38,4 +40,22 @@ class AskAIAnalyst extends NewsEvent {
 
   @override
   List<Object?> get props => [query];
+}
+
+// ─── Chat History Events ───
+
+class LoadNewsChatHistory extends NewsEvent {
+  const LoadNewsChatHistory();
+}
+
+class NewsChatHistoryLoaded extends NewsEvent {
+  final List<ChatMessage> messages;
+  const NewsChatHistoryLoaded(this.messages);
+
+  @override
+  List<Object?> get props => [messages];
+}
+
+class ClearNewsChatHistory extends NewsEvent {
+  const ClearNewsChatHistory();
 }

@@ -1,0 +1,12 @@
+---
+description: Project-wide correctness, scope, and verification baseline
+globs:
+alwaysApply: true
+---
+
+- Inspect repository instructions, manifests, lockfiles, nearby code, and tests before editing.
+- Use the project's actual versions and APIs; never guess or upgrade dependencies without approval.
+- Make the smallest coherent change and preserve architecture, public behavior, user data, and unrelated worktree changes.
+- Preserve or improve type safety, validate trust-boundary data, and do not weaken auth, permissions, or security controls.
+- Add focused tests when behavior changes; run relevant format, analysis, type, test, and build checks.
+- Inspect the final diff and report exact evidence plus anything not verified.

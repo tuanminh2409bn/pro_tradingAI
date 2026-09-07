@@ -1,0 +1,14 @@
+---
+description: Flutter and Dart conventions derived from the checked-in project configuration
+globs: "**/*.{dart,yaml}"
+alwaysApply: false
+---
+
+# Flutter and Dart
+
+- Read `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, and any Flutter version-manager files before choosing APIs or commands.
+- Preserve the project's state-management, navigation, dependency-injection, localization, theming, and folder conventions.
+- Keep null safety sound. Avoid `dynamic`, unchecked casts, force unwraps, and broad exception catches unless required and justified.
+- Keep widgets focused and use existing design-system components. Account for async lifecycle, cancellation, mounted checks, accessibility, localization, and different screen sizes where relevant.
+- Do not hand-edit generated files. Use the repository's generator and include necessary source changes.
+- Format changed Dart files, run `flutter analyze`, focused tests, the relevant broader `flutter test`, and a target build when the requested outcome depends on it.

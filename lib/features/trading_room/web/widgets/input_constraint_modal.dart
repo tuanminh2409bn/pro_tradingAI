@@ -7,15 +7,18 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../data/models/trading_models.dart';
 import '../../bloc/trading_room_bloc.dart';
 import '../../bloc/trading_room_event.dart';
+import '../../bloc/trading_room_state.dart';
 
 class InputConstraintModal extends StatefulWidget {
   const InputConstraintModal({super.key});
 
   /// Show as dialog overlay
   static Future<void> show(BuildContext context) {
+    final state = context.read<TradingRoomBloc>().state;
+    final isConfigured = state is TradingRoomLoaded && state.isRiskConfigured;
     return showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: isConfigured,
       barrierColor: Colors.black87,
       builder: (_) => BlocProvider.value(
         value: context.read<TradingRoomBloc>(),
@@ -43,6 +46,13 @@ class _InputConstraintModalState extends State<InputConstraintModal>
   @override
   void initState() {
     super.initState();
+    final state = context.read<TradingRoomBloc>().state;
+    if (state is TradingRoomLoaded && state.riskConfig != null) {
+      final config = state.riskConfig!;
+      _balanceController.text = config.balance.toStringAsFixed(0);
+      _riskController.text = config.riskPerTrade.toStringAsFixed(1);
+      _maxLossController.text = config.maxDailyLoss.toStringAsFixed(1);
+    }
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -193,6 +203,9 @@ class _InputConstraintModalState extends State<InputConstraintModal>
   }
 
   Widget _buildHeader(BuildContext context) {
+    final state = context.read<TradingRoomBloc>().state;
+    final isConfigured = state is TradingRoomLoaded && state.isRiskConfigured;
+
     return Row(
       children: [
         Container(
@@ -241,6 +254,11 @@ class _InputConstraintModalState extends State<InputConstraintModal>
             ],
           ),
         ),
+        if (isConfigured)
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
       ],
     );
   }

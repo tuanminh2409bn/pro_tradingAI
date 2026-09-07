@@ -18,6 +18,19 @@ from firebase_admin import credentials, firestore, messaging
 from openai import OpenAI
 from dotenv import load_dotenv
 
+from analysis_cache import (
+    analysis_cache,
+    analysis_cache_key,
+    ttl_for_timeframe,
+)
+from feature_engine import (
+    apply_stage_gates,
+    build_mtf_feature_pack,
+    build_signal_from_features,
+    candle_interval_sec,
+    features_prompt_block,
+)
+
 load_dotenv()
 
 # Initialize Firebase Admin
@@ -35,8 +48,62 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-81c46e39c3bf43fba0478a9108e76b76")
-ai_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+if not DEEPSEEK_API_KEY:
+    print("⚠️ DEEPSEEK_API_KEY not set — AI calls will use rule-based fallback")
+ai_client = OpenAI(api_key=DEEPSEEK_API_KEY or "sk-missing", base_url="https://api.deepseek.com")
+
+# ─── Per-symbol price book & PnL helpers (V2.1 P0#1) ───
+YAHOO_TICKER_MAP = {
+    "XAUUSD": "GC=F",
+    "XAGUSD": "SI=F",
+    "BTCUSD": "BTC-USD",
+    "ETHUSD": "ETH-USD",
+    "EURUSD": "EURUSD=X",
+    "GBPUSD": "GBPUSD=X",
+    "USDJPY": "USDJPY=X",
+    "USDCHF": "USDCHF=X",
+    "AUDUSD": "AUDUSD=X",
+    "USDCAD": "USDCAD=X",
+    "NZDUSD": "NZDUSD=X",
+    "US100": "NQ=F",
+    "USOIL": "CL=F",
+}
+
+# Approx USD value per 1.0 pip move per 1.0 lot (aligned with Flutter SymbolMeta)
+PIP_META = {
+    "XAUUSD": (0.1, 10.0),
+    "XAGUSD": (0.01, 50.0),
+    "BTCUSD": (1.0, 1.0),
+    "ETHUSD": (1.0, 1.0),
+    "EURUSD": (0.0001, 10.0),
+    "GBPUSD": (0.0001, 10.0),
+    "USDJPY": (0.01, 9.0),
+    "USDCHF": (0.0001, 10.0),
+    "AUDUSD": (0.0001, 10.0),
+    "USDCAD": (0.0001, 10.0),
+    "US100": (1.0, 1.0),
+    "USOIL": (0.01, 10.0),
+}
+
+
+def normalize_symbol(symbol: str) -> str:
+    if not symbol:
+        return "XAUUSD"
+    # Strip broker prefix e.g. OANDA:XAUUSD
+    if ":" in symbol:
+        symbol = symbol.split(":")[-1]
+    return re.sub(r"[^A-Za-z0-9]", "", symbol).upper()
+
+
+def calc_pnl(symbol: str, trade_type: str, open_price: float, mark_price: float, lot_size: float) -> float:
+    sym = normalize_symbol(symbol)
+    pip_size, pip_value = PIP_META.get(sym, (0.0001, 10.0))
+    if pip_size <= 0:
+        return 0.0
+    direction = -1.0 if str(trade_type).upper() == "SELL" else 1.0
+    pips = ((mark_price - open_price) * direction) / pip_size
+    return round(pips * pip_value * float(lot_size), 2)
 
 # ─── Master Prompt Cache (tránh Firestore read mỗi request) ───
 _master_prompt_cache: dict = {"prompt": None, "fetched_at": 0}
@@ -120,12 +187,61 @@ class TradingViewStreamer:
     def __init__(self):
         self.candle_map = {}
         self.last_price = 4800.0
+        # Independent mark prices per clean symbol — NEVER reuse chart price for other symbols' PnL
+        self.last_prices: dict = {"XAUUSD": 4800.0}
         self.account_info = {"balance": 0.0, "equity": 0.0, "margin": 0.0, "leverage": 500}
         self.connections = set()
         self.is_running = False
         self.interval = "5"
         self.symbol = "OANDA:XAUUSD"
         self.ws_task = None
+        # ─── Rate limiting & Delta tracking ───
+        self._last_broadcast_time = 0.0   # monotonic timestamp of last tick broadcast
+        self._pending_delta: dict = {}     # candles changed since last broadcast
+
+    def chart_symbol_clean(self) -> str:
+        return normalize_symbol(self.symbol)
+
+    def set_last_price(self, symbol: str, price: float):
+        """Bind a mark price to a specific symbol only."""
+        if price is None or price <= 0:
+            return
+        clean = normalize_symbol(symbol)
+        self.last_prices[clean] = float(price)
+        if clean == self.chart_symbol_clean():
+            self.last_price = float(price)
+
+    def get_cached_price(self, symbol: str) -> float | None:
+        return self.last_prices.get(normalize_symbol(symbol))
+
+    async def get_price(self, symbol: str) -> float:
+        """Return mark price for [symbol], never another chart's price."""
+        clean = normalize_symbol(symbol)
+        cached = self.last_prices.get(clean)
+        if cached and cached > 0:
+            return cached
+        # Fallback: Yahoo last close for symbols not currently streamed
+        yahoo = YAHOO_TICKER_MAP.get(clean)
+        if yahoo:
+            try:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo}?range=1d&interval=1m"
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 ProTradingAI/2.1"})
+                    if resp.status_code == 200:
+                        result = resp.json().get("chart", {}).get("result", [])
+                        if result:
+                            meta = result[0].get("meta", {})
+                            price = meta.get("regularMarketPrice") or meta.get("previousClose")
+                            if price:
+                                self.set_last_price(clean, float(price))
+                                return float(price)
+            except Exception as e:
+                print(f"[PRICE] Yahoo fallback failed for {clean}: {e}")
+        # Last resort: only if this IS the active chart symbol
+        if clean == self.chart_symbol_clean() and self.last_price > 0:
+            return self.last_price
+        print(f"[PRICE] No mark price for {clean} — returning 0 (PnL will not use foreign chart)")
+        return 0.0
 
     def _pack(self, msg):
         return f"~m~{len(msg)}~m~{msg}"
@@ -178,18 +294,21 @@ class TradingViewStreamer:
                                 if data.get("m") in ["timescale_update", "du"]:
                                     new_candles = self._extract_candles(data.get("p", []))
                                     if new_candles:
-                                        print(f"SERVER: Received {len(new_candles)} candles from TV")
                                         for c in new_candles:
                                             self.candle_map[c["t"]] = c
-                                        
+                                            self._pending_delta[c["t"]] = c  # accumulate delta
+
                                         sorted_times = sorted(self.candle_map.keys())
                                         if len(sorted_times) > 3000:
-                                            for t in sorted_times[:-3000]: del self.candle_map[t]
-                                        
-                                        self.last_price = self.candle_map[sorted_times[-1]]["c"]
-                                        await self.broadcast_update("update")
+                                            for t in sorted_times[:-3000]:
+                                                del self.candle_map[t]
+                                                self._pending_delta.pop(t, None)
+
+                                        self.set_last_price(self.chart_symbol_clean(), self.candle_map[sorted(self.candle_map.keys())[-1]]["c"])
+                                        await self.broadcast_delta()  # rate-limited delta only
                                 elif data.get("m") == "series_completed":
                                     print(f"SERVER: Series completed for {self.symbol}. {len(self.candle_map)} candles loaded.")
+                                    self._pending_delta = {}  # clear pending — full init coming
                                     await self.broadcast_update("init")
                             except Exception as e:
                                 print(f"Packet Parse Error: {e}")
@@ -230,11 +349,50 @@ class TradingViewStreamer:
                             })
         return extracted
 
+    async def broadcast_delta(self):
+        """Rate-limited delta broadcast — max 5x/second, sends only changed candles."""
+        if not self.connections:
+            self._pending_delta = {}
+            return
+
+        now = time.monotonic()
+        if now - self._last_broadcast_time < 0.2:
+            return  # Too soon — skip, next tick will carry accumulated delta
+
+        if not self._pending_delta:
+            return  # Nothing changed
+
+        self._last_broadcast_time = now
+        delta = list(self._pending_delta.values())
+        self._pending_delta = {}  # reset after broadcast
+
+        print(f"SERVER: Broadcasting tick to {len(self.connections)} clients. Delta: {len(delta)} candle(s), price: {self.last_price}")
+        msg = json.dumps({
+            "type": "tick",
+            "symbol": self.chart_symbol_clean(),
+            "price": self.last_price,
+            "prices": self.last_prices,
+            "delta": delta,  # Only changed candles (1–5 typically)
+        })
+        disconnected = set()
+        for ws in self.connections:
+            try: await ws.send_text(msg)
+            except: disconnected.add(ws)
+        self.connections -= disconnected
+
     async def broadcast_update(self, msg_type):
+        """Full candle list broadcast — used for init and heartbeat only."""
         if not self.connections: return
         candles_list = [self.candle_map[t] for t in sorted(self.candle_map.keys())]
         print(f"SERVER: Broadcasting {msg_type} to {len(self.connections)} clients. Candles: {len(candles_list)}")
-        msg = json.dumps({"type": msg_type, "price": self.last_price, "candles": candles_list, "account": self.account_info})
+        msg = json.dumps({
+            "type": msg_type,
+            "symbol": self.chart_symbol_clean(),
+            "price": self.last_price,
+            "prices": self.last_prices,
+            "candles": candles_list,
+            "account": self.account_info,
+        })
         disconnected = set()
         for ws in self.connections:
             try: await ws.send_text(msg)
@@ -327,259 +485,235 @@ def send_push_notification_to_all(symbol: str, signal_type: str, entry: float, s
     except Exception as e:
         print(f"❌ [PUSH] Error sending notifications: {e}")
 
-async def process_ai_analysis(doc_id, symbol, timeframe):
-    try:
-        print(f"⏳ [AI Engine] Processing {symbol} ({timeframe})...")
-        doc_ref = db.collection('analysis_requests').document(doc_id)
-        doc_ref.update({'status': 'PROCESSING'})
-        
-        # Get Master Prompt from DB or use default
-        config_record = db.collection('AdminSettings').document('ai_config').get()
-        
-        # Default 5-Layer Master Prompt
-        default_master_prompt = """You are an AI trading expert specializing in Smart Money Concepts (SMC), Wyckoff Method, and Volume Spread Analysis (VSA).
+DEFAULT_MASTER_PROMPT = """You are an AI trading Aggregator coordinating Execution / HTF1 / HTF2 agents (SMC, Wyckoff, VSA).
 
-Analyze the given market data and return a comprehensive JSON with these EXACT keys:
+You receive PRECOMPUTED multi-timeframe feature summaries only. Do NOT invent OHLC series.
 
+Return JSON with EXACT keys:
 {
   "symbol": "XAUUSD",
   "type": "BUY" or "SELL",
   "entryPrice": number,
-  "slPrice": number, 
+  "slPrice": number,
   "tpPrices": [TP1, TP2, TP3],
   "probability": 0-100,
-  "layers": [
-    {
-      "layer": 1,
-      "type": "box",
-      "items": [
-        {"label": "OB (SMC Bullish)", "color": "green_opacity", "price_top": number, "price_bottom": number, "time_start": timestamp, "time_end": timestamp},
-        {"label": "BOS", "color": "cyan", "price_y": number, "time_x": timestamp}
-      ]
-    },
-    {
-      "layer": 2,
-      "type": "icon_text",
-      "items": [
-        {"icon": "dollar", "text": "TYPE 1 $$$", "color": "yellow", "time_x": timestamp, "price_y": number},
-        {"icon": "skull", "text": "TRAP", "color": "red", "time_x": timestamp, "price_y": number}
-      ]
-    },
-    {
-      "layer": 3,
-      "type": "candle_color",
-      "items": [
-        {"candle_time": timestamp, "fill_color": "purple", "label_bottom": "STOP"},
-        {"candle_time": timestamp, "fill_color": "white", "label_bottom": "Nd"}
-      ]
-    },
-    {
-      "layer": 4,
-      "type": "execution",
-      "entry_line": {"price": number, "color": "cyan"},
-      "sl_line": {"price": number, "color": "red"},
-      "tp_lines": [{"price": number, "label": "TP1"}, ...],
-      "suggested_lot": number,
-      "curves": [
-        {"id": "SIG_1", "type": "bezier_dashed", "color": "#00FFFF", "points": [{"x_time": t, "y_price": p}, ...]},
-        {"id": "SIG_2", "type": "bezier_dashed", "color": "#1E90FF", "points": [{"x_time": t, "y_price": p}, ...]}
-      ]
-    },
-    {
-      "layer": 5,
-      "type": "overlay",
-      "items": [
-        {"type": "ghost_box", "label": "HTF H4 OB", "zone_type": "magnet", "price_top": number, "price_bottom": number},
-        {"type": "wyckoff_phase", "text": "PHASE C -> D"},
-        {"type": "htf_trend", "htf1_label": "H4", "htf1_trend": "Bullish", "htf2_label": "D1", "htf2_trend": "Bearish"}
-      ]
-    }
-  ]
+  "setup_ready": boolean,
+  "veto": boolean,
+  "veto_data": object|null,
+  "fallback": false,
+  "forecast_text": string,
+  "layers": [ /* layers 1-5 */ ]
 }
 
 RULES:
-- All timestamps must be Unix timestamps (seconds)
-- All prices must be realistic for the given symbol
-- Layer 4 SIG_1 has 3 control points (quadratic bezier), SIG_2 has 4 control points (cubic bezier)  
-- SIG curves project into the future (current candle time + N candles)
-- Generate at least 1 item per layer
-- ghost_box zone_type: "danger" (red) or "magnet" (green)
+- Respect SETUP_READY and VETO from features: if setup_ready=false OR veto=true, OMIT layer 4 (no Entry/SL/TP/SIG curves).
+- If veto=true, type may still reflect bias but forecast_text must explain HTF freeze.
+- Prices must align with CURRENT_PRICE and feature levels
+- Layer 4 only when setup_ready=true and veto=false
+- Timestamps are Unix seconds; SIG_1=3 points, SIG_2=4 points
+- Prefer BIAS from execution features; keep output deterministic
 """
-        
-        master_prompt = default_master_prompt
-        if config_record.exists and 'ai_master_prompt' in config_record.to_dict():
-            custom_prompt = config_record.to_dict()['ai_master_prompt']
-            if custom_prompt and len(custom_prompt.strip()) > 50:
-                master_prompt = custom_prompt
-            
+
+
+def _normalize_candle_list(raw) -> list:
+    out = []
+    if not isinstance(raw, list):
+        return out
+    for c in raw:
+        if not isinstance(c, dict):
+            continue
         try:
-            print("Calling DeepSeek API for 5-Layer Analysis...")
-            current_price = streamer.last_price
-            current_time = int(time.time())
-            
-            # Get recent candle data for context
-            sorted_times = sorted(streamer.candle_map.keys())[-20:]
-            recent_candles = [streamer.candle_map[t] for t in sorted_times]
-            candle_summary = "\n".join([
-                f"Time:{c['t']}, O:{c['o']}, H:{c['h']}, L:{c['l']}, C:{c['c']}" 
-                for c in recent_candles[-10:]
-            ])
-            
-            candle_interval_sec = 300  # default 5min
-            tf_map = {"1": 60, "5": 300, "15": 900, "60": 3600, "240": 14400}
-            candle_interval_sec = tf_map.get(str(timeframe), 300)
-            
-            prompt_content = f"""Analyze {symbol} at timeframe {timeframe}.
-CURRENT PRICE: {current_price}
-CURRENT TIMESTAMP: {current_time}
-CANDLE INTERVAL: {candle_interval_sec} seconds
+            out.append({
+                "t": int(c.get("t") or c.get("time") or 0),
+                "o": float(c.get("o") if c.get("o") is not None else c.get("open")),
+                "h": float(c.get("h") if c.get("h") is not None else c.get("high")),
+                "l": float(c.get("l") if c.get("l") is not None else c.get("low")),
+                "c": float(c.get("c") if c.get("c") is not None else c.get("close")),
+            })
+        except (TypeError, ValueError):
+            continue
+    return [x for x in out if x["t"] > 0]
 
-Recent 10 candles (newest last):
-{candle_summary}
 
-Generate a COMPLETE 5-layer analysis JSON. 
-- entryPrice must be very close to {current_price}
-- For BUY: slPrice < entryPrice, tpPrices > entryPrice  
-- For SELL: slPrice > entryPrice, tpPrices < entryPrice
-- Layer 1 structure boxes should reference recent price levels
-- Layer 2 warnings at key swing points from the candle data
-- Layer 3: identify any abnormal candles (high volume / climax patterns)
-- Layer 4: SIG_1 curves from entry toward TP (3 points), SIG_2 curves with retest dip (4 points). Future timestamps = current_time + N * {candle_interval_sec}
-- Layer 5: HTF context overlay based on the broader trend visible in candle data"""
-            
-            response = ai_client.chat.completions.create(
-                model="deepseek-chat",
-                messages=[
-                    {"role": "system", "content": master_prompt},
-                    {"role": "user", "content": prompt_content}
-                ],
-                response_format={"type": "json_object"},
-            )
-            ai_result_str = response.choices[0].message.content
-            ai_result = json.loads(ai_result_str)
-            print(f"✅ DeepSeek returned 5-Layer analysis with {len(ai_result.get('layers', []))} layers")
-            
-        except Exception as e:
-            print(f"DeepSeek API Error: {e}. Using fallback 5-Layer simulation.")
-            current_time = int(time.time())
-            candle_interval_sec = 300
-            entry_price = current_price + random.uniform(-2, 2)
-            trade_type = random.choice(['BUY', 'SELL'])
-            is_buy = trade_type == 'BUY'
-            sl_price = entry_price - 5 if is_buy else entry_price + 5
-            tp1 = entry_price + 8 if is_buy else entry_price - 8
-            tp2 = entry_price + 16 if is_buy else entry_price - 16
-            tp3 = entry_price + 24 if is_buy else entry_price - 24
-            
-            # Generate realistic 5-layer fallback
-            ob_top = entry_price + 2 if is_buy else entry_price - 1
-            ob_bottom = entry_price - 1 if is_buy else entry_price + 2
-            
-            ai_result = {
-                'symbol': symbol,
-                'type': trade_type,
-                'entryPrice': round(entry_price, 2),
-                'slPrice': round(sl_price, 2),
-                'tpPrices': [round(tp1, 2), round(tp2, 2), round(tp3, 2)],
-                'probability': random.randint(70, 95),
-                'layers': [
-                    {
-                        "layer": 1, "type": "box",
-                        "items": [
-                            {"label": f"OB ({'Bullish' if is_buy else 'Bearish'})", "color": "green_opacity" if is_buy else "red_opacity",
-                             "price_top": round(ob_top, 2), "price_bottom": round(ob_bottom, 2),
-                             "time_start": current_time - candle_interval_sec * 8, "time_end": current_time - candle_interval_sec * 3},
-                            {"label": "BOS", "color": "cyan", "price_y": round(entry_price + (1.5 if is_buy else -1.5), 2),
-                             "time_x": current_time - candle_interval_sec * 5}
-                        ]
-                    },
-                    {
-                        "layer": 2, "type": "icon_text",
-                        "items": [
-                            {"icon": "dollar", "text": "$$$ LIQUIDITY", "color": "yellow",
-                             "time_x": current_time - candle_interval_sec * 6,
-                             "price_y": round(sl_price + (1 if is_buy else -1), 2)},
-                            {"icon": "arrow", "text": f"{'BSL Sweep' if is_buy else 'SSL Sweep'}", "color": "red",
-                             "time_x": current_time - candle_interval_sec * 4,
-                             "price_y": round(sl_price + (0.5 if is_buy else -0.5), 2)}
-                        ]
-                    },
-                    {
-                        "layer": 3, "type": "candle_color",
-                        "items": [
-                            {"candle_time": current_time - candle_interval_sec * 7, "fill_color": "purple", "label_bottom": "STOP"},
-                            {"candle_time": current_time - candle_interval_sec * 3, "fill_color": "white", "label_bottom": "Nd"}
-                        ]
-                    },
-                    {
-                        "layer": 4, "type": "execution",
-                        "entry_line": {"price": round(entry_price, 2), "color": "cyan"},
-                        "sl_line": {"price": round(sl_price, 2), "color": "red"},
-                        "tp_lines": [
-                            {"price": round(tp1, 2), "label": "TP1"},
-                            {"price": round(tp2, 2), "label": "TP2"},
-                            {"price": round(tp3, 2), "label": "TP3"}
-                        ],
-                        "suggested_lot": 0.5,
-                        "curves": [
-                            {
-                                "id": "SIG_1", "type": "bezier_dashed", "color": "#00FFFF",
-                                "points": [
-                                    {"x_time": current_time, "y_price": round(entry_price, 2)},
-                                    {"x_time": current_time + candle_interval_sec * 3, "y_price": round((entry_price + tp1) / 2 + (2 if is_buy else -2), 2)},
-                                    {"x_time": current_time + candle_interval_sec * 6, "y_price": round(tp1, 2)}
-                                ]
-                            },
-                            {
-                                "id": "SIG_2", "type": "bezier_dashed", "color": "#1E90FF",
-                                "points": [
-                                    {"x_time": current_time, "y_price": round(entry_price, 2)},
-                                    {"x_time": current_time + candle_interval_sec * 2, "y_price": round(entry_price + (-2 if is_buy else 2), 2)},
-                                    {"x_time": current_time + candle_interval_sec * 5, "y_price": round((entry_price + tp1) / 2, 2)},
-                                    {"x_time": current_time + candle_interval_sec * 8, "y_price": round(tp1, 2)}
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        "layer": 5, "type": "overlay",
-                        "items": [
-                            {"type": "ghost_box", "label": "HTF H4 OB", "zone_type": "magnet" if is_buy else "danger",
-                             "price_top": round(entry_price + 15, 2), "price_bottom": round(entry_price - 15, 2)},
-                            {"type": "wyckoff_phase", "text": f"PHASE {'C -> D' if is_buy else 'B -> C'}"},
-                            {"type": "htf_trend", "htf1_label": "H4", "htf1_trend": "Bullish" if is_buy else "Bearish",
-                             "htf2_label": "D1", "htf2_trend": "Bullish" if is_buy else "Bearish"}
-                        ]
-                    }
-                ]
-            }
-            
-        ai_result['status'] = 'ACTIVE'
-        ai_result['createdAt'] = firestore.SERVER_TIMESTAMP
-        
-        doc_ref.update({'status': 'COMPLETED'})
-        
-        old_signals = db.collection('signals').where('symbol', '==', symbol).get()
-        for doc in old_signals:
-            db.collection('signals').document(doc.id).update({'status': 'CLOSED'})
+def _streamer_candles_list() -> list:
+    return [streamer.candle_map[t] for t in sorted(streamer.candle_map.keys())]
 
-        db.collection('signals').add(ai_result)
-        print(f"✅ AI 5-Layer Signal for {symbol} sent to Firebase successfully!")
-        
-        # Send push notification to all subscribers
+
+async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) -> dict:
+    """LLM (temp=0) or deterministic FeatureEngine fallback. No random.*."""
+    config_record = db.collection('AdminSettings').document('ai_config').get()
+    master_prompt = DEFAULT_MASTER_PROMPT
+    if config_record.exists and 'ai_master_prompt' in config_record.to_dict():
+        custom_prompt = config_record.to_dict()['ai_master_prompt']
+        if custom_prompt and len(custom_prompt.strip()) > 50:
+            master_prompt = custom_prompt
+
+    gate = {
+        "setup_ready": bool(features.get("setup_ready")),
+        "veto": bool(features.get("veto")),
+        "veto_data": features.get("veto_data"),
+    }
+
+    if not DEEPSEEK_API_KEY:
+        print("[AI Engine] No DEEPSEEK_API_KEY — rule-based fallback")
+        return build_signal_from_features(features)
+
+    interval = int(features.get("candle_interval_sec") or candle_interval_sec(timeframe))
+    prompt_content = f"""Multi-Agent Aggregator — use ONLY this feature pack:
+
+{features_prompt_block(features)}
+
+CANDLE INTERVAL: {interval} seconds
+ACCOUNT_CONTEXT: {features.get('account_context')}
+
+Generate COMPLETE analysis JSON.
+- If SETUP_READY is false OR VETO is true: do NOT include layer 4.
+- entryPrice near {features.get('current_price')} when hard setup
+- Map Layer 1 to ORDER_BLOCKS / structure; Layer 5 HTF from HTF1/HTF2 summaries
+"""
+    try:
+        print("Calling DeepSeek API (temperature=0, MTF feature summary)...")
+        create_kwargs = dict(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": master_prompt},
+                {"role": "user", "content": prompt_content},
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0,
+        )
+        try:
+            response = ai_client.chat.completions.create(**create_kwargs, seed=42)
+        except TypeError:
+            response = ai_client.chat.completions.create(**create_kwargs)
+        ai_result = json.loads(response.choices[0].message.content)
+        ai_result["fallback"] = False
+        ai_result = apply_stage_gates(ai_result, gate)
+        print(
+            f"✅ DeepSeek analysis layers={len(ai_result.get('layers', []))} "
+            f"setup_ready={ai_result.get('setup_ready')} veto={ai_result.get('veto')}"
+        )
+        return ai_result
+    except Exception as e:
+        print(f"DeepSeek API Error: {e}. Using deterministic FeatureEngine fallback.")
+        return build_signal_from_features(features)
+
+
+async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload: dict | None = None):
+    """
+    Day 3+4:
+      cache_key = analysis:{symbol}:{tf}:{last_closed_candle_timestamp}
+      MTF FeatureEngine → setup_ready / veto → LLM(temp=0) → cache
+    """
+    try:
+        print(f"⏳ [AI Engine] Processing {symbol} ({timeframe})...")
+        doc_ref = db.collection('analysis_requests').document(doc_id)
+        doc_ref.update({'status': 'PROCESSING'})
+        payload = req_payload or {}
+
+        clean_symbol = normalize_symbol(symbol)
+        candles_exec = _normalize_candle_list(payload.get("candles_execution"))
+        if not candles_exec:
+            candles_exec = _streamer_candles_list()
+        candles_htf1 = _normalize_candle_list(payload.get("candles_htf_1"))
+        candles_htf2 = _normalize_candle_list(payload.get("candles_htf_2"))
+
+        current_price = streamer.get_cached_price(clean_symbol) or streamer.last_price
+        if current_price <= 0 and candles_exec:
+            current_price = float(candles_exec[-1].get("c") or 0)
+
+        features = build_mtf_feature_pack(
+            symbol=clean_symbol,
+            timeframe=timeframe,
+            candles_execution=candles_exec,
+            current_price=float(current_price or 0),
+            candles_htf_1=candles_htf1 or None,
+            candles_htf_2=candles_htf2 or None,
+        )
+        features["account_context"] = payload.get("account_context") or {}
+
+        last_closed_ts = int(features["last_closed_candle_timestamp"])
+        cache_key = analysis_cache_key(clean_symbol, timeframe, last_closed_ts)
+        ttl = ttl_for_timeframe(timeframe)
+        cache_hit = False
+
+        ai_result = await analysis_cache.get(cache_key)
+        if ai_result is not None:
+            cache_hit = True
+            print(f"⚡ [AI Cache HIT] {cache_key} backend={analysis_cache.backend}")
+        else:
+            got_lock = await analysis_cache.acquire_lock(cache_key, ttl=90)
+            if not got_lock:
+                print(f"⏳ [AI Stampede] waiting on {cache_key}")
+                ai_result = await analysis_cache.wait_for(cache_key, timeout_sec=60)
+                if ai_result is None:
+                    print(f"⚠️ [AI Stampede] timeout — computing fallback for {cache_key}")
+                    ai_result = build_signal_from_features(features)
+                    await analysis_cache.set(cache_key, ai_result, ttl)
+                else:
+                    cache_hit = True
+                    print(f"⚡ [AI Cache HIT after wait] {cache_key}")
+            else:
+                try:
+                    ai_result = await analysis_cache.get(cache_key)
+                    if ai_result is not None:
+                        cache_hit = True
+                        print(f"⚡ [AI Cache HIT after lock] {cache_key}")
+                    else:
+                        ai_result = await _run_analysis_pipeline(clean_symbol, timeframe, features)
+                        await analysis_cache.set(cache_key, ai_result, ttl)
+                        print(
+                            f"💾 [AI Cache SET] {cache_key} ttl={ttl}s "
+                            f"fallback={ai_result.get('fallback')} setup_ready={ai_result.get('setup_ready')}"
+                        )
+                finally:
+                    await analysis_cache.release_lock(cache_key)
+
+        ai_result = dict(ai_result)
+        ai_result["symbol"] = clean_symbol
+        ai_result["cache_hit"] = cache_hit
+        ai_result["cache_key"] = cache_key
+        ai_result["status"] = "ACTIVE"
+        ai_result["createdAt"] = firestore.SERVER_TIMESTAMP
+        ai_result["userId"] = user_id
+
+        doc_ref.update({
+            "status": "COMPLETED",
+            "cache_hit": cache_hit,
+            "cache_key": cache_key,
+            "setup_ready": bool(ai_result.get("setup_ready")),
+            "veto": bool(ai_result.get("veto")),
+        })
+
+        old_signals_query = db.collection("signals").where("symbol", "==", clean_symbol)
+        if user_id:
+            old_signals_query = old_signals_query.where("userId", "==", user_id)
+        for doc in old_signals_query.get():
+            db.collection("signals").document(doc.id).update({"status": "CLOSED"})
+
+        db.collection("signals").add(ai_result)
+        print(
+            f"✅ AI Signal for {clean_symbol} (user={user_id}, cache_hit={cache_hit}, "
+            f"setup_ready={ai_result.get('setup_ready')}, veto={ai_result.get('veto')}) → Firebase"
+        )
+
         try:
             send_push_notification_to_all(
-                symbol=symbol,
-                signal_type=ai_result.get('type', 'BUY'),
-                entry=float(ai_result.get('entryPrice', 0.0)),
-                sl=float(ai_result.get('slPrice', 0.0)),
-                tp=ai_result.get('tpPrices', []),
-                probability=int(ai_result.get('probability', 0))
+                symbol=clean_symbol,
+                signal_type=ai_result.get("type", "BUY"),
+                entry=float(ai_result.get("entryPrice", 0.0)),
+                sl=float(ai_result.get("slPrice", 0.0)),
+                tp=ai_result.get("tpPrices", []),
+                probability=int(ai_result.get("probability", 0)),
             )
         except Exception as push_err:
             print(f"FCM Multicast triggering failed: {push_err}")
     except Exception as e:
         print(f"AI Process Error: {e}")
+        try:
+            db.collection("analysis_requests").document(doc_id).update({"status": "ERROR", "error": str(e)})
+        except Exception:
+            pass
 
 def on_analysis_request_snapshot(col_snapshot, changes, read_time):
     for change in changes:
@@ -589,17 +723,21 @@ def on_analysis_request_snapshot(col_snapshot, changes, read_time):
                 symbol = req_data.get('symbol', 'UNKNOWN')
                 timeframe = req_data.get('timeframe', 'UNKNOWN')
                 doc_id = change.document.id
+                user_id = req_data.get('userId', '')
                 
-                print(f"🔔 [NEW EVENT] Analysis Request: {symbol} ({timeframe}) | ID: {doc_id}")
+                print(f"🔔 [NEW EVENT] Analysis Request: {symbol} ({timeframe}) | User: {user_id} | ID: {doc_id}")
                 
                 if main_loop and not main_loop.is_closed():
-                    asyncio.run_coroutine_threadsafe(process_ai_analysis(doc_id, symbol, timeframe), main_loop)
+                    asyncio.run_coroutine_threadsafe(
+                        process_ai_analysis(doc_id, symbol, timeframe, user_id, req_data), main_loop
+                    )
 
 @app.on_event("startup")
 async def startup_event():
     global main_loop
     main_loop = asyncio.get_running_loop()
     print("SERVER: Data Engine Starting Up...")
+    await analysis_cache.connect()
     await streamer.start()
     db.collection('analysis_requests').on_snapshot(on_analysis_request_snapshot)
     print("SERVER: Listening to Firebase analysis_requests...")
@@ -681,6 +819,8 @@ async def _update_radar_prices():
                     continue
                 prev_close = closes[-2]
                 current_price = closes[-1]
+                # Keep independent mark book warm for open-position PnL (P0#1)
+                streamer.set_last_price(sym, float(current_price))
                 change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close else 0
 
                 # Tính volatility
@@ -751,25 +891,27 @@ async def _update_admin_stats():
     try:
         # Đếm tổng users
         users_ref = db.collection("users")
-        users_count = len(users_ref.limit(10000).get())
+        users_count = users_ref.count().get()[0][0].value
 
         # Đếm tổng trades hôm nay
         from datetime import date
         today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
         trades_today_ref = db.collection("trades").where("createdAt", ">=", today_start)
-        trades_today = len(trades_today_ref.limit(10000).get())
+        trades_today = trades_today_ref.count().get()[0][0].value
 
         # Đếm signals đang active
-        active_signals = len(db.collection("signals").where("status", "==", "ACTIVE").get())
+        active_signals_ref = db.collection("signals").where("status", "==", "ACTIVE")
+        active_signals = active_signals_ref.count().get()[0][0].value
 
         # Đếm pending requests
-        pending = len(db.collection("admin").document("requests").collection("pending").get())
+        pending_ref = db.collection("admin").document("requests").collection("pending")
+        pending = pending_ref.count().get()[0][0].value
 
         # Ước tính DAU (users đăng nhập trong 24h qua dựa trên lastSeen)
         from datetime import timedelta
         day_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         dau_ref = db.collection("users").where("lastSeen", ">=", day_ago)
-        dau = len(dau_ref.limit(10000).get())
+        dau = dau_ref.count().get()[0][0].value
 
         stats = {
             "dau": max(dau, users_count if users_count < 100 else dau),
@@ -843,9 +985,25 @@ async def _check_service_status():
             results["mt4_online"] = False
             results["mt4_latency"] = 0
 
+    # Day 6 — Admin verify analysis cache backend (Redis / memory)
+    try:
+        results["redis_online"] = analysis_cache.backend == "redis"
+        results["redis_backend"] = analysis_cache.backend
+        results["redis_latency"] = 1 if analysis_cache.backend == "redis" else 0
+        results["master_prompt_cache_ttl_sec"] = _MASTER_PROMPT_CACHE_TTL
+    except Exception:
+        results["redis_online"] = False
+        results["redis_backend"] = "unknown"
+        results["redis_latency"] = 0
+
     results["updatedAt"] = firestore.SERVER_TIMESTAMP
     db.collection("admin").document("service_status").set(results, merge=True)
-    print(f"[SERVICE STATUS] AI: {'✅' if results.get('ai_online') else '❌'}, MT4: {'✅' if results.get('mt4_online') else '❌'}, Data: {'✅' if results.get('data_online') else '❌'}")
+    print(
+        f"[SERVICE STATUS] AI: {'✅' if results.get('ai_online') else '❌'}, "
+        f"MT4: {'✅' if results.get('mt4_online') else '❌'}, "
+        f"Data: {'✅' if results.get('data_online') else '❌'}, "
+        f"Cache: {results.get('redis_backend')}"
+    )
 
 
 
@@ -873,6 +1031,21 @@ BEARISH_KEYWORDS = [
     'sell', 'short', 'resistance', 'crash', 'weak', 'selloff', 'concern', 'slump',
     'giảm', 'bán', 'tiêu cực', 'bi quan', 'lo ngại', 'áp lực'
 ]
+
+HIGH_IMPACT_KEYWORDS = [
+    'fed', 'fomc', 'nfp', 'non-farm', 'nonfarm', 'payroll', 'cpi', 'ppi',
+    'interest rate', 'rate decision', 'ecb', 'boe', 'boj', 'powell',
+    'inflation', 'gdp', 'jackson hole', 'qe ', 'tightening', 'hawkish', 'dovish',
+]
+
+def _compute_impact(title: str, summary: str) -> str:
+    """Day 6 — simple calendar-style impact from headline keywords."""
+    text = f"{title} {summary}".lower()
+    if any(k in text for k in HIGH_IMPACT_KEYWORDS):
+        return "HIGH"
+    if any(k in text for k in ('gold', 'xau', 'forex', 'usd', 'oil', 'yield')):
+        return "MEDIUM"
+    return "LOW"
 
 def _compute_sentiment(title: str, summary: str) -> str:
     text = (title + " " + summary).lower()
@@ -916,6 +1089,10 @@ def _parse_rss_xml(xml_text: str, source: str, category: str) -> list:
                     image_url = img_src.group(1)
 
         sentiment = _compute_sentiment(title_str, desc_str)
+        impact = _compute_impact(title_str, desc_str)
+        sentiment_score = 70 if sentiment == "bullish" else (30 if sentiment == "bearish" else 50)
+        if impact == "HIGH":
+            sentiment_score = 85 if sentiment == "bullish" else (15 if sentiment == "bearish" else 50)
         article_id = hashlib.md5((title_str + link_str).encode()).hexdigest()
         items.append({
             "id": article_id,
@@ -925,6 +1102,9 @@ def _parse_rss_xml(xml_text: str, source: str, category: str) -> list:
             "source": source,
             "category": category,
             "sentiment": sentiment,
+            "sentimentScore": sentiment_score,
+            "impact": impact,
+            "type": "FOREXFACTORY" if impact == "HIGH" else "ALERT",
             "imageUrl": image_url,
             "publishedAt": pub_str,
             "timestamp": firestore.SERVER_TIMESTAMP,
@@ -1081,12 +1261,22 @@ async def root():
     return {
         "status": "online",
         "service": "ProTrading AI Data Engine",
-        "version": "2.0",
-        "websocket_endpoint": "/ws/trading"
+        "version": "2.1",
+        "sprint": "v21-day7",
+        "websocket_endpoint": "/ws/trading",
     }
 
 @app.get("/health")
-async def health(): return {"status": "ok"}
+async def health():
+    return {
+        "status": "ok",
+        "version": "2.1",
+        "sprint": "v21-day7",
+        "analysis_cache": analysis_cache.backend,
+        "redis_url_set": bool(os.environ.get("REDIS_URL", "").strip()),
+        "deepseek_configured": bool(DEEPSEEK_API_KEY),
+        "master_prompt_cache_ttl_sec": _MASTER_PROMPT_CACHE_TTL,
+    }
 
 @app.get("/api/image-proxy")
 async def image_proxy(url: str):
@@ -1150,18 +1340,22 @@ async def link_account(req: LinkAccountRequest):
         return {"status": "success", "accountId": account_id}
     except Exception as e:
         print(f"SERVER: Link Account Error: {e}")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Unable to link broker account. Please try again."}
 
 @app.post("/api/trade")
 async def execute_trade(req: TradeRequest):
     """Execute a trade and save to Firestore"""
     try:
         trade_id = f"trade_{int(asyncio.get_event_loop().time() * 1000)}"
-        entry_price = req.entryPrice if req.entryPrice > 0 else streamer.last_price
+        sym = normalize_symbol(req.symbol)
+        if req.entryPrice > 0:
+            entry_price = req.entryPrice
+        else:
+            entry_price = await streamer.get_price(sym)
         
         trade_data = {
             'id': trade_id,
-            'symbol': req.symbol,
+            'symbol': sym,
             'type': req.action,
             'lotSize': req.volume,
             'openPrice': entry_price,
@@ -1179,15 +1373,15 @@ async def execute_trade(req: TradeRequest):
         user_id = req.userId if req.userId else 'default'
         db.collection('users').document(user_id).collection('trades').document(trade_id).set(trade_data)
         
-        print(f"✅ Trade executed: {req.action} {req.symbol} {req.volume} lots @ {entry_price}")
-        return {"status": "success", "tradeId": trade_id, "entryPrice": entry_price}
+        print(f"✅ Trade executed: {req.action} {sym} {req.volume} lots @ {entry_price}")
+        return {"status": "success", "tradeId": trade_id, "entryPrice": entry_price, "symbol": sym}
     except Exception as e:
         print(f"❌ Trade Error: {e}")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Trade execution failed. Please retry."}
 
 @app.post("/api/trade/close")
 async def close_trade(req: CloseTradeRequest):
-    """Close an open trade"""
+    """Close an open trade using that trade's own symbol mark price."""
     try:
         user_id = req.userId if req.userId else 'default'
         trade_ref = db.collection('users').document(user_id).collection('trades').document(req.tradeId)
@@ -1197,31 +1391,60 @@ async def close_trade(req: CloseTradeRequest):
             return {"status": "error", "message": "Trade not found"}
         
         trade_data = trade_doc.to_dict()
-        close_price = streamer.last_price
-        
-        # Calculate profit
-        if trade_data.get('type') == 'BUY':
-            profit = (close_price - trade_data['openPrice']) * trade_data['lotSize'] * 100
-        else:
-            profit = (trade_data['openPrice'] - close_price) * trade_data['lotSize'] * 100
-        
+        trade_symbol = normalize_symbol(trade_data.get('symbol', 'XAUUSD'))
+        close_price = await streamer.get_price(trade_symbol)
+        if close_price <= 0:
+            return {"status": "error", "message": f"No mark price available for {trade_symbol}"}
+
+        profit = calc_pnl(
+            trade_symbol,
+            trade_data.get('type', 'BUY'),
+            float(trade_data.get('openPrice', 0)),
+            close_price,
+            float(trade_data.get('lotSize', 0)),
+        )
+
+        trade_type = str(trade_data.get('type', 'BUY')).upper()
+        journal_action = 'LONG' if trade_type in ('BUY', 'LONG') else 'SHORT'
+        entry_price = float(trade_data.get('openPrice', trade_data.get('entryPrice', 0)) or 0)
+
+        # Day 6 — dual-write journal schema alongside execution fields
         trade_ref.update({
             'status': 'CLOSED',
             'closePrice': close_price,
-            'profit': round(profit, 2),
+            'currentPrice': close_price,
+            'profit': profit,
             'closeTime': firestore.SERVER_TIMESTAMP,
+            'action': journal_action,
+            'entryPrice': entry_price,
+            'exitPrice': close_price,
+            'netProfit': profit,
+            'swap': float(trade_data.get('swap', 0) or 0),
+            'slippage': float(trade_data.get('slippage', 0) or 0),
         })
         
-        print(f"✅ Trade closed: {req.tradeId} @ {close_price}, Profit: {profit:.2f}")
-        return {"status": "success", "closePrice": close_price, "profit": round(profit, 2)}
+        print(f"✅ Trade closed: {req.tradeId} {trade_symbol} @ {close_price}, Profit: {profit:.2f}")
+        return {"status": "success", "closePrice": close_price, "profit": profit, "symbol": trade_symbol}
     except Exception as e:
         print(f"❌ Close Trade Error: {e}")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Unable to close trade. Please retry."}
 
 @app.post("/api/ai/chat")
 async def ai_chat(req: AIChatRequest):
     """Real AI chat using DeepSeek - inject Master Prompt từ Admin config"""
+    friendly = (
+        "Hệ thống AI đang thực hiện phân tích kỹ thuật tạm thời. "
+        "Vui lòng thử lại sau vài giây — tín hiệu rule-based vẫn khả dụng trên Trading Room."
+    )
     try:
+        if not DEEPSEEK_API_KEY:
+            return {
+                "status": "error",
+                "response": friendly,
+                "fallback": True,
+                "message": friendly,
+            }
+
         current_price = streamer.last_price
         candles_summary = ""
         sorted_times = sorted(streamer.candle_map.keys())
@@ -1248,14 +1471,21 @@ async def ai_chat(req: AIChatRequest):
                 {"role": "user", "content": req.message}
             ],
             max_tokens=600,
+            temperature=0.0,
         )
 
         ai_response = response.choices[0].message.content
         print(f"✅ AI Chat [{req.symbol}]: {req.message[:50]}...")
-        return {"status": "success", "response": ai_response}
+        return {"status": "success", "response": ai_response, "fallback": False}
     except Exception as e:
         print(f"❌ AI Chat Error: {e}")
-        return {"status": "error", "response": f"AI service tạm thời không khả dụng: {str(e)}"}
+        # Day 5/7 — never leak stack/exception to clients
+        return {
+            "status": "error",
+            "response": friendly,
+            "fallback": True,
+            "message": friendly,
+        }
 
 @app.post("/api/risk-config")
 async def save_risk_config(req: RiskConfigRequest):
@@ -1290,18 +1520,28 @@ async def get_risk_config(user_id: str):
 
 @app.get("/api/trades/{user_id}")
 async def get_open_trades(user_id: str):
-    """Get user's open trades"""
+    """Get user's open trades — each position marked with its OWN symbol price."""
     try:
         trades = db.collection('users').document(user_id).collection('trades').where('status', '==', 'OPEN').get()
         trade_list = []
         for trade in trades:
             td = trade.to_dict()
-            # Update current price
-            td['currentPrice'] = streamer.last_price
-            if td.get('type') == 'BUY':
-                td['profit'] = round((streamer.last_price - td['openPrice']) * td['lotSize'] * 100, 2)
+            sym = normalize_symbol(td.get('symbol', 'XAUUSD'))
+            mark = await streamer.get_price(sym)
+            td['symbol'] = sym
+            if mark > 0:
+                td['currentPrice'] = mark
+                td['profit'] = calc_pnl(
+                    sym,
+                    td.get('type', 'BUY'),
+                    float(td.get('openPrice', 0)),
+                    mark,
+                    float(td.get('lotSize', 0)),
+                )
             else:
-                td['profit'] = round((td['openPrice'] - streamer.last_price) * td['lotSize'] * 100, 2)
+                # Keep stored values — never borrow active chart price
+                td['currentPrice'] = td.get('currentPrice', td.get('openPrice', 0))
+                td['profit'] = td.get('profit', 0.0)
             trade_list.append(td)
         return {"status": "success", "trades": trade_list}
     except Exception as e:
@@ -1314,7 +1554,14 @@ async def websocket_endpoint(websocket: WebSocket):
     streamer.connections.add(websocket)
     # Gửi ngay dữ liệu hiện có
     candles_list = [streamer.candle_map[t] for t in sorted(streamer.candle_map.keys())]
-    await websocket.send_text(json.dumps({"type": "init", "price": streamer.last_price, "candles": candles_list, "account": streamer.account_info}))
+    await websocket.send_text(json.dumps({
+        "type": "init",
+        "symbol": streamer.chart_symbol_clean(),
+        "price": streamer.last_price,
+        "prices": streamer.last_prices,
+        "candles": candles_list,
+        "account": streamer.account_info,
+    }))
     try:
         while True:
             data = await websocket.receive_text()
@@ -1324,9 +1571,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 streamer.candle_map = {}
                 await streamer.start()
             elif msg.get("action") == "set_symbol":
-                sym = msg["symbol"]
+                sym = normalize_symbol(msg["symbol"])
                 streamer.symbol = TV_SYMBOL_MAP.get(sym, f"OANDA:{sym}")
                 streamer.candle_map = {}
+                # Keep last_prices for other symbols; do not wipe the book
                 await streamer.start()
     except:
         streamer.connections.discard(websocket)

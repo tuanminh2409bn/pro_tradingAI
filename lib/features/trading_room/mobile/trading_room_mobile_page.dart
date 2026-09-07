@@ -1,312 +1,289 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
+import '../../../data/models/trading_models.dart';
+import '../../../data/repositories/trading_repository.dart';
 import '../bloc/trading_room_bloc.dart';
 import '../bloc/trading_room_event.dart';
 import '../bloc/trading_room_state.dart';
+import '../web/widgets/execution_panel.dart';
 import '../web/widgets/kinetic_chart.dart';
-import '../../../data/repositories/trading_repository.dart';
+import '../web/widgets/news_red_zone_binder.dart';
 
-class TradingRoomMobilePage extends StatefulWidget {
-  const TradingRoomMobilePage({super.key});
+/// Day 6 mobile parity — TF matrix, ExecutionPanel (1 SL / 2-stage), Red Zone.
+class TradingRoomMobilePage extends StatelessWidget {
+  final String? userId;
+  const TradingRoomMobilePage({super.key, this.userId});
 
-  @override
-  State<TradingRoomMobilePage> createState() => _TradingRoomMobilePageState();
-}
-
-class _TradingRoomMobilePageState extends State<TradingRoomMobilePage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => TradingRoomBloc(
-        tradingRepository: context.read<TradingRepository>(),
-      )..add(LoadTradingData()),
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
+      create: (context) =>
+          TradingRoomBloc(tradingRepository: context.read<TradingRepository>())
+            ..add(LoadTradingData(userId: userId)),
+      child: NewsRedZoneBinder(
+        child: Scaffold(
           backgroundColor: AppColors.background,
-          elevation: 0,
-          title: const Text(
-            'KINETIC',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1,
-            ),
-          ),
-          actions: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'EQUITY',
-                  style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold),
-                ),
-                BlocBuilder<TradingRoomBloc, TradingRoomState>(
-                  builder: (context, state) {
-                    final equity = state is TradingRoomLoaded ? state.account.equity : 0.0;
-                    return Text(
-                      '\$$equity',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            const Icon(Icons.sensors, color: AppColors.primary),
-            const SizedBox(width: 16),
-          ],
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Balance & Max Loss Row
-              Row(
-                children: [
-                  Expanded(
-                    child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
-                      builder: (context, state) {
-                        final balance = state is TradingRoomLoaded ? state.account.balance : 0.0;
-                        return _buildStatusCard(
-                          'BALANCE',
-                          '\$$balance',
-                          isLive: true,
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildStatusCard(
-                      'MAX LOSS LOCK',
-                      '-\$1,250.00',
-                      textColor: AppColors.bear,
-                      showProgress: true,
-                    ),
-                  ),
-                ],
+          appBar: AppBar(
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            title: const Text(
+              'KINETIC',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1,
               ),
-              const SizedBox(height: 16),
-              
-              // Chart Section
-              Container(
-                height: 350,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                ),
-                child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
-                  builder: (context, state) {
-                    if (state is TradingRoomLoaded) {
-                      return KineticChart(
-                        signal: state.currentSignal,
-                        candles: state.candles,
-                      );
-                    }
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Order Execution Section
-              Row(
-                children: [
-                  Expanded(
-                    flex: 7,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'AUTO-LOT OPTIMIZER',
-                            style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            '1.42 LOTS',
-                            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildRiskBtn('1% RISK', false),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildRiskBtn('2% RISK', true),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 5,
+            ),
+            actions: [
+              BlocBuilder<TradingRoomBloc, TradingRoomState>(
+                builder: (context, state) {
+                  final equity = state is TradingRoomLoaded
+                      ? state.account.equity
+                      : 0.0;
+                  final pnl = state is TradingRoomLoaded ? state.totalPnL : 0.0;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _buildTradeBtn('BUY', AppColors.primary),
-                        const SizedBox(height: 8),
-                        _buildTradeBtn('SELL', AppColors.bear),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              // Analysis Layers
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'ACTIVE ANALYSIS LAYERS',
-                          style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        Text(
+                          'EQ \$${equity.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
-                          '5/5 ACTIVE',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 8),
+                          'P&L ${pnl >= 0 ? '+' : ''}${pnl.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            color: pnl >= 0
+                                ? AppColors.primary
+                                : AppColors.bear,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    _buildLayerItem(Icons.warning_amber_rounded, 'Liquidity Trap Detected', AppColors.primary),
-                    const SizedBox(height: 8),
-                    _buildLayerItem(Icons.show_chart, 'Action Lines (Entry/SL/TP)', Colors.white54),
-                  ],
-                ),
+                  );
+                },
               ),
-              const SizedBox(height: 100), // Space for unified bottom nav
             ],
+          ),
+          body: BlocBuilder<TradingRoomBloc, TradingRoomState>(
+            builder: (context, state) {
+              if (state is TradingRoomError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        state.message,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.read<TradingRoomBloc>().add(
+                          LoadTradingData(userId: userId),
+                        ),
+                        child: const Text('RETRY'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              if (state is! TradingRoomLoaded) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                );
+              }
+              return Column(
+                children: [
+                  if (state.newsRedZoneLabel != null)
+                    _MobileRedZoneBanner(label: state.newsRedZoneLabel!),
+                  _MobileModeTfBar(state: state),
+                  _MobileStageBanner(signal: state.currentSignal),
+                  Expanded(
+                    child: KineticChart(
+                      symbol: state.currentSymbol,
+                      signal: state.currentSignal,
+                      candles: state.candles,
+                    ),
+                  ),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.42,
+                    child: const SingleChildScrollView(child: ExecutionPanel()),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatusCard(String title, String value, {bool isLive = false, Color? textColor, bool showProgress = false}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
-              if (isLive)
-                Row(
-                  children: [
-                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle)),
-                    const SizedBox(width: 4),
-                    const Text('LIVE', style: TextStyle(color: AppColors.primary, fontSize: 8, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(color: textColor ?? Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          if (showProgress) ...[
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: 0.15,
-              backgroundColor: Colors.white10,
-              color: AppColors.bear,
-              minHeight: 2,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+class _MobileRedZoneBanner extends StatelessWidget {
+  final String label;
+  const _MobileRedZoneBanner({required this.label});
 
-  Widget _buildRiskBtn(String label, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.black26,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: isActive ? AppColors.primary.withValues(alpha: 0.3) : Colors.white10),
-      ),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? AppColors.primary : Colors.white54,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTradeBtn(String label, Color color) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(label == 'BUY' ? Icons.trending_up : Icons.trending_down, color: Colors.black, size: 16),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12),
-          ),
-        ],
+      color: AppColors.bear.withValues(alpha: 0.2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Text(
+        'RED ZONE · ${label.replaceFirst('NEWS ', '')}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.bear,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
+}
 
-  Widget _buildLayerItem(IconData icon, String label, Color iconColor) {
+class _MobileStageBanner extends StatelessWidget {
+  final TradingSignal? signal;
+  const _MobileStageBanner({required this.signal});
+
+  @override
+  Widget build(BuildContext context) {
+    if (signal == null) return const SizedBox.shrink();
+    final Color color;
+    final String text;
+    if (signal!.veto) {
+      color = AppColors.bear;
+      text = 'VETO — ENTRY FROZEN';
+    } else if (!signal!.setupReady) {
+      color = AppColors.accent;
+      text = 'SOFT — WAITING ZONE';
+    } else {
+      color = AppColors.primary;
+      text = 'HARD SETUP — READY';
+    }
     return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.black12,
-        borderRadius: BorderRadius.circular(8),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: color.withValues(alpha: 0.12),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.6,
+        ),
       ),
-      child: Row(
+    );
+  }
+}
+
+class _MobileModeTfBar extends StatelessWidget {
+  final TradingRoomLoaded state;
+  const _MobileModeTfBar({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final mode = state.tradingMode;
+    final tfs = const [
+      {'label': 'M5', 'value': '5'},
+      {'label': 'M15', 'value': '15'},
+      {'label': 'H1', 'value': '60'},
+      {'label': 'H4', 'value': '240'},
+      {'label': 'D1', 'value': '1440'},
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: Column(
         children: [
-          Icon(icon, color: iconColor, size: 16),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w500)),
+          Row(
+            children: TradingMode.values.map((m) {
+              final active = m == mode;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: InkWell(
+                    onTap: () => context.read<TradingRoomBloc>().add(
+                      ChangeTradingMode(m),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.primary.withValues(alpha: 0.15)
+                            : Colors.white10,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: active
+                              ? AppColors.primary.withValues(alpha: 0.4)
+                              : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        m.displayName.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: active ? AppColors.primary : Colors.white54,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: tfs.map((tf) {
+              final value = tf['value']!;
+              final allowed = mode.allowsTimeframe(value);
+              final active = state.currentTimeframe == value;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: InkWell(
+                    onTap: !allowed
+                        ? null
+                        : () => context.read<TradingRoomBloc>().add(
+                            ChangeTimeframe(value),
+                          ),
+                    child: Opacity(
+                      opacity: allowed ? 1 : 0.35,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppColors.entry.withValues(alpha: 0.2)
+                              : Colors.white10,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          tf['label']!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: active ? AppColors.entry : Colors.white54,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import '../bloc/trading_room_state.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../data/repositories/trading_repository.dart';
+import '../../../data/models/trading_models.dart';
 import 'widgets/kinetic_chart.dart';
 import 'widgets/execution_panel.dart';
 import 'widgets/terminal_panel.dart';
@@ -15,6 +16,7 @@ import 'widgets/ai_chat_panel.dart';
 import 'widgets/live_data_bar.dart';
 import 'widgets/chart_tools_sidebar.dart';
 import 'widgets/input_constraint_modal.dart';
+import 'widgets/news_red_zone_binder.dart';
 
 class TradingRoomWebPage extends StatefulWidget {
   final String? userId;
@@ -34,40 +36,52 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
       create: (context) =>
           TradingRoomBloc(tradingRepository: context.read<TradingRepository>())
             ..add(LoadTradingData(userId: widget.userId)),
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: BlocConsumer<TradingRoomBloc, TradingRoomState>(
-          listenWhen: (prev, curr) {
-            if (prev is TradingRoomLoading && curr is TradingRoomLoaded) {
-              return !curr.isRiskConfigured;
-            }
-            return false;
-          },
-          listener: (context, state) {
-            if (state is TradingRoomLoaded && !state.isRiskConfigured) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                InputConstraintModal.show(context);
-              });
-            }
-          },
-          builder: (context, state) {
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final isMobile = constraints.maxWidth < 900;
-                return Column(
-                  children: [
-                    _WebTopNavbar(onMenuPressed: widget.onMenuPressed),
-                    const LiveDataBar(),
-                    Expanded(
-                      child: isMobile
-                          ? _buildMobileLayout(context)
-                          : _buildDesktopLayout(context),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
+      child: NewsRedZoneBinder(
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: BlocConsumer<TradingRoomBloc, TradingRoomState>(
+            listenWhen: (prev, curr) {
+              if (curr is TradingRoomLoaded) {
+                final prevLoaded = prev is TradingRoomLoaded ? prev : null;
+                final justLoaded =
+                    prevLoaded == null || !prevLoaded.isRiskConfigLoaded;
+                return curr.isRiskConfigLoaded &&
+                    !curr.isRiskConfigured &&
+                    justLoaded;
+              }
+              return false;
+            },
+            listener: (context, state) {
+              if (state is TradingRoomLoaded &&
+                  state.isRiskConfigLoaded &&
+                  !state.isRiskConfigured) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  InputConstraintModal.show(context);
+                });
+              }
+            },
+            builder: (context, state) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final isMobile = constraints.maxWidth < 900;
+                  return Column(
+                    children: [
+                      _WebTopNavbar(onMenuPressed: widget.onMenuPressed),
+                      const LiveDataBar(),
+                      if (state is TradingRoomLoaded &&
+                          state.newsRedZoneLabel != null)
+                        _NewsRedZoneBanner(label: state.newsRedZoneLabel!),
+                      Expanded(
+                        child: isMobile
+                            ? _buildMobileLayout(context)
+                            : _buildDesktopLayout(context),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -121,13 +135,92 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
         builder: (context, state) {
           if (state is TradingRoomLoaded) {
             return KineticChart(
+              symbol: state.currentSymbol,
               candles: state.candles,
               signal: state.currentSignal,
               activeTool: _activeTool,
             );
+          } else if (state is TradingRoomError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.bear,
+                    size: 40,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error: ${state.message}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<TradingRoomBloc>().add(
+                      LoadTradingData(userId: widget.userId),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                    ),
+                    child: const Text('RETRY'),
+                  ),
+                ],
+              ),
+            );
           }
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         },
+      ),
+    );
+  }
+}
+
+class _NewsRedZoneBanner extends StatelessWidget {
+  final String label;
+  const _NewsRedZoneBanner({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: AppColors.bear.withValues(alpha: 0.18),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.bear,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'RED ZONE',
+            style: TextStyle(
+              color: AppColors.bear,
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label.replaceFirst('NEWS ', ''),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ),
+          TextButton(
+            onPressed: () =>
+                context.read<TradingRoomBloc>().add(const ClearNewsRedZone()),
+            child: const Text('DISMISS', style: TextStyle(fontSize: 10)),
+          ),
+        ],
       ),
     );
   }
@@ -135,64 +228,82 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
 
 // ─── All Symbols Data ───
 const _symbolGroups = [
-  _SymbolGroup(name: '🏆 Metals', symbols: [
-    _Symbol('XAUUSD', '🥇 Gold / USD',     'XAUUSD'),
-    _Symbol('XAGUSD', '🥈 Silver / USD',   'XAGUSD'),
-    _Symbol('XPTUSD', 'Platinum / USD',    'XPTUSD'),
-    _Symbol('XPDUSD', 'Palladium / USD',   'XPDUSD'),
-  ]),
-  _SymbolGroup(name: '📈 Forex Majors', symbols: [
-    _Symbol('EURUSD', '💶 EUR / USD',      'EURUSD'),
-    _Symbol('GBPUSD', '💷 GBP / USD',      'GBPUSD'),
-    _Symbol('USDJPY', '💴 USD / JPY',      'USDJPY'),
-    _Symbol('USDCHF', '🇨🇭 USD / CHF',     'USDCHF'),
-    _Symbol('AUDUSD', '🇦🇺 AUD / USD',     'AUDUSD'),
-    _Symbol('USDCAD', '🇨🇦 USD / CAD',     'USDCAD'),
-    _Symbol('NZDUSD', '🇳🇿 NZD / USD',     'NZDUSD'),
-  ]),
-  _SymbolGroup(name: '📊 Forex Minors', symbols: [
-    _Symbol('EURGBP', 'EUR / GBP',         'EURGBP'),
-    _Symbol('EURJPY', 'EUR / JPY',         'EURJPY'),
-    _Symbol('GBPJPY', '💷 GBP / JPY',      'GBPJPY'),
-    _Symbol('EURAUD', 'EUR / AUD',         'EURAUD'),
-    _Symbol('GBPAUD', 'GBP / AUD',         'GBPAUD'),
-    _Symbol('AUDNZD', 'AUD / NZD',         'AUDNZD'),
-    _Symbol('CADCHF', 'CAD / CHF',         'CADCHF'),
-    _Symbol('AUDCAD', 'AUD / CAD',         'AUDCAD'),
-    _Symbol('AUDCHF', 'AUD / CHF',         'AUDCHF'),
-    _Symbol('NZDJPY', 'NZD / JPY',         'NZDJPY'),
-  ]),
-  _SymbolGroup(name: '🛢️ Commodities', symbols: [
-    _Symbol('USOIL',  '🛢️ WTI Crude Oil',  'WTI'),
-    _Symbol('UKOIL',  '🛢️ Brent Crude',    'BRENT'),
-    _Symbol('NGAS',   '🔥 Natural Gas',    'NGAS'),
-    _Symbol('CORN',   '🌽 Corn',           'CORN'),
-    _Symbol('WHEAT',  '🌾 Wheat',          'WHEAT'),
-    _Symbol('SOYBN',  '🫘 Soybeans',       'SOYBN'),
-    _Symbol('COPPER', '🔶 Copper',         'COPPER'),
-  ]),
-  _SymbolGroup(name: '📉 Indices', symbols: [
-    _Symbol('US30',   '🗽 Dow Jones 30',   'US30'),
-    _Symbol('US500',  '🇺🇸 S&P 500',       'US500'),
-    _Symbol('US100',  '💻 Nasdaq 100',     'US100'),
-    _Symbol('UK100',  '🇬🇧 FTSE 100',      'UK100'),
-    _Symbol('DE40',   '🇩🇪 DAX 40',        'DE40'),
-    _Symbol('JP225',  '🇯🇵 Nikkei 225',    'JP225'),
-    _Symbol('FR40',   '🇫🇷 CAC 40',        'FR40'),
-    _Symbol('AU200',  '🇦🇺 ASX 200',       'AU200'),
-    _Symbol('HK50',   '🇭🇰 Hang Seng 50',  'HK50'),
-    _Symbol('CHINA50','🇨🇳 China A50',     'CHINA50'),
-  ]),
-  _SymbolGroup(name: '₿ Crypto', symbols: [
-    _Symbol('BTCUSD', '₿ Bitcoin / USD',   'BTC'),
-    _Symbol('ETHUSD', '⟠ Ethereum / USD',  'ETH'),
-    _Symbol('BNBUSD', '🟡 BNB / USD',      'BNB'),
-    _Symbol('SOLUSD', '◎ Solana / USD',    'SOL'),
-    _Symbol('XRPUSD', '🔷 XRP / USD',      'XRP'),
-    _Symbol('ADAUSD', '🔵 Cardano / USD',  'ADA'),
-    _Symbol('DOTUSD', 'Polkadot / USD',    'DOT'),
-    _Symbol('LINKUSD','🔗 Chainlink / USD','LINK'),
-  ]),
+  _SymbolGroup(
+    name: '🏆 Metals',
+    symbols: [
+      _Symbol('XAUUSD', '🥇 Gold / USD', 'XAUUSD'),
+      _Symbol('XAGUSD', '🥈 Silver / USD', 'XAGUSD'),
+      _Symbol('XPTUSD', 'Platinum / USD', 'XPTUSD'),
+      _Symbol('XPDUSD', 'Palladium / USD', 'XPDUSD'),
+    ],
+  ),
+  _SymbolGroup(
+    name: '📈 Forex Majors',
+    symbols: [
+      _Symbol('EURUSD', '💶 EUR / USD', 'EURUSD'),
+      _Symbol('GBPUSD', '💷 GBP / USD', 'GBPUSD'),
+      _Symbol('USDJPY', '💴 USD / JPY', 'USDJPY'),
+      _Symbol('USDCHF', '🇨🇭 USD / CHF', 'USDCHF'),
+      _Symbol('AUDUSD', '🇦🇺 AUD / USD', 'AUDUSD'),
+      _Symbol('USDCAD', '🇨🇦 USD / CAD', 'USDCAD'),
+      _Symbol('NZDUSD', '🇳🇿 NZD / USD', 'NZDUSD'),
+    ],
+  ),
+  _SymbolGroup(
+    name: '📊 Forex Minors',
+    symbols: [
+      _Symbol('EURGBP', 'EUR / GBP', 'EURGBP'),
+      _Symbol('EURJPY', 'EUR / JPY', 'EURJPY'),
+      _Symbol('GBPJPY', '💷 GBP / JPY', 'GBPJPY'),
+      _Symbol('EURAUD', 'EUR / AUD', 'EURAUD'),
+      _Symbol('GBPAUD', 'GBP / AUD', 'GBPAUD'),
+      _Symbol('AUDNZD', 'AUD / NZD', 'AUDNZD'),
+      _Symbol('CADCHF', 'CAD / CHF', 'CADCHF'),
+      _Symbol('AUDCAD', 'AUD / CAD', 'AUDCAD'),
+      _Symbol('AUDCHF', 'AUD / CHF', 'AUDCHF'),
+      _Symbol('NZDJPY', 'NZD / JPY', 'NZDJPY'),
+    ],
+  ),
+  _SymbolGroup(
+    name: '🛢️ Commodities',
+    symbols: [
+      _Symbol('USOIL', '🛢️ WTI Crude Oil', 'WTI'),
+      _Symbol('UKOIL', '🛢️ Brent Crude', 'BRENT'),
+      _Symbol('NGAS', '🔥 Natural Gas', 'NGAS'),
+      _Symbol('CORN', '🌽 Corn', 'CORN'),
+      _Symbol('WHEAT', '🌾 Wheat', 'WHEAT'),
+      _Symbol('SOYBN', '🫘 Soybeans', 'SOYBN'),
+      _Symbol('COPPER', '🔶 Copper', 'COPPER'),
+    ],
+  ),
+  _SymbolGroup(
+    name: '📉 Indices',
+    symbols: [
+      _Symbol('US30', '🗽 Dow Jones 30', 'US30'),
+      _Symbol('US500', '🇺🇸 S&P 500', 'US500'),
+      _Symbol('US100', '💻 Nasdaq 100', 'US100'),
+      _Symbol('UK100', '🇬🇧 FTSE 100', 'UK100'),
+      _Symbol('DE40', '🇩🇪 DAX 40', 'DE40'),
+      _Symbol('JP225', '🇯🇵 Nikkei 225', 'JP225'),
+      _Symbol('FR40', '🇫🇷 CAC 40', 'FR40'),
+      _Symbol('AU200', '🇦🇺 ASX 200', 'AU200'),
+      _Symbol('HK50', '🇭🇰 Hang Seng 50', 'HK50'),
+      _Symbol('CHINA50', '🇨🇳 China A50', 'CHINA50'),
+    ],
+  ),
+  _SymbolGroup(
+    name: '₿ Crypto',
+    symbols: [
+      _Symbol('BTCUSD', '₿ Bitcoin / USD', 'BTC'),
+      _Symbol('ETHUSD', '⟠ Ethereum / USD', 'ETH'),
+      _Symbol('BNBUSD', '🟡 BNB / USD', 'BNB'),
+      _Symbol('SOLUSD', '◎ Solana / USD', 'SOL'),
+      _Symbol('XRPUSD', '🔷 XRP / USD', 'XRP'),
+      _Symbol('ADAUSD', '🔵 Cardano / USD', 'ADA'),
+      _Symbol('DOTUSD', 'Polkadot / USD', 'DOT'),
+      _Symbol('LINKUSD', '🔗 Chainlink / USD', 'LINK'),
+    ],
+  ),
 ];
 
 class _SymbolGroup {
@@ -202,9 +313,9 @@ class _SymbolGroup {
 }
 
 class _Symbol {
-  final String value;   // sent to bloc (e.g. XAUUSD)
-  final String label;   // displayed in UI
-  final String short;   // short ticker for tab
+  final String value; // sent to bloc (e.g. XAUUSD)
+  final String label; // displayed in UI
+  final String short; // short ticker for tab
   const _Symbol(this.value, this.label, this.short);
 }
 
@@ -212,28 +323,77 @@ class _Symbol {
 class _SubTabBar extends StatelessWidget {
   const _SubTabBar();
 
+  static const _timeframes = [
+    {'value': '5', 'label': 'M5'},
+    {'value': '15', 'label': 'M15'},
+    {'value': '60', 'label': 'H1'},
+    {'value': '240', 'label': 'H4'},
+    {'value': '1440', 'label': 'D1'},
+  ];
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<TradingRoomBloc, TradingRoomState>(
       builder: (context, state) {
         String symbol = 'XAUUSD';
-        String timeframe = 'M5';
+        String currentTf = '5';
+        TradingMode mode = TradingMode.scalping;
         if (state is TradingRoomLoaded) {
           symbol = state.currentSymbol;
-          timeframe = _formatTimeframe(state.currentTimeframe);
+          currentTf = state.currentTimeframe;
+          mode = state.tradingMode;
         }
 
         return Container(
           height: 36,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+            ),
           ),
           child: Row(
             children: [
-              _SubTab(label: context.tr('tr_tab_label'), isActive: true, activeColor: AppColors.primary),
+              _SubTab(
+                label: context.tr('tr_tab_label'),
+                isActive: true,
+                activeColor: AppColors.primary,
+              ),
               const SizedBox(width: 2),
-              _SubTab(label: '$symbol $timeframe', isActive: false, activeColor: AppColors.secondary, isSymbolTab: true),
+              _SubTab(
+                label: '$symbol ${_formatTimeframe(currentTf)}',
+                isActive: false,
+                activeColor: AppColors.secondary,
+                isSymbolTab: true,
+              ),
+              const SizedBox(width: 8),
+              // ── Vertical divider ──
+              Container(
+                width: 1,
+                height: 20,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+              const SizedBox(width: 6),
+              // ── Timeframe selector — only mode TFs active (V2.1 P0#6) ──
+              for (final tf in _timeframes) ...[
+                _TimeframeButton(
+                  label: tf['label']!,
+                  isActive:
+                      currentTf == tf['value'] ||
+                      (tf['value'] == '1440' &&
+                          (currentTf == 'D' || currentTf == '1D')),
+                  isEnabled: mode.allowsTimeframe(tf['value']!),
+                  onTap: () {
+                    if (!mode.allowsTimeframe(tf['value']!)) return;
+                    if (currentTf != tf['value']) {
+                      context.read<TradingRoomBloc>().add(
+                        ChangeTimeframe(tf['value']!),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(width: 2),
+              ],
               const Spacer(),
               // Symbol selector button
               Tooltip(
@@ -242,10 +402,18 @@ class _SubTabBar extends StatelessWidget {
                   onTap: () => _showSymbolDialog(context),
                   borderRadius: BorderRadius.circular(4),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    margin: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 4,
+                    ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                      ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
@@ -253,7 +421,14 @@ class _SubTabBar extends StatelessWidget {
                       children: [
                         Icon(Icons.swap_horiz, color: Colors.white54, size: 14),
                         const SizedBox(width: 4),
-                        Text('Symbol', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text(
+                          'Symbol',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -279,17 +454,87 @@ class _SubTabBar extends StatelessWidget {
     );
   }
 
-  String _formatTimeframe(String tf) {
+  static String _formatTimeframe(String tf) {
     switch (tf) {
-      case '1': return 'M1';
-      case '5': return 'M5';
-      case '15': return 'M15';
-      case '60': return 'H1';
-      case '240': return 'H4';
-      case '1D': return 'D1';
-      case '1W': return 'W1';
-      default: return 'M$tf';
+      case '1':
+        return 'M1';
+      case '5':
+        return 'M5';
+      case '15':
+        return 'M15';
+      case '60':
+        return 'H1';
+      case '240':
+        return 'H4';
+      case '1440':
+        return 'D1';
+      case 'D':
+        return 'D1';
+      case '1D':
+        return 'D1';
+      case '1W':
+        return 'W1';
+      default:
+        return 'M$tf';
     }
+  }
+}
+
+// ─── Timeframe Button ───
+class _TimeframeButton extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final bool isEnabled;
+  final VoidCallback onTap;
+
+  const _TimeframeButton({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.isEnabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor;
+    if (!isEnabled) {
+      textColor = Colors.white12;
+    } else if (isActive) {
+      textColor = AppColors.primary;
+    } else {
+      textColor = Colors.white38;
+    }
+    return Opacity(
+      opacity: isEnabled ? 1.0 : 0.35,
+      child: InkWell(
+        onTap: isEnabled ? onTap : null,
+        borderRadius: BorderRadius.circular(3),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isActive && isEnabled
+                ? AppColors.primary.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(
+              color: isActive && isEnabled
+                  ? AppColors.primary.withValues(alpha: 0.5)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.w900 : FontWeight.w600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -311,7 +556,9 @@ class _SubTab extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isActive ? activeColor.withValues(alpha: 0.08) : Colors.transparent,
+        color: isActive
+            ? activeColor.withValues(alpha: 0.08)
+            : Colors.transparent,
         border: Border(
           bottom: BorderSide(
             color: isActive ? activeColor : Colors.transparent,
@@ -324,13 +571,17 @@ class _SubTab extends StatelessWidget {
         children: [
           if (isSymbolTab) ...[
             Container(
-              width: 6, height: 6,
+              width: 6,
+              height: 6,
               margin: const EdgeInsets.only(right: 6),
               decoration: BoxDecoration(
                 color: AppColors.primary,
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.5), blurRadius: 4),
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.5),
+                    blurRadius: 4,
+                  ),
                 ],
               ),
             ),
@@ -411,7 +662,10 @@ class _WebTopNavbar extends StatelessWidget {
                 statusColor = AppColors.primary;
               }
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
@@ -421,12 +675,16 @@ class _WebTopNavbar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 8, height: 8,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         color: statusColor,
                         shape: BoxShape.circle,
                         boxShadow: [
-                          BoxShadow(color: statusColor.withValues(alpha: 0.5), blurRadius: 4),
+                          BoxShadow(
+                            color: statusColor.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          ),
                         ],
                       ),
                     ),
@@ -643,7 +901,12 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
     final q = _query.toUpperCase();
     return _symbolGroups
         .expand((g) => g.symbols)
-        .where((s) => s.value.contains(q) || s.label.toUpperCase().contains(q) || s.short.contains(q))
+        .where(
+          (s) =>
+              s.value.contains(q) ||
+              s.label.toUpperCase().contains(q) ||
+              s.short.contains(q),
+        )
         .toList();
   }
 
@@ -673,7 +936,11 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
+                ),
               ),
               child: Row(
                 children: [
@@ -683,10 +950,17 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
                     child: TextField(
                       controller: _searchController,
                       autofocus: true,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Search symbol... (XAUUSD, Gold, BTC)',
-                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+                        hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 14,
+                        ),
                         border: InputBorder.none,
                         isDense: true,
                       ),
@@ -694,7 +968,11 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.4), size: 18),
+                    icon: Icon(
+                      Icons.close,
+                      color: Colors.white.withValues(alpha: 0.4),
+                      size: 18,
+                    ),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -703,9 +981,7 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
 
             // Content
             Expanded(
-              child: isSearching
-                  ? _buildSearchResults()
-                  : _buildGroupedList(),
+              child: isSearching ? _buildSearchResults() : _buildGroupedList(),
             ),
           ],
         ),
@@ -720,9 +996,16 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, color: Colors.white.withValues(alpha: 0.2), size: 40),
+            Icon(
+              Icons.search_off,
+              color: Colors.white.withValues(alpha: 0.2),
+              size: 40,
+            ),
             const SizedBox(height: 12),
-            Text('No symbol found for "$_query"', style: TextStyle(color: Colors.white38, fontSize: 13)),
+            Text(
+              'No symbol found for "$_query"',
+              style: TextStyle(color: Colors.white38, fontSize: 13),
+            ),
           ],
         ),
       );
@@ -744,7 +1027,15 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-              child: Text(group.name, style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+              child: Text(
+                group.name,
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                ),
+              ),
             ),
             ...group.symbols.map((s) => _buildSymbolTile(s)),
             if (gi < _symbolGroups.length - 1)
@@ -770,11 +1061,18 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Text(
                 s.short,
-                style: const TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -784,12 +1082,29 @@ class _SymbolSearchDialogState extends State<_SymbolSearchDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(s.label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text(s.value, style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11)),
+                  Text(
+                    s.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    s.value,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.15), size: 12),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withValues(alpha: 0.15),
+              size: 12,
+            ),
           ],
         ),
       ),

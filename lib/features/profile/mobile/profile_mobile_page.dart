@@ -19,12 +19,13 @@ class ProfileMobilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
-    final userId = authState.user?.uid ?? FirebaseAuth.instance.currentUser?.uid;
+    final userId =
+        authState.user?.uid ?? FirebaseAuth.instance.currentUser?.uid;
 
     return BlocProvider(
-      create: (context) => ProfileBloc(
-        profileRepository: context.read<ProfileRepository>(),
-      )..add(LoadProfileData(userId: userId)),
+      create: (context) =>
+          ProfileBloc(profileRepository: context.read<ProfileRepository>())
+            ..add(LoadProfileData(userId: userId)),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -118,7 +119,11 @@ class ProfileMobilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildUserIdentityCard(BuildContext context, String? userId, UserProfile profile) {
+  Widget _buildUserIdentityCard(
+    BuildContext context,
+    String? userId,
+    UserProfile profile,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -133,10 +138,16 @@ class ProfileMobilePage extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 30,
-                backgroundImage: profile.avatarUrl.isNotEmpty ? NetworkImage(profile.avatarUrl) : null,
+                backgroundImage: profile.avatarUrl.isNotEmpty
+                    ? NetworkImage(profile.avatarUrl)
+                    : null,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: profile.avatarUrl.isEmpty
-                    ? const Icon(Icons.person, color: AppColors.primary, size: 30)
+                    ? const Icon(
+                        Icons.person,
+                        color: AppColors.primary,
+                        size: 30,
+                      )
                     : null,
               ),
               const SizedBox(width: 16),
@@ -157,8 +168,15 @@ class ProfileMobilePage extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit, size: 14, color: Colors.white38),
-                          onPressed: () => _showEditUsernameDialog(context, profile.username),
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 14,
+                            color: Colors.white38,
+                          ),
+                          onPressed: () => _showEditUsernameDialog(
+                            context,
+                            profile.username,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
@@ -167,13 +185,19 @@ class ProfileMobilePage extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       profile.email,
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -189,7 +213,10 @@ class ProfileMobilePage extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(4),
@@ -216,8 +243,14 @@ class ProfileMobilePage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSimpleStat(context.tr('profile_trades'), '${profile.totalTrades}'),
-              _buildSimpleStat(context.tr('profile_win_rate'), '${profile.winRate}%'),
+              _buildSimpleStat(
+                context.tr('profile_trades'),
+                '${profile.totalTrades}',
+              ),
+              _buildSimpleStat(
+                context.tr('profile_win_rate'),
+                '${profile.winRate}%',
+              ),
               _buildSimpleStat(context.tr('profile_rank'), '#${profile.rank}'),
             ],
           ),
@@ -250,7 +283,10 @@ class ProfileMobilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBrokerAccountsCard(BuildContext context, List<BrokerAccount> accounts) {
+  Widget _buildBrokerAccountsCard(
+    BuildContext context,
+    List<BrokerAccount> accounts,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -261,31 +297,35 @@ class ProfileMobilePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                context.tr('profile_broker_accounts'),
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white54,
-                  letterSpacing: 1,
-                ),
+          Text(
+            context.tr('profile_broker_accounts'),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Colors.white54,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Day 5 API Relay — no MT4/MT5 credential form on mobile (App Store).
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.25),
               ),
-              TextButton.icon(
-                onPressed: () => _showLinkAccountDialog(context),
-                icon: const Icon(Icons.add, size: 14, color: AppColors.primary),
-                label: Text(
-                  context.tr('profile_link_new'),
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            ),
+            child: Text(
+              context.tr('profile_link_on_web_only'),
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                height: 1.4,
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 16),
           if (accounts.isEmpty)
@@ -294,7 +334,10 @@ class ProfileMobilePage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   context.tr('profile_no_accounts'),
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    fontSize: 12,
+                  ),
                 ),
               ),
             )
@@ -375,11 +418,26 @@ class ProfileMobilePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildQuotaRow(context.tr('profile_api_requests'), quota.apiUsed, quota.apiLimit, AppColors.primary),
+          _buildQuotaRow(
+            context.tr('profile_api_requests'),
+            quota.apiUsed,
+            quota.apiLimit,
+            AppColors.primary,
+          ),
           const SizedBox(height: 16),
-          _buildQuotaRow(context.tr('profile_backtest_sessions'), quota.backtestUsed, quota.backtestLimit, AppColors.secondary),
+          _buildQuotaRow(
+            context.tr('profile_backtest_sessions'),
+            quota.backtestUsed,
+            quota.backtestLimit,
+            AppColors.secondary,
+          ),
           const SizedBox(height: 16),
-          _buildQuotaRow(context.tr('profile_neural_storage'), quota.storageUsed.toInt(), quota.storageLimit.toInt(), AppColors.accent),
+          _buildQuotaRow(
+            context.tr('profile_neural_storage'),
+            quota.storageUsed.toInt(),
+            quota.storageLimit.toInt(),
+            AppColors.accent,
+          ),
         ],
       ),
     );
@@ -405,7 +463,11 @@ class ProfileMobilePage extends StatelessWidget {
             ),
             Text(
               '$used / $limit',
-              style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -443,10 +505,18 @@ class ProfileMobilePage extends StatelessWidget {
           const SizedBox(height: 16),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.phonelink_lock, color: AppColors.primary, size: 20),
+            leading: const Icon(
+              Icons.phonelink_lock,
+              color: AppColors.primary,
+              size: 20,
+            ),
             title: Text(
               context.tr('profile_2fa_title'),
-              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             subtitle: Text(
               context.tr('profile_2fa_subtitle'),
@@ -456,7 +526,8 @@ class ProfileMobilePage extends StatelessWidget {
               scale: 0.8,
               child: Switch(
                 value: state.is2FAEnabled,
-                onChanged: (v) => context.read<ProfileBloc>().add(Toggle2FARequested(v)),
+                onChanged: (v) =>
+                    context.read<ProfileBloc>().add(Toggle2FARequested(v)),
                 activeColor: AppColors.primary,
               ),
             ),
@@ -467,9 +538,17 @@ class ProfileMobilePage extends StatelessWidget {
             leading: const Icon(Icons.key, color: Colors.white38, size: 20),
             title: Text(
               context.tr('profile_change_key'),
-              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: Colors.white24,
+              size: 18,
+            ),
             onTap: () => _showChangePasswordDialog(context),
           ),
         ],
@@ -485,12 +564,17 @@ class ProfileMobilePage extends StatelessWidget {
           context.read<AuthBloc>().add(AuthLogoutRequested());
         },
         icon: const Icon(Icons.logout, size: 14),
-        label: const Text('Sign Out', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Sign Out',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.bear,
           side: BorderSide(color: AppColors.bear.withValues(alpha: 0.2)),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -502,7 +586,10 @@ class ProfileMobilePage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text(context.tr('profile_edit_username'), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          context.tr('profile_edit_username'),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -520,7 +607,9 @@ class ProfileMobilePage extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
-                context.read<ProfileBloc>().add(UpdateUsernameRequested(ctrl.text.trim()));
+                context.read<ProfileBloc>().add(
+                  UpdateUsernameRequested(ctrl.text.trim()),
+                );
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -545,7 +634,10 @@ class ProfileMobilePage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text(context.tr('profile_change_key'), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          context.tr('profile_change_key'),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -628,7 +720,10 @@ class ProfileMobilePage extends StatelessWidget {
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               }
@@ -640,112 +735,7 @@ class ProfileMobilePage extends StatelessWidget {
     );
   }
 
-  void _showLinkAccountDialog(BuildContext context) {
-    final platformController = TextEditingController(text: 'mt4');
-    final serverController = TextEditingController();
-    final loginController = TextEditingController();
-    final passwordController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          context.tr('profile_link_broker_title'),
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: 'mt4',
-                dropdownColor: AppColors.surface,
-                decoration: InputDecoration(
-                  labelText: context.tr('profile_platform'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-                style: const TextStyle(color: Colors.white),
-                items: const [
-                  DropdownMenuItem(value: 'mt4', child: Text('MT4')),
-                  DropdownMenuItem(value: 'mt5', child: Text('MT5')),
-                ],
-                onChanged: (v) => platformController.text = v ?? 'mt4',
-              ),
-              TextField(
-                controller: serverController,
-                decoration: InputDecoration(
-                  labelText: context.tr('profile_broker_server'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              TextField(
-                controller: loginController,
-                decoration: InputDecoration(
-                  labelText: context.tr('profile_login_id'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: context.tr('profile_trading_password'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-                style: const TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-              // Security warning banner
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.security, color: Colors.green, size: 14),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        context.tr('profile_security_notice'),
-                        style: const TextStyle(color: Colors.green, fontSize: 10),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(context.tr('cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<ProfileBloc>().add(LinkBrokerAccountRequested(
-                platform: platformController.text,
-                server: serverController.text,
-                login: loginController.text,
-                password: passwordController.text,
-              ));
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.tr('profile_link_sent'))),
-              );
-            },
-            child: Text(context.tr('profile_link_account')),
-          ),
-        ],
-      ),
-    );
-  }
+  // Day 5: MT4/MT5 link form removed from mobile (API Relay / App Store).
 }
 
 class _PreferencesCard extends StatelessWidget {
@@ -782,10 +772,18 @@ class _PreferencesCard extends StatelessWidget {
               // Push Notifications
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.notifications_active, color: AppColors.primary, size: 20),
+                leading: const Icon(
+                  Icons.notifications_active,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 title: Text(
                   context.tr('profile_push_notifications'),
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 subtitle: Text(
                   context.tr('profile_push_notifications_subtitle'),
@@ -795,7 +793,9 @@ class _PreferencesCard extends StatelessWidget {
                   scale: 0.8,
                   child: Switch(
                     value: pushEnabled,
-                    onChanged: (v) => context.read<ProfileBloc>().add(UpdatePushNotificationsRequested(v)),
+                    onChanged: (v) => context.read<ProfileBloc>().add(
+                      UpdatePushNotificationsRequested(v),
+                    ),
                     activeColor: AppColors.primary,
                   ),
                 ),
@@ -804,10 +804,18 @@ class _PreferencesCard extends StatelessWidget {
               // Language
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.language, color: Colors.white54, size: 20),
+                leading: const Icon(
+                  Icons.language,
+                  color: Colors.white54,
+                  size: 20,
+                ),
                 title: Text(
                   context.tr('profile_language'),
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 trailing: DropdownButton<String>(
                   value: lang,
@@ -815,8 +823,14 @@ class _PreferencesCard extends StatelessWidget {
                   underline: const SizedBox(),
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   items: [
-                    DropdownMenuItem(value: 'vi', child: Text(context.tr('profile_language_vi'))),
-                    DropdownMenuItem(value: 'en', child: Text(context.tr('profile_language_en'))),
+                    DropdownMenuItem(
+                      value: 'vi',
+                      child: Text(context.tr('profile_language_vi')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'en',
+                      child: Text(context.tr('profile_language_en')),
+                    ),
                   ],
                   onChanged: (v) {
                     if (v != null) context.read<LocaleCubit>().setLanguage(v);
@@ -827,10 +841,18 @@ class _PreferencesCard extends StatelessWidget {
               // Data Sharing
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.share, color: Colors.white54, size: 20),
+                leading: const Icon(
+                  Icons.share,
+                  color: Colors.white54,
+                  size: 20,
+                ),
                 title: Text(
                   context.tr('profile_data_sharing'),
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 subtitle: Text(
                   context.tr('profile_data_sharing_subtitle'),
@@ -840,7 +862,9 @@ class _PreferencesCard extends StatelessWidget {
                   scale: 0.8,
                   child: Switch(
                     value: dataEnabled,
-                    onChanged: (v) => context.read<ProfileBloc>().add(UpdateDataSharingRequested(v)),
+                    onChanged: (v) => context.read<ProfileBloc>().add(
+                      UpdateDataSharingRequested(v),
+                    ),
                     activeColor: AppColors.primary,
                   ),
                 ),

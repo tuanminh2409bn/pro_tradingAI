@@ -65,7 +65,8 @@ class AppLocalizations {
       'start': 'START',
       'current': 'CURRENT',
       'ai_performance_insight': 'AI PERFORMANCE INSIGHT',
-      'ai_insight_desc': '"You are currently showing 12% higher profit variance during the NY open. Suggest waiting for 5-min candle confirmation."',
+      'ai_insight_desc':
+          '"You are currently showing 12% higher profit variance during the NY open. Suggest waiting for 5-min candle confirmation."',
       'psychology_score': 'PSYCHOLOGY SCORE',
       'discipline': 'DISCIPLINE',
       'risk_adherence': 'RISK ADHERENCE',
@@ -86,7 +87,8 @@ class AppLocalizations {
       'listen_ai_advice': 'Listen to AI Advice',
       // Risk Config Modal
       'risk_config_title': 'RISK CONFIGURATION',
-      'risk_config_subtitle': 'Set your risk parameters before initializing the chart',
+      'risk_config_subtitle':
+          'Set your risk parameters before initializing the chart',
       'risk_config_balance': 'ACCOUNT BALANCE',
       'risk_config_balance_hint': 'e.g. 10000',
       'risk_config_balance_error': 'Balance must be greater than 0',
@@ -158,9 +160,12 @@ class AppLocalizations {
       'exec_manual': 'MANUAL ENTRY',
       'exec_execute_long': 'EXECUTE LONG',
       'exec_execute_short': 'EXECUTE SHORT',
-      'exec_sl_tight': 'SL1 Tight',
-      'exec_sl_normal': 'SL2 Normal',
-      'exec_sl_wide': 'SL3 Wide',
+      'exec_sl': 'Stop Loss',
+      'exec_sl_single': 'Single SL',
+      // legacy keys kept for safety but no longer SL1/2/3 copy
+      'exec_sl_tight': 'Stop Loss',
+      'exec_sl_normal': 'Stop Loss',
+      'exec_sl_wide': 'Stop Loss',
       // AI Chat Panel
       'ai_title': 'AI ASSISTANT V3.2',
       'ai_active': 'Neural Engine Active',
@@ -168,12 +173,14 @@ class AppLocalizations {
       'ai_empty_hint': 'Ask AI about the chart,\nmarket conditions, or signals',
       // Journal Screen
       'journal_page_title': 'Performance Analytics',
-      'journal_page_desc': 'Track your trading performance, analyze patterns, and improve your edge.',
+      'journal_page_desc':
+          'Track your trading performance, analyze patterns, and improve your edge.',
       'journal_above_target': 'Above target',
       'journal_below_target': 'Below target',
       'journal_no_trades': 'No trades yet',
       'journal_no_trades_recorded': 'No trades recorded yet',
-      'journal_no_trades_ai': 'No trades recorded yet. Start trading to see AI performance insights.',
+      'journal_no_trades_ai':
+          'No trades recorded yet. Start trading to see AI performance insights.',
       'journal_playing_voice': 'Playing Voice Analysis...',
       'journal_export_csv': 'Export CSV',
       'journal_filter': 'Filter',
@@ -196,9 +203,19 @@ class AppLocalizations {
       'news_greed': 'GREED',
       'news_no_articles': 'No news articles available',
       'news_ai_placeholder': 'Ask about market sentiment...',
+      'news_ai_title': 'DEEPSEEK V3.2 ANALYST',
+      'news_ai_clear_tooltip': 'Clear chat history',
+      'news_ai_clear_title': 'Clear history?',
+      'news_ai_clear_content': 'All chat history will be permanently deleted.',
+      'news_ai_cancel': 'Cancel',
+      'news_ai_delete': 'Delete',
+      'news_ai_empty_hint': 'Ask AI about news\nand market analysis',
+      'news_ai_welcome':
+          'Hello Trader. I am connected to DeepSeek AI. Ask me anything about market sentiment, news impact, or trading analysis.',
       // ─── Profile Screen ───
       'profile_title': 'Security & Profile',
-      'profile_subtitle': 'Manage your identity, broker accounts and API quotas.',
+      'profile_subtitle':
+          'Manage your identity, broker accounts and API quotas.',
       'profile_system_online': '● PROTRADING AI SYSTEM ONLINE',
       'profile_connecting': '○ CONNECTING...',
       // Profile Info
@@ -224,9 +241,11 @@ class AppLocalizations {
       'profile_broker_server': 'Broker Server (e.g. Exness-Real10)',
       'profile_login_id': 'Login ID',
       'profile_trading_password': 'Trading Password',
-      'profile_security_notice': 'App only requires Read-only password to sync. Absolutely safe, the system CANNOT trade or withdraw your money.',
+      'profile_security_notice':
+          'App only requires Read-only password to sync. Absolutely safe, the system CANNOT trade or withdraw your money.',
       'profile_link_account': 'LINK ACCOUNT',
-      'profile_link_sent': 'Linking request sent. Check status in a few moments.',
+      'profile_link_sent':
+          'Linking request sent. Check status in a few moments.',
       // Quota
       'profile_api_requests': 'API REQUESTS',
       'profile_backtest_sessions': 'BACKTEST SESSIONS',
@@ -245,11 +264,24 @@ class AppLocalizations {
       'profile_language_vi': 'Tiếng Việt',
       'profile_language_en': 'English',
       'profile_data_sharing': 'Share Debug Data',
-      'profile_data_sharing_subtitle': 'Allow sharing diagnostic data (Default: ON)',
+      'profile_data_sharing_subtitle':
+          'Allow sharing diagnostic data (Default: ON)',
       // Stats
       'profile_trades': 'TRADES',
       'profile_win_rate': 'WIN RATE',
       'profile_rank': 'RANK',
+      // Day 5
+      'profile_link_on_web_only':
+          'Link MT4/MT5 only on Web (Profile → Link Broker). Mobile uses API Relay — no broker credentials on device.',
+      'sync_gate_title': 'CONNECT YOUR BROKER',
+      'sync_gate_body':
+          'Link MT4/MT5 on Web to unlock live relay, Journal clarity, and synced risk. Or continue in manual mode with Input Constraint.',
+      'sync_gate_connect': 'CONNECT NOW',
+      'sync_gate_skip': 'SKIP & ENTER MANUALLY',
+      'journal_locked_title': 'JOURNAL LOCKED',
+      'journal_locked_body':
+          'Link your broker on Web (Profile → Link Broker) to unlock full Journal analytics.',
+      'ai_fallback_label': 'FALLBACK MODE',
     },
     'vi': {
       'system_access': 'ĐĂNG NHẬP HỆ THỐNG',
@@ -312,7 +344,8 @@ class AppLocalizations {
       'start': 'BẮT ĐẦU',
       'current': 'HIỆN TẠI',
       'ai_performance_insight': 'AI PHÂN TÍCH HIỆU SUẤT',
-      'ai_insight_desc': '"Bạn đang có phương sai lợi nhuận cao hơn 12% vào lúc mở cửa phiên Mỹ. Đề xuất chờ xác nhận nến 5 phút."',
+      'ai_insight_desc':
+          '"Bạn đang có phương sai lợi nhuận cao hơn 12% vào lúc mở cửa phiên Mỹ. Đề xuất chờ xác nhận nến 5 phút."',
       'psychology_score': 'ĐIỂM TÂM LÝ',
       'discipline': 'KỶ LUẬT',
       'risk_adherence': 'TUÂN THỦ RỦI RO',
@@ -405,22 +438,27 @@ class AppLocalizations {
       'exec_manual': 'VÀO LỆNH THỦ CÔNG',
       'exec_execute_long': 'MUA (LONG)',
       'exec_execute_short': 'BÁN (SHORT)',
-      'exec_sl_tight': 'Cắt Lỗ Hẹp',
-      'exec_sl_normal': 'Cắt Lỗ Vừa',
-      'exec_sl_wide': 'Cắt Lỗ Rộng',
+      'exec_sl': 'Cắt Lỗ',
+      'exec_sl_single': 'Một mức SL',
+      'exec_sl_tight': 'Cắt Lỗ',
+      'exec_sl_normal': 'Cắt Lỗ',
+      'exec_sl_wide': 'Cắt Lỗ',
       // AI Chat Panel
       'ai_title': 'TRỢ LÝ AI V3.2',
       'ai_active': 'Neural Engine Đang Hoạt Động',
       'ai_placeholder': 'Hỏi AI về biểu đồ...',
-      'ai_empty_hint': 'Hỏi AI về biểu đồ,\nđiều kiện thị trường, hoặc tín hiệu',
+      'ai_empty_hint':
+          'Hỏi AI về biểu đồ,\nđiều kiện thị trường, hoặc tín hiệu',
       // Journal Screen
       'journal_page_title': 'Phân Tích Hiệu Suất',
-      'journal_page_desc': 'Theo dõi hiệu suất giao dịch, phân tích xu hướng và cải thiện lợi thế của bạn.',
+      'journal_page_desc':
+          'Theo dõi hiệu suất giao dịch, phân tích xu hướng và cải thiện lợi thế của bạn.',
       'journal_above_target': 'Trên mục tiêu',
       'journal_below_target': 'Dưới mục tiêu',
       'journal_no_trades': 'Chưa có lệnh nào',
       'journal_no_trades_recorded': 'Chưa có lệnh nào được ghi lại',
-      'journal_no_trades_ai': 'Chưa có lệnh nào. Bắt đầu giao dịch để xem phân tích AI.',
+      'journal_no_trades_ai':
+          'Chưa có lệnh nào. Bắt đầu giao dịch để xem phân tích AI.',
       'journal_playing_voice': 'Đang phát phân tích giọng nói...',
       'journal_export_csv': 'Xuất CSV',
       'journal_filter': 'Lọc',
@@ -443,9 +481,19 @@ class AppLocalizations {
       'news_greed': 'THAM LAM',
       'news_no_articles': 'Không có bài báo nào',
       'news_ai_placeholder': 'Hỏi về tâm lý thị trường...',
+      'news_ai_title': 'PHÂN TÍCH DEEPSEEK V3.2',
+      'news_ai_clear_tooltip': 'Xóa lịch sử chat',
+      'news_ai_clear_title': 'Xóa lịch sử?',
+      'news_ai_clear_content': 'Tất cả lịch sử chat sẽ bị xóa vĩnh viễn.',
+      'news_ai_cancel': 'Hủy',
+      'news_ai_delete': 'Xóa',
+      'news_ai_empty_hint': 'Hỏi AI về tin tức\nvà phân tích thị trường',
+      'news_ai_welcome':
+          'Xin chào Trader. Tôi được kết nối với DeepSeek AI. Hãy hỏi tôi bất cứ điều gì về tâm lý thị trường, tác động tin tức hoặc phân tích giao dịch.',
       // ─── Profile Screen ───
       'profile_title': 'Bảo Mật & Hồ Sơ',
-      'profile_subtitle': 'Quản lý danh tính, tài khoản sàn và hạn mức API của bạn.',
+      'profile_subtitle':
+          'Quản lý danh tính, tài khoản sàn và hạn mức API của bạn.',
       'profile_system_online': '● HỆ THỐNG PROTRADING AI TRỰC TUYẾN',
       'profile_connecting': '○ ĐANG KẾT NỐI...',
       // Profile Info
@@ -471,9 +519,11 @@ class AppLocalizations {
       'profile_broker_server': 'Server Sàn (VD: Exness-Real10)',
       'profile_login_id': 'ID Đăng Nhập',
       'profile_trading_password': 'Mật Khẩu Giao Dịch',
-      'profile_security_notice': 'App chỉ yêu cầu Mật khẩu chỉ đọc để đồng bộ. Tuyệt đối an toàn, hệ thống KHÔNG THỂ vào lệnh hoặc rút tiền ra bạn.',
+      'profile_security_notice':
+          'App chỉ yêu cầu Mật khẩu chỉ đọc để đồng bộ. Tuyệt đối an toàn, hệ thống KHÔNG THỂ vào lệnh hoặc rút tiền ra bạn.',
       'profile_link_account': 'LIÊN KẾT',
-      'profile_link_sent': 'Đã gửi yêu cầu liên kết. Kiểm tra trạng thái sau ít phút.',
+      'profile_link_sent':
+          'Đã gửi yêu cầu liên kết. Kiểm tra trạng thái sau ít phút.',
       // Quota
       'profile_api_requests': 'YÊU CẦU API',
       'profile_backtest_sessions': 'PHIÊN BACKTEST',
@@ -487,16 +537,30 @@ class AppLocalizations {
       // Preferences
       'profile_preferences': 'TÙY CHỈNH',
       'profile_push_notifications': 'Thông Báo Đẩy',
-      'profile_push_notifications_subtitle': 'Nhận tín hiệu giao dịch và cảnh báo',
+      'profile_push_notifications_subtitle':
+          'Nhận tín hiệu giao dịch và cảnh báo',
       'profile_language': 'Ngôn Ngữ',
       'profile_language_vi': 'Tiếng Việt',
       'profile_language_en': 'English',
       'profile_data_sharing': 'Chia Sẻ Dữ Liệu Gỡ Lỗi',
-      'profile_data_sharing_subtitle': 'Cho phép chia sẻ dữ liệu gỡ lỗi hệ thống (Mặc định: BẬT)',
+      'profile_data_sharing_subtitle':
+          'Cho phép chia sẻ dữ liệu gỡ lỗi hệ thống (Mặc định: BẬT)',
       // Stats
       'profile_trades': 'LỆNH',
       'profile_win_rate': 'TỶ LỆ THẮNG',
       'profile_rank': 'HẠNG',
+      // Day 5
+      'profile_link_on_web_only':
+          'Liên kết MT4/MT5 chỉ trên Web (Profile → Link Broker). Mobile dùng API Relay — không nhập mật khẩu sàn trên thiết bị.',
+      'sync_gate_title': 'KẾT NỐI SÀN GIAO DỊCH',
+      'sync_gate_body':
+          'Liên kết MT4/MT5 trên Web để mở khóa relay live, Journal rõ ràng và đồng bộ rủi ro. Hoặc tiếp tục chế độ thủ công với Input Constraint.',
+      'sync_gate_connect': 'KẾT NỐI NGAY',
+      'sync_gate_skip': 'BỎ QUA & NHẬP THỦ CÔNG',
+      'journal_locked_title': 'JOURNAL ĐÃ KHÓA',
+      'journal_locked_body':
+          'Liên kết sàn trên Web (Profile → Link Broker) để mở khóa phân tích Journal đầy đủ.',
+      'ai_fallback_label': 'CHẾ ĐỘ DỰ PHÒNG',
     },
   };
 

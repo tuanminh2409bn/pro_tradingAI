@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/widgets/sync_gate_modal.dart';
 import '../../../core/widgets/web_sidebar.dart';
 import '../../../logic/navigation_cubit.dart';
 import '../../trading_room/web/trading_room_web_page.dart';
@@ -24,48 +25,70 @@ class WebDashboardShell extends StatelessWidget {
 
     return BlocProvider(
       create: (context) => NavigationCubit(),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isMobile = constraints.maxWidth < 900;
-          
-          return Scaffold(
-            key: scaffoldKey,
-            drawer: isMobile ? const Drawer(child: WebSidebar(isMobile: true)) : null,
-            body: Row(
-              children: [
-                if (!isMobile) const WebSidebar(),
-                Expanded(
-                  child: BlocBuilder<NavigationCubit, NavbarItem>(
-                    builder: (context, currentItem) {
-                      final VoidCallback? onMenuPressed = isMobile ? () => scaffoldKey.currentState?.openDrawer() : null;
-                      
-                      switch (currentItem) {
-                        case NavbarItem.tradingRoom:
-                          return TradingRoomWebPage(userId: userId, onMenuPressed: onMenuPressed);
-                        case NavbarItem.journal:
-                          return JournalWebPage(userId: userId, onMenuPressed: onMenuPressed);
-                        case NavbarItem.newsFeed:
-                          return NewsFeedWebPage(userId: userId, onMenuPressed: onMenuPressed);
-                        case NavbarItem.backtestDojo:
-                          return const BacktestWebPage();
-                        case NavbarItem.community:
-                          return const CommunityWebPage();
-                        case NavbarItem.radar:
-                          return const RadarWebPage();
-                        case NavbarItem.referral:
-                          return ReferralWebPage(userId: userId, onMenuPressed: onMenuPressed);
-                        case NavbarItem.profile:
-                          return ProfileWebPage(userId: userId, onMenuPressed: onMenuPressed);
-                        case NavbarItem.admin:
-                          return const AdminWebPage();
-                      }
-                    },
+      child: SyncGateHost(
+        userId: userId,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 900;
+
+            return Scaffold(
+              key: scaffoldKey,
+              drawer: isMobile
+                  ? const Drawer(child: WebSidebar(isMobile: true))
+                  : null,
+              body: Row(
+                children: [
+                  if (!isMobile) const WebSidebar(),
+                  Expanded(
+                    child: BlocBuilder<NavigationCubit, NavbarItem>(
+                      builder: (context, currentItem) {
+                        final VoidCallback? onMenuPressed = isMobile
+                            ? () => scaffoldKey.currentState?.openDrawer()
+                            : null;
+
+                        switch (currentItem) {
+                          case NavbarItem.tradingRoom:
+                            return TradingRoomWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
+                          case NavbarItem.journal:
+                            return JournalWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
+                          case NavbarItem.newsFeed:
+                            return NewsFeedWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
+                          case NavbarItem.backtestDojo:
+                            return const BacktestWebPage();
+                          case NavbarItem.community:
+                            return const CommunityWebPage();
+                          case NavbarItem.radar:
+                            return const RadarWebPage();
+                          case NavbarItem.referral:
+                            return ReferralWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
+                          case NavbarItem.profile:
+                            return ProfileWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
+                          case NavbarItem.admin:
+                            return const AdminWebPage();
+                        }
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

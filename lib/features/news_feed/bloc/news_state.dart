@@ -17,12 +17,14 @@ class NewsLoaded extends NewsState {
   final SentimentPulse pulse;
   final List<Map<String, dynamic>> chatMessages;
   final bool isAiThinking;
+  final bool isLoadingHistory;
 
   const NewsLoaded({
     required this.articles,
     required this.pulse,
     this.chatMessages = const [],
     this.isAiThinking = false,
+    this.isLoadingHistory = false,
   });
 
   NewsLoaded copyWith({
@@ -30,17 +32,19 @@ class NewsLoaded extends NewsState {
     SentimentPulse? pulse,
     List<Map<String, dynamic>>? chatMessages,
     bool? isAiThinking,
+    bool? isLoadingHistory,
   }) {
     return NewsLoaded(
       articles: articles ?? this.articles,
       pulse: pulse ?? this.pulse,
       chatMessages: chatMessages ?? this.chatMessages,
       isAiThinking: isAiThinking ?? this.isAiThinking,
+      isLoadingHistory: isLoadingHistory ?? this.isLoadingHistory,
     );
   }
 
   @override
-  List<Object?> get props => [articles, pulse, chatMessages, isAiThinking];
+  List<Object?> get props => [articles, pulse, chatMessages, isAiThinking, isLoadingHistory];
 }
 
 class NewsError extends NewsState {

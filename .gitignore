@@ -12,6 +12,14 @@
 .swiftpm/
 migrate_working_dir/
 
+# Secrets / credentials — never commit
+.env
+.env.*
+*.pem
+*firebase-adminsdk*.json
+*adminsdk*.json
+serviceAccount*.json
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -32,6 +40,9 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+
+# Local deploy tooling
+.venv_deploy/
 
 # Symbolication related
 app.*.symbols

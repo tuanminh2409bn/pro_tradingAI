@@ -5,7 +5,7 @@ class JournalRepository {
   final FirebaseFirestore _firestore;
 
   JournalRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   Stream<List<TradeRecord>> getTradeHistory(String userId) {
     return _firestore
@@ -15,24 +15,14 @@ class JournalRepository {
         .orderBy('closeTime', descending: true)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return <TradeRecord>[];
-      }
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TradeRecord(
-          symbol: data['symbol'] ?? '',
-          action: data['action'] ?? 'LONG',
-          lotSize: (data['lotSize'] ?? 0).toDouble(),
-          entryPrice: (data['entryPrice'] ?? 0).toDouble(),
-          exitPrice: (data['exitPrice'] ?? 0).toDouble(),
-          netProfit: (data['netProfit'] ?? 0).toDouble(),
-          closeTime: (data['closeTime'] as Timestamp).toDate(),
-          swap: (data['swap'] ?? 0).toDouble(),
-          slippage: (data['slippage'] ?? 0).toDouble(),
-        );
-      }).toList();
-    });
+          if (snapshot.docs.isEmpty) {
+            return <TradeRecord>[];
+          }
+          return snapshot.docs
+              .map((doc) => TradeRecord.fromFirestoreMap(doc.data()))
+              .whereType<TradeRecord>()
+              .toList();
+        });
   }
 
   Stream<JournalStats> getJournalStats(String userId) {
@@ -40,42 +30,33 @@ class JournalRepository {
         .collection('users')
         .doc(userId)
         .collection('trades')
-        .orderBy('closeTime', descending: false)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.docs.isEmpty) {
-        return const JournalStats(
-          totalProfit: 0.0,
-          winRate: 0.0,
-          profitFactor: 0.0,
-          rrRatio: '0:0',
-          equityData: [],
-          totalTrades: 0,
-          bestTrade: 0.0,
-          worstTrade: 0.0,
-          avgProfit: 0.0,
-          aiInsight: 'No trades recorded yet. Start trading to see AI performance insights.',
-          heatmapData: [],
-        );
-      }
+          if (snapshot.docs.isEmpty) {
+            return const JournalStats(
+              totalProfit: 0.0,
+              winRate: 0.0,
+              profitFactor: 0.0,
+              rrRatio: '0:0',
+              equityData: [],
+              totalTrades: 0,
+              bestTrade: 0.0,
+              worstTrade: 0.0,
+              avgProfit: 0.0,
+              aiInsight: '__NO_TRADES__',
+              heatmapData: [],
+            );
+          }
 
-      final trades = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TradeRecord(
-          symbol: data['symbol'] ?? '',
-          action: data['action'] ?? 'LONG',
-          lotSize: (data['lotSize'] ?? 0).toDouble(),
-          entryPrice: (data['entryPrice'] ?? 0).toDouble(),
-          exitPrice: (data['exitPrice'] ?? 0).toDouble(),
-          netProfit: (data['netProfit'] ?? 0).toDouble(),
-          closeTime: (data['closeTime'] as Timestamp).toDate(),
-          swap: (data['swap'] ?? 0).toDouble(),
-          slippage: (data['slippage'] ?? 0).toDouble(),
-        );
-      }).toList();
+          final trades =
+              snapshot.docs
+                  .map((doc) => TradeRecord.fromFirestoreMap(doc.data()))
+                  .whereType<TradeRecord>()
+                  .toList()
+                ..sort((a, b) => a.closeTime.compareTo(b.closeTime));
 
-      return _computeStats(trades);
-    });
+          return _computeStats(trades);
+        });
   }
 
   JournalStats _computeStats(List<TradeRecord> trades) {
@@ -90,7 +71,7 @@ class JournalRepository {
         bestTrade: 0.0,
         worstTrade: 0.0,
         avgProfit: 0.0,
-        aiInsight: 'No trades recorded yet. Start trading to see AI performance insights.',
+        aiInsight: '__NO_TRADES__',
         heatmapData: [],
       );
     }
@@ -109,22 +90,40 @@ class JournalRepository {
     final avgProfit = totalProfit / totalTrades;
 
     // Best & Worst Trade
-    final bestTrade = trades.map((t) => t.netProfit).reduce((a, b) => a > b ? a : b);
-    final worstTrade = trades.map((t) => t.netProfit).reduce((a, b) => a < b ? a : b);
+    final bestTrade = trades
+        .map((t) => t.netProfit)
+        .reduce((a, b) => a > b ? a : b);
+    final worstTrade = trades
+        .map((t) => t.netProfit)
+        .reduce((a, b) => a < b ? a : b);
 
     // Profit Factor = gross profit / gross loss
-    final grossProfit = winningTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit);
-    final grossLoss = losingTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit.abs());
-    final profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? double.infinity : 0.0;
+    final grossProfit = winningTrades.fold<double>(
+      0.0,
+      (sum, t) => sum + t.netProfit,
+    );
+    final grossLoss = losingTrades.fold<double>(
+      0.0,
+      (sum, t) => sum + t.netProfit.abs(),
+    );
+    final profitFactor = grossLoss > 0
+        ? grossProfit / grossLoss
+        : grossProfit > 0
+        ? double.infinity
+        : 0.0;
 
     // Average R:R Ratio
     final avgWin = winningTrades.isNotEmpty
-        ? winningTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit) / winningTrades.length
+        ? winningTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit) /
+              winningTrades.length
         : 0.0;
     final avgLoss = losingTrades.isNotEmpty
-        ? losingTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit.abs()) / losingTrades.length
+        ? losingTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit.abs()) /
+              losingTrades.length
         : 0.0;
-    final rrRatio = avgLoss > 0 ? '1:${(avgWin / avgLoss).toStringAsFixed(2)}' : '1:0.00';
+    final rrRatio = avgLoss > 0
+        ? '1:${(avgWin / avgLoss).toStringAsFixed(2)}'
+        : '1:0.00';
 
     // Equity Curve (cumulative P&L from chronological trades)
     final equityData = <double>[];
@@ -197,18 +196,28 @@ class JournalRepository {
 
     // Performance summary
     if (totalProfit > 0) {
-      buffer.write('Strong performance with \$${totalProfit.toStringAsFixed(2)} total profit across $totalTrades trades. ');
+      buffer.write(
+        'Strong performance with \$${totalProfit.toStringAsFixed(2)} total profit across $totalTrades trades. ',
+      );
     } else {
-      buffer.write('Portfolio is down \$${totalProfit.abs().toStringAsFixed(2)} across $totalTrades trades. Focus on risk management. ');
+      buffer.write(
+        'Portfolio is down \$${totalProfit.abs().toStringAsFixed(2)} across $totalTrades trades. Focus on risk management. ',
+      );
     }
 
     // Win rate insight
     if (winRate >= 60) {
-      buffer.write('Your ${winRate.toStringAsFixed(1)}% win rate is excellent — maintain your edge. ');
+      buffer.write(
+        'Your ${winRate.toStringAsFixed(1)}% win rate is excellent — maintain your edge. ',
+      );
     } else if (winRate >= 45) {
-      buffer.write('Win rate at ${winRate.toStringAsFixed(1)}% is acceptable but can be improved with better entries. ');
+      buffer.write(
+        'Win rate at ${winRate.toStringAsFixed(1)}% is acceptable but can be improved with better entries. ',
+      );
     } else {
-      buffer.write('Win rate of ${winRate.toStringAsFixed(1)}% is below average — consider reviewing your entry criteria. ');
+      buffer.write(
+        'Win rate of ${winRate.toStringAsFixed(1)}% is below average — consider reviewing your entry criteria. ',
+      );
     }
 
     // Recent trend (last 7 trades)
@@ -218,17 +227,25 @@ class JournalRepository {
       final recentWinRate = (recentWins / 7) * 100;
       final diff = recentWinRate - winRate;
       if (diff > 5) {
-        buffer.write('Your win rate improved by ${diff.toStringAsFixed(1)}% in the last 7 trades — momentum is building. ');
+        buffer.write(
+          'Your win rate improved by ${diff.toStringAsFixed(1)}% in the last 7 trades — momentum is building. ',
+        );
       } else if (diff < -5) {
-        buffer.write('Recent 7 trades show a ${diff.abs().toStringAsFixed(1)}% drop in win rate — consider taking a break. ');
+        buffer.write(
+          'Recent 7 trades show a ${diff.abs().toStringAsFixed(1)}% drop in win rate — consider taking a break. ',
+        );
       }
     }
 
     // Profit factor
     if (profitFactor.isFinite && profitFactor > 2.0) {
-      buffer.write('Profit factor of ${profitFactor.toStringAsFixed(2)} indicates a robust strategy.');
+      buffer.write(
+        'Profit factor of ${profitFactor.toStringAsFixed(2)} indicates a robust strategy.',
+      );
     } else if (profitFactor.isFinite && profitFactor < 1.0) {
-      buffer.write('Profit factor below 1.0 — losses are exceeding gains. Tighten stop losses.');
+      buffer.write(
+        'Profit factor below 1.0 — losses are exceeding gains. Tighten stop losses.',
+      );
     }
 
     return buffer.toString();

@@ -79,19 +79,28 @@ class _AIChatPanelState extends State<AIChatPanel>
         final messages = state is TradingRoomLoaded
             ? state.chatMessages
             : <ChatMessage>[];
-        final isLoading =
-            state is TradingRoomLoaded && state.isAIChatLoading;
+        final isLoading = state is TradingRoomLoaded && state.isAIChatLoading;
+        final isLoadingHistory =
+            state is TradingRoomLoaded && state.isLoadingHistory;
 
         return Container(
           decoration: BoxDecoration(
             color: AppColors.surface.withValues(alpha: 0.9),
             border: Border(
-              left: BorderSide(color: AppColors.secondary.withValues(alpha: 0.15)),
+              left: BorderSide(
+                color: AppColors.secondary.withValues(alpha: 0.15),
+              ),
             ),
           ),
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(context),
+              if (isLoadingHistory)
+                const LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                  color: AppColors.secondary,
+                  minHeight: 2,
+                ),
               Expanded(child: _buildMessageList(messages, isLoading)),
               _buildInput(),
             ],
@@ -101,13 +110,15 @@ class _AIChatPanelState extends State<AIChatPanel>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.background,
         border: Border(
-          bottom: BorderSide(color: AppColors.secondary.withValues(alpha: 0.15)),
+          bottom: BorderSide(
+            color: AppColors.secondary.withValues(alpha: 0.15),
+          ),
         ),
       ),
       child: Row(
@@ -123,15 +134,17 @@ class _AIChatPanelState extends State<AIChatPanel>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      AppColors.secondary
-                          .withValues(alpha: 0.3 + _diamondController.value * 0.5),
+                      AppColors.secondary.withValues(
+                        alpha: 0.3 + _diamondController.value * 0.5,
+                      ),
                       AppColors.secondary.withValues(alpha: 0.1),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.secondary
-                          .withValues(alpha: 0.2 + _diamondController.value * 0.3),
+                      color: AppColors.secondary.withValues(
+                        alpha: 0.2 + _diamondController.value * 0.3,
+                      ),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -140,42 +153,102 @@ class _AIChatPanelState extends State<AIChatPanel>
                 child: const Center(
                   child: Text(
                     '◆',
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: AppColors.secondary, fontSize: 12),
                   ),
                 ),
               );
             },
           ),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.tr('ai_title'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.tr('ai_title'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                context.tr('ai_active'),
-                style: const TextStyle(
-                  color: AppColors.secondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
+                const SizedBox(height: 2),
+                Text(
+                  context.tr('ai_active'),
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
+          // Clear history button
+          Tooltip(
+            message: 'Xóa lịch sử chat',
+            child: BlocBuilder<TradingRoomBloc, TradingRoomState>(
+              builder: (context, state) {
+                final hasMessages =
+                    state is TradingRoomLoaded && state.chatMessages.isNotEmpty;
+                return IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  color: hasMessages ? Colors.white30 : Colors.white12,
+                  onPressed: hasMessages
+                      ? () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: AppColors.surface,
+                              title: const Text(
+                                'Xóa lịch sử?',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              content: const Text(
+                                'Tất cả lịch sử chat sẽ bị xóa vĩnh viễn.',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text(
+                                    'Hủy',
+                                    style: TextStyle(color: Colors.white54),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    context.read<TradingRoomBloc>().add(
+                                      const ClearChatHistory(),
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Xóa',
+                                    style: TextStyle(color: Color(0xFFff4444)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                      : null,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
           Container(
             width: 8,
             height: 8,
@@ -201,8 +274,11 @@ class _AIChatPanelState extends State<AIChatPanel>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_awesome,
-                color: AppColors.secondary.withValues(alpha: 0.3), size: 32),
+            Icon(
+              Icons.auto_awesome,
+              color: AppColors.secondary.withValues(alpha: 0.3),
+              size: 32,
+            ),
             const SizedBox(height: 12),
             Text(
               context.tr('ai_empty_hint'),
@@ -233,11 +309,16 @@ class _AIChatPanelState extends State<AIChatPanel>
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isUser = message.isUser;
+    final isFallback = message.isFallback && !isUser;
     final bgColor = isUser
         ? AppColors.entry.withValues(alpha: 0.2)
+        : isFallback
+        ? AppColors.accent.withValues(alpha: 0.12)
         : AppColors.secondary.withValues(alpha: 0.15);
     final borderColor = isUser
         ? AppColors.entry.withValues(alpha: 0.4)
+        : isFallback
+        ? AppColors.accent.withValues(alpha: 0.45)
         : AppColors.secondary.withValues(alpha: 0.3);
     final align = isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
@@ -249,6 +330,19 @@ class _AIChatPanelState extends State<AIChatPanel>
       child: Column(
         crossAxisAlignment: align,
         children: [
+          if (isFallback)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'FALLBACK MODE',
+                style: TextStyle(
+                  color: AppColors.accent.withValues(alpha: 0.9),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
           Container(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.7,
@@ -297,7 +391,9 @@ class _AIChatPanelState extends State<AIChatPanel>
               color: AppColors.secondary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: AppColors.secondary.withValues(alpha: 0.2), width: 0.5),
+                color: AppColors.secondary.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -364,7 +460,9 @@ class _AIChatPanelState extends State<AIChatPanel>
                   ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 12),
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
                 ),
                 onChanged: (text) {
                   setState(() => _isComposing = text.trim().isNotEmpty);
@@ -398,7 +496,7 @@ class _AIChatPanelState extends State<AIChatPanel>
                           BoxShadow(
                             color: AppColors.secondary.withValues(alpha: 0.2),
                             blurRadius: 8,
-                          )
+                          ),
                         ]
                       : [],
                 ),

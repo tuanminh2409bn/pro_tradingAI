@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10-slim-bullseye
 
 # Cài đặt các công cụ hệ thống
 RUN apt-get update && apt-get install -y \
@@ -13,6 +13,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py .
+COPY feature_engine.py .
+COPY analysis_cache.py .
 
 # Không ép cứng cổng ở đây, Google Cloud sẽ cấp biến môi trường PORT
 CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}

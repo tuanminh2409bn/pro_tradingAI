@@ -5,6 +5,8 @@ import '../localization/app_localizations.dart';
 import '../constants/colors.dart';
 import 'language_toggle.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class WebSidebar extends StatefulWidget {
   final bool isMobile;
   const WebSidebar({super.key, this.isMobile = false});
@@ -15,6 +17,32 @@ class WebSidebar extends StatefulWidget {
 
 class _WebSidebarState extends State<WebSidebar> {
   bool _isCollapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCollapsedState();
+  }
+
+  Future<void> _loadCollapsedState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _isCollapsed = prefs.getBool('sidebar_collapsed') ?? false;
+      });
+    } catch (e) {
+      print('WebSidebar: Error loading collapsed state: $e');
+    }
+  }
+
+  Future<void> _saveCollapsedState(bool val) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('sidebar_collapsed', val);
+    } catch (e) {
+      print('WebSidebar: Error saving collapsed state: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +92,11 @@ class _WebSidebarState extends State<WebSidebar> {
                         color: AppColors.primary,
                         size: 24,
                       ),
-                      onPressed: () => setState(() => _isCollapsed = !_isCollapsed),
+                      onPressed: () {
+                        final newVal = !_isCollapsed;
+                        setState(() => _isCollapsed = newVal);
+                        _saveCollapsedState(newVal);
+                      },
                       style: IconButton.styleFrom(
                         backgroundColor: Colors.white.withValues(alpha: 0.05),
                       ),
