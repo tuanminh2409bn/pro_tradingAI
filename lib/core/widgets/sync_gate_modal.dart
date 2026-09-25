@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../constants/colors.dart';
+import '../security/partner_access.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../logic/navigation_cubit.dart';
 
@@ -43,6 +45,8 @@ class _SyncGateHostState extends State<SyncGateHost> {
     final gate = await repo.getSyncGateState(uid);
     if (!mounted) return;
     if (gate.brokerLinked || gate.syncGateDismissed) return;
+    if (kIsWeb && !await currentUserHasVerifiedPartnerClaim()) return;
+    if (!mounted) return;
     await SyncGateModal.show(
       context,
       userId: uid,

@@ -9,6 +9,7 @@ import '../bloc/trading_room_state.dart';
 import '../web/widgets/execution_panel.dart';
 import '../web/widgets/kinetic_chart.dart';
 import '../web/widgets/news_red_zone_binder.dart';
+import '../web/widgets/forecast_panel.dart';
 
 /// Day 6 mobile parity — TF matrix, ExecutionPanel (1 SL / 2-stage), Red Zone.
 class TradingRoomMobilePage extends StatelessWidget {
@@ -111,8 +112,13 @@ class TradingRoomMobilePage extends StatelessWidget {
                       symbol: state.currentSymbol,
                       signal: state.currentSignal,
                       candles: state.candles,
+                      selectedTakeProfitIndex: state.selectedTakeProfitIndex,
+                      onTimeframeSelected: (timeframe) => context
+                          .read<TradingRoomBloc>()
+                          .add(ChangeTimeframe(timeframe)),
                     ),
                   ),
+                  ForecastPanel(signal: state.currentSignal),
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.42,
                     child: const SingleChildScrollView(child: ExecutionPanel()),

@@ -1,5 +1,10 @@
 # ProTrading AI VIP V2.1 — DoD Checklist (PDF trang 10) Evidence
 
+> **Historical evidence only.** This file describes the `v21-day7` production
+> snapshot and is not acceptance evidence for the current V2.1 Master source.
+> Current status and same-build requirements are tracked in
+> `tasks/acceptance-matrix.md` and `tasks/release-readiness-v2.1.md`.
+
 > Sprint Day 7 harden. Evidence = code markers + production probes + tests.
 > Date: 2026-09-06 · FE: `https://protrading-ai-2026.web.app` · BE: `https://103-69-189-243.sslip.io`
 

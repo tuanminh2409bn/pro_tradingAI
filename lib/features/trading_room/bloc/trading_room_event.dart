@@ -65,21 +65,42 @@ class ChangeTimeframe extends TradingRoomEvent {
 }
 
 class ExecuteTrade extends TradingRoomEvent {
+  final String signalChartId;
   final String type; // 'BUY' or 'SELL'
   final double lotSize;
   final double entryPrice;
   final double slPrice;
   final List<double> tpPrices;
+  final TakeProfitAllocationPlan? takeProfitPlan;
   const ExecuteTrade({
+    this.signalChartId = '',
     required this.type,
     required this.lotSize,
     this.entryPrice = 0.0,
     this.slPrice = 0.0,
     this.tpPrices = const [],
+    this.takeProfitPlan,
   });
 
   @override
-  List<Object?> get props => [type, lotSize, entryPrice, slPrice, tpPrices];
+  List<Object?> get props => [
+    signalChartId,
+    type,
+    lotSize,
+    entryPrice,
+    slPrice,
+    tpPrices,
+    takeProfitPlan,
+  ];
+}
+
+class SelectTakeProfit extends TradingRoomEvent {
+  final int targetIndex;
+
+  const SelectTakeProfit(this.targetIndex);
+
+  @override
+  List<Object?> get props => [targetIndex];
 }
 
 class RequestAnalysis extends TradingRoomEvent {
@@ -116,6 +137,15 @@ class UpdateRiskConfigLoaded extends TradingRoomEvent {
   List<Object?> get props => [config];
 }
 
+class UpdateServerCutoff extends TradingRoomEvent {
+  final bool active;
+  final bool available;
+  const UpdateServerCutoff(this.active, {this.available = true});
+
+  @override
+  List<Object?> get props => [active, available];
+}
+
 class ClosePosition extends TradingRoomEvent {
   final String positionId;
   const ClosePosition(this.positionId);
@@ -147,6 +177,10 @@ class UpdatePositions extends TradingRoomEvent {
 
   @override
   List<Object?> get props => [positions];
+}
+
+class PositionRefreshFailed extends TradingRoomEvent {
+  const PositionRefreshFailed();
 }
 
 class TradeExecuted extends TradingRoomEvent {
@@ -186,11 +220,11 @@ class ClearChatHistory extends TradingRoomEvent {
 
 /// Day 6 — inject Layer-5 news_column Red Zone from HIGH-impact headline.
 class ApplyNewsRedZone extends TradingRoomEvent {
-  final String label;
-  const ApplyNewsRedZone(this.label);
+  final RedZoneOverlay overlay;
+  const ApplyNewsRedZone(this.overlay);
 
   @override
-  List<Object?> get props => [label];
+  List<Object?> get props => [overlay];
 }
 
 class ClearNewsRedZone extends TradingRoomEvent {

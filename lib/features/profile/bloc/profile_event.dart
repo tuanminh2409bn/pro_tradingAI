@@ -40,6 +40,10 @@ class UpdateBrokerAccounts extends ProfileEvent {
   List<Object?> get props => [accounts];
 }
 
+class ProfileStreamFailed extends ProfileEvent {
+  const ProfileStreamFailed();
+}
+
 class LinkBrokerAccountRequested extends ProfileEvent {
   final String platform;
   final String server;

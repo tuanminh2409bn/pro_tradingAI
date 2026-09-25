@@ -1,16 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/security/admin_access.dart';
 import '../models/admin_models.dart';
 
 class AdminRepository {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
 
-  AdminRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  AdminRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
-  Stream<SystemStats> getSystemStats() {
-    return _firestore.collection('admin').doc('stats').snapshots().map((s) {
+  Future<void> _requireAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Admin access denied');
+    final token = await user.getIdTokenResult();
+    if (!hasVerifiedAdminClaim(token.claims)) {
+      throw StateError('Admin access denied');
+    }
+  }
+
+  Stream<SystemStats> getSystemStats() async* {
+    await _requireAdmin();
+    yield* _firestore.collection('admin').doc('stats').snapshots().map((s) {
       final data = s.data();
-      if (data == null)
+      if (data == null) {
         return const SystemStats(
           dau: 0,
           mau: 0,
@@ -18,6 +32,7 @@ class AdminRepository {
           latency: 0,
           pendingAlerts: 0,
         );
+      }
       return SystemStats(
         dau: (data['dau'] ?? 0).toInt(),
         mau: (data['mau'] ?? 0).toInt(),
@@ -27,12 +42,14 @@ class AdminRepository {
         totalTrades: (data['totalTrades'] ?? 0).toInt(),
         activeSessions: (data['activeSignals'] ?? 0).toInt(),
         globalPnl: (data['globalPnl'] ?? 0).toDouble(),
+        isAvailable: true,
       );
     });
   }
 
-  Stream<List<PendingRequest>> getPendingRequests() {
-    return _firestore
+  Stream<List<PendingRequest>> getPendingRequests() async* {
+    await _requireAdmin();
+    yield* _firestore
         .collection('admin')
         .doc('requests')
         .collection('pending')
@@ -44,6 +61,7 @@ class AdminRepository {
           (s) => s.docs.map((doc) {
             final data = doc.data();
             return PendingRequest(
+              id: doc.id,
               userId: data['userId'] ?? doc.id,
               username: data['username'] ?? '@unknown',
               type: data['type'] ?? 'REQUEST',
@@ -57,6 +75,7 @@ class AdminRepository {
   }
 
   Future<void> approveRequest(String requestId) async {
+    await _requireAdmin();
     await _firestore
         .collection('admin')
         .doc('requests')
@@ -69,6 +88,7 @@ class AdminRepository {
   }
 
   Future<void> rejectRequest(String requestId) async {
+    await _requireAdmin();
     await _firestore
         .collection('admin')
         .doc('requests')
@@ -81,6 +101,7 @@ class AdminRepository {
   }
 
   Future<void> broadcastSignal(String message, String tier) async {
+    await _requireAdmin();
     await _firestore.collection('broadcasts').add({
       'message': message,
       'tier': tier,
@@ -89,6 +110,7 @@ class AdminRepository {
   }
 
   Future<AIConfig?> getAIConfig() async {
+    await _requireAdmin();
     final doc = await _firestore
         .collection('AdminSettings')
         .doc('ai_config')
@@ -98,6 +120,7 @@ class AdminRepository {
   }
 
   Future<void> saveAIConfig(AIConfig config) async {
+    await _requireAdmin();
     await _firestore.collection('AdminSettings').doc('ai_config').set({
       'ai_master_prompt': config.masterPrompt,
       'lastUpdatedBy': config.lastUpdatedBy,
@@ -106,16 +129,20 @@ class AdminRepository {
   }
 
   // ─── Global Risk Config ───
-  Stream<GlobalRiskConfig> getGlobalRisk() {
-    return _firestore.collection('admin').doc('global_risk').snapshots().map((
+  Stream<GlobalRiskConfig> getGlobalRisk() async* {
+    await _requireAdmin();
+    yield* _firestore.collection('admin').doc('global_risk').snapshots().map((
       s,
     ) {
-      if (!s.exists || s.data() == null) return const GlobalRiskConfig();
+      if (!s.exists || s.data() == null) {
+        return const GlobalRiskConfig.unavailable();
+      }
       return GlobalRiskConfig.fromMap(s.data()!);
     });
   }
 
   Future<void> saveGlobalRisk(GlobalRiskConfig config) async {
+    await _requireAdmin();
     await _firestore
         .collection('admin')
         .doc('global_risk')
@@ -124,23 +151,26 @@ class AdminRepository {
 
   // ─── Kill Switch ───
   Future<void> toggleKillSwitch(bool enabled) async {
+    await _requireAdmin();
     await _firestore.collection('admin').doc('system_config').set({
       'tradingEnabled': enabled,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
-  Stream<bool> getKillSwitchState() {
-    return _firestore.collection('admin').doc('system_config').snapshots().map((
+  Stream<bool> getKillSwitchState() async* {
+    await _requireAdmin();
+    yield* _firestore.collection('admin').doc('system_config').snapshots().map((
       s,
     ) {
-      return (s.data()?['tradingEnabled'] ?? true) as bool;
+      return (s.data()?['tradingEnabled'] ?? false) as bool;
     });
   }
 
   // ─── Service Status (from Firestore — backend ghi mỗi 60s) ───
-  Stream<List<ServiceStatus>> getServiceStatus() {
-    return _firestore.collection('admin').doc('service_status').snapshots().map(
+  Stream<List<ServiceStatus>> getServiceStatus() async* {
+    await _requireAdmin();
+    yield* _firestore.collection('admin').doc('service_status').snapshots().map(
       (s) {
         final data = s.data();
         if (data == null) return _defaultServiceStatus();
@@ -179,9 +209,40 @@ class AdminRepository {
   ];
 
   // ─── Radar Config ───
+  Future<RadarAdminConfig?> getRadarConfig() async {
+    await _requireAdmin();
+    final snapshot = await _firestore
+        .collection('admin')
+        .doc('radar_config')
+        .get();
+    final data = snapshot.data();
+    if (data == null) return null;
+    final rawSymbols = data['watchlist'];
+    final rawSensitivity = data['sensitivity'];
+    if (rawSymbols is! List || rawSensitivity is! num) return null;
+    final symbols = rawSymbols
+        .whereType<String>()
+        .map((symbol) => symbol.trim().toUpperCase())
+        .where((symbol) => RegExp(r'^[A-Z0-9._-]{2,20}$').hasMatch(symbol))
+        .toSet()
+        .toList(growable: false);
+    final sensitivity = rawSensitivity.toDouble();
+    if (symbols.isEmpty || sensitivity < 0 || sensitivity > 1) return null;
+    return RadarAdminConfig(symbols: symbols, sensitivity: sensitivity);
+  }
+
   Future<void> saveRadarConfig(List<String> symbols, double sensitivity) async {
+    await _requireAdmin();
+    final normalizedSymbols = symbols
+        .map((symbol) => symbol.trim().toUpperCase())
+        .where((symbol) => RegExp(r'^[A-Z0-9._-]{2,20}$').hasMatch(symbol))
+        .toSet()
+        .toList(growable: false);
+    if (normalizedSymbols.isEmpty || sensitivity < 0 || sensitivity > 1) {
+      throw ArgumentError('Invalid radar configuration');
+    }
     await _firestore.collection('admin').doc('radar_config').set({
-      'watchlist': symbols,
+      'watchlist': normalizedSymbols,
       'sensitivity': sensitivity,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -189,30 +250,22 @@ class AdminRepository {
 
   // ─── Daily Stats for Analytics Chart (7 ngày) ───
   Future<List<Map<String, dynamic>>> getDailyStats(int days) async {
-    final results = <Map<String, dynamic>>[];
-    final now = DateTime.now();
-    for (int i = days - 1; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
-      final key =
-          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      results.add({'date': key, 'dau': 0, 'mau': 0});
-    }
-    try {
-      final snap = await _firestore
-          .collection('admin')
-          .doc('daily_stats')
-          .collection('days')
-          .orderBy(FieldPath.documentId, descending: true)
-          .limit(days)
-          .get();
-      for (final doc in snap.docs) {
-        final idx = results.indexWhere((r) => r['date'] == doc.id);
-        if (idx >= 0) {
-          results[idx]['dau'] = (doc.data()['dau'] ?? 0).toInt();
-          results[idx]['mau'] = (doc.data()['mau'] ?? 0).toInt();
-        }
-      }
-    } catch (_) {}
-    return results;
+    await _requireAdmin();
+    final snap = await _firestore
+        .collection('admin')
+        .doc('daily_stats')
+        .collection('days')
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(days)
+        .get();
+    return snap.docs.reversed
+        .map(
+          (doc) => <String, dynamic>{
+            'date': doc.id,
+            'dau': (doc.data()['dau'] ?? 0).toInt(),
+            'mau': (doc.data()['mau'] ?? 0).toInt(),
+          },
+        )
+        .toList(growable: false);
   }
 }

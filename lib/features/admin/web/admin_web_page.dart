@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../data/models/admin_models.dart';
 import '../../../data/repositories/admin_repository.dart';
 import '../bloc/admin_bloc.dart';
@@ -25,7 +26,22 @@ class AdminWebPage extends StatelessWidget {
             ..add(LoadAdminData()),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: BlocBuilder<AdminBloc, AdminState>(
+        body: BlocConsumer<AdminBloc, AdminState>(
+          listenWhen: (previous, current) =>
+              previous is AdminLoaded &&
+              current is AdminLoaded &&
+              previous.actionResultNonce != current.actionResultNonce,
+          listener: (context, state) {
+            if (state is! AdminLoaded || state.actionMessageKey.isEmpty) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr(state.actionMessageKey)),
+                backgroundColor: state.actionSucceeded
+                    ? AppColors.primary
+                    : AppColors.bear,
+              ),
+            );
+          },
           builder: (context, state) {
             if (state is AdminLoading || state is AdminInitial) {
               return const Center(
@@ -36,7 +52,7 @@ class AdminWebPage extends StatelessWidget {
             if (state is AdminError) {
               return Center(
                 child: Text(
-                  state.message,
+                  context.tr(state.message),
                   style: const TextStyle(color: AppColors.bear),
                 ),
               );
@@ -53,7 +69,7 @@ class AdminWebPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // ── Header ──────────────────────────────────────
-                          _buildHeader(state.stats),
+                          _buildHeader(state.stats, state.serviceStatuses),
                           const SizedBox(height: 24),
 
                           // ── KPI Cards (NEW) ──────────────────────────────
@@ -70,7 +86,10 @@ class AdminWebPage extends StatelessWidget {
                             children: [
                               Expanded(
                                 flex: 8,
-                                child: _AnalyticsHub(stats: state.stats),
+                                child: _AnalyticsHub(
+                                  stats: state.stats,
+                                  dailyStats: state.dailyStats,
+                                ),
                               ),
                               const SizedBox(width: 24),
                               const Expanded(
@@ -101,7 +120,13 @@ class AdminWebPage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 24),
-                              const Expanded(flex: 5, child: _RadarConfig()),
+                              Expanded(
+                                flex: 5,
+                                child: _RadarConfig(
+                                  config: state.radarConfig,
+                                  isLoaded: state.radarConfigLoaded,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -110,6 +135,7 @@ class AdminWebPage extends StatelessWidget {
                           _AIConfigCard(
                             aiConfig: state.aiConfig,
                             isSaving: state.aiConfigSaving,
+                            isLoaded: state.aiConfigLoaded,
                           ),
                           const SizedBox(height: 24),
 
@@ -131,7 +157,10 @@ class AdminWebPage extends StatelessWidget {
 
   // ─── Header ───────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(SystemStats stats) {
+  Widget _buildHeader(SystemStats stats, List<ServiceStatus> services) {
+    final systemStatus = services.isEmpty
+        ? 'UNAVAILABLE'
+        : '${services.where((service) => service.isOnline).length}/${services.length} ONLINE';
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -158,15 +187,11 @@ class AdminWebPage extends StatelessWidget {
         ),
         Row(
           children: [
-            _buildHeaderStat(
-              'SYSTEM STATUS',
-              'ACTIVE - 60 FPS',
-              AppColors.primary,
-            ),
+            _buildHeaderStat('SYSTEM STATUS', systemStatus, AppColors.primary),
             const SizedBox(width: 16),
             _buildHeaderStat(
               'PENDING ALERTS',
-              '${stats.pendingAlerts}',
+              stats.isAvailable ? '${stats.pendingAlerts}' : '—',
               AppColors.secondary,
             ),
           ],
@@ -220,7 +245,7 @@ class AdminWebPage extends StatelessWidget {
         Expanded(
           child: _kpiCard(
             'ACTIVE USERS',
-            '${stats.dau}',
+            stats.isAvailable ? '${stats.dau}' : '—',
             Icons.people,
             AppColors.primary,
           ),
@@ -229,7 +254,7 @@ class AdminWebPage extends StatelessWidget {
         Expanded(
           child: _kpiCard(
             'TRADES 24H',
-            '${stats.totalTrades}',
+            stats.isAvailable ? '${stats.totalTrades}' : '—',
             Icons.swap_horiz,
             AppColors.secondary,
           ),
@@ -238,11 +263,17 @@ class AdminWebPage extends StatelessWidget {
         Expanded(
           child: _kpiCard(
             'GLOBAL P&L',
-            stats.globalPnl >= 0
+            !stats.isAvailable
+                ? '—'
+                : stats.globalPnl >= 0
                 ? '+\$${stats.globalPnl.toStringAsFixed(0)}'
                 : '-\$${stats.globalPnl.abs().toStringAsFixed(0)}',
             Icons.trending_up,
-            stats.globalPnl >= 0 ? Colors.green : AppColors.bear,
+            !stats.isAvailable
+                ? Colors.white38
+                : stats.globalPnl >= 0
+                ? Colors.green
+                : AppColors.bear,
           ),
         ),
         const SizedBox(width: 16),
@@ -366,18 +397,6 @@ class AdminWebPage extends StatelessWidget {
                 ToggleKillSwitch(!currentlyEnabled),
               );
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    currentlyEnabled
-                        ? 'Trading PAUSED — Kill switch activated!'
-                        : 'Trading RESUMED!',
-                  ),
-                  backgroundColor: currentlyEnabled
-                      ? AppColors.bear
-                      : Colors.green,
-                ),
-              );
             },
             child: Text(
               currentlyEnabled ? 'PAUSE ALL' : 'RESUME ALL',
@@ -395,24 +414,6 @@ class AdminWebPage extends StatelessWidget {
   // ─── Services Status (NEW) ────────────────────────────────────────────────
 
   Widget _buildServicesStatus(List<ServiceStatus> services) {
-    // If no services provided, show placeholder cards
-    final displayServices = services.isNotEmpty
-        ? services
-        : const [
-            ServiceStatus(
-              name: 'WebSocket Server',
-              isOnline: true,
-              latencyMs: 12,
-            ),
-            ServiceStatus(name: 'MetaApi Cloud', isOnline: true, latencyMs: 45),
-            ServiceStatus(name: 'DeepSeek AI', isOnline: true, latencyMs: 230),
-            ServiceStatus(
-              name: 'Analysis Cache',
-              isOnline: false,
-              latencyMs: 0,
-            ),
-          ];
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -437,68 +438,76 @@ class AdminWebPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: displayServices.map((svc) {
-              return Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: svc.isOnline
-                        ? Colors.green.withValues(alpha: 0.05)
-                        : AppColors.bear.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
+          if (services.isEmpty)
+            const Text(
+              'SERVICE HEALTH DATA UNAVAILABLE',
+              style: TextStyle(color: Colors.white38, fontSize: 11),
+            )
+          else
+            Row(
+              children: services.map((svc) {
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
                       color: svc.isOnline
-                          ? Colors.green.withValues(alpha: 0.2)
-                          : AppColors.bear.withValues(alpha: 0.2),
+                          ? Colors.green.withValues(alpha: 0.05)
+                          : AppColors.bear.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: svc.isOnline
+                            ? Colors.green.withValues(alpha: 0.2)
+                            : AppColors.bear.withValues(alpha: 0.2),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.circle,
-                            color: svc.isOnline ? Colors.green : AppColors.bear,
-                            size: 8,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            svc.isOnline ? 'ONLINE' : 'OFFLINE',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.circle,
                               color: svc.isOnline
                                   ? Colors.green
                                   : AppColors.bear,
+                              size: 8,
                             ),
+                            const SizedBox(width: 6),
+                            Text(
+                              svc.isOnline ? 'ONLINE' : 'OFFLINE',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: svc.isOnline
+                                    ? Colors.green
+                                    : AppColors.bear,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          svc.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        svc.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      Text(
-                        '${svc.latencyMs}ms',
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 11,
+                        Text(
+                          '${svc.latencyMs}ms',
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
@@ -525,29 +534,22 @@ class AdminWebPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'PENDING APPROVALS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                'VIEW ALL',
-                style: TextStyle(
-                  fontSize: 8,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          const Text(
+            'PENDING APPROVALS',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(height: 24),
-          ...requests.map((req) => _buildApprovalRow(context, req)),
+          if (requests.isEmpty)
+            const Text(
+              'NO PENDING REQUESTS',
+              style: TextStyle(color: Colors.white38, fontSize: 11),
+            )
+          else
+            ...requests.map((req) => _buildApprovalRow(context, req)),
         ],
       ),
     );
@@ -597,9 +599,8 @@ class AdminWebPage extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () => context.read<AdminBloc>().add(
-                  HandleRequest(req.userId, true),
-                ),
+                onPressed: () =>
+                    context.read<AdminBloc>().add(HandleRequest(req.id, true)),
                 icon: const Icon(
                   Icons.check,
                   color: AppColors.primary,
@@ -607,9 +608,8 @@ class AdminWebPage extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => context.read<AdminBloc>().add(
-                  HandleRequest(req.userId, false),
-                ),
+                onPressed: () =>
+                    context.read<AdminBloc>().add(HandleRequest(req.id, false)),
                 icon: const Icon(Icons.close, color: AppColors.bear, size: 18),
               ),
             ],
@@ -657,6 +657,21 @@ class _GlobalRiskCardState extends State<_GlobalRiskCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.config.isAvailable) {
+      return Container(
+        height: 180,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          'GLOBAL RISK CONFIGURATION UNAVAILABLE',
+          style: TextStyle(color: Colors.white38, fontSize: 11),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -761,7 +776,7 @@ class _GlobalRiskCardState extends State<_GlobalRiskCard> {
                     Switch(
                       value: _newsGuard,
                       onChanged: (v) => setState(() => _newsGuard = v),
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ],
                 ),
@@ -809,12 +824,6 @@ class _GlobalRiskCardState extends State<_GlobalRiskCard> {
                     ),
                   ),
                 );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Risk config saved!'),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -850,7 +859,8 @@ class _GlobalRiskCardState extends State<_GlobalRiskCard> {
 
 class _AnalyticsHub extends StatefulWidget {
   final SystemStats stats;
-  const _AnalyticsHub({required this.stats});
+  final List<Map<String, dynamic>> dailyStats;
+  const _AnalyticsHub({required this.stats, required this.dailyStats});
 
   @override
   State<_AnalyticsHub> createState() => _AnalyticsHubState();
@@ -859,13 +869,14 @@ class _AnalyticsHub extends StatefulWidget {
 class _AnalyticsHubState extends State<_AnalyticsHub> {
   bool _showDau = true;
 
-  // Simulated 7-day data (real data loaded from Firestore in production)
-  final List<double> _dauData = [12, 18, 15, 22, 20, 28, 25];
-  final List<double> _mauData = [100, 105, 108, 115, 120, 125, 130];
-
   @override
   Widget build(BuildContext context) {
-    final dataPoints = _showDau ? _dauData : _mauData;
+    final dataPoints = widget.dailyStats
+        .map((row) => ((row[_showDau ? 'dau' : 'mau'] as num?) ?? 0).toDouble())
+        .toList(growable: false);
+    final labels = widget.dailyStats
+        .map((row) => (row['date'] ?? '').toString())
+        .toList(growable: false);
     final activeColor = _showDau ? AppColors.primary : AppColors.secondary;
 
     return Container(
@@ -957,107 +968,106 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
 
           // Chart
           Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval:
-                      (dataPoints.reduce((a, b) => a > b ? a : b) / 4).clamp(
-                        1,
-                        1000000,
-                      ),
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 1,
-                      getTitlesWidget: (val, meta) {
-                        const days = [
-                          'Mon',
-                          'Tue',
-                          'Wed',
-                          'Thu',
-                          'Fri',
-                          'Sat',
-                          'Sun',
-                        ];
-                        final idx = val.toInt();
-                        if (idx < 0 || idx >= days.length) {
-                          return const SizedBox();
-                        }
-                        return Text(
-                          days[idx],
-                          style: const TextStyle(
-                            color: Colors.white24,
-                            fontSize: 9,
-                          ),
-                        );
-                      },
+            child: dataPoints.isEmpty
+                ? const Center(
+                    child: Text(
+                      'ANALYTICS DATA UNAVAILABLE',
+                      style: TextStyle(color: Colors.white38, fontSize: 11),
                     ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (val, meta) => Text(
-                        '${val.toInt()}',
-                        style: const TextStyle(
-                          color: Colors.white24,
-                          fontSize: 9,
+                  )
+                : LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval:
+                            (dataPoints.reduce((a, b) => a > b ? a : b) / 4)
+                                .clamp(1, 1000000),
+                        getDrawingHorizontalLine: (_) => FlLine(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          strokeWidth: 1,
                         ),
                       ),
-                    ),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: dataPoints
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value))
-                        .toList(),
-                    isCurved: true,
-                    color: activeColor,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                            radius: 3,
-                            color: activeColor,
-                            strokeWidth: 0,
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 1,
+                            getTitlesWidget: (val, meta) {
+                              final idx = val.toInt();
+                              if (idx < 0 || idx >= labels.length) {
+                                return const SizedBox();
+                              }
+                              final label = labels[idx];
+                              return Text(
+                                label.length >= 5
+                                    ? label.substring(label.length - 5)
+                                    : label,
+                                style: const TextStyle(
+                                  color: Colors.white24,
+                                  fontSize: 9,
+                                ),
+                              );
+                            },
                           ),
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          activeColor.withValues(alpha: 0.2),
-                          Colors.transparent,
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (val, meta) => Text(
+                              '${val.toInt()}',
+                              style: const TextStyle(
+                                color: Colors.white24,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: dataPoints
+                              .asMap()
+                              .entries
+                              .map((e) => FlSpot(e.key.toDouble(), e.value))
+                              .toList(),
+                          isCurved: true,
+                          color: activeColor,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, bar, index) =>
+                                FlDotCirclePainter(
+                                  radius: 3,
+                                  color: activeColor,
+                                  strokeWidth: 0,
+                                ),
+                          ),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              colors: [
+                                activeColor.withValues(alpha: 0.2),
+                                Colors.transparent,
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
 
           const Divider(color: Colors.white10),
@@ -1067,13 +1077,22 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
             children: [
               _StatItem(
                 label: 'GROWTH',
-                val: '+${widget.stats.growth}%',
+                val: widget.stats.isAvailable
+                    ? '+${widget.stats.growth}%'
+                    : '—',
                 color: AppColors.primary,
               ),
-              _StatItem(label: 'SESSIONS', val: '${widget.stats.dau} / min'),
+              _StatItem(
+                label: 'SESSIONS',
+                val: widget.stats.isAvailable
+                    ? '${widget.stats.dau} / min'
+                    : '—',
+              ),
               _StatItem(
                 label: 'LATENCY',
-                val: '${widget.stats.latency}ms',
+                val: widget.stats.isAvailable
+                    ? '${widget.stats.latency}ms'
+                    : '—',
                 color: AppColors.secondary,
               ),
             ],
@@ -1089,16 +1108,38 @@ class _AnalyticsHubState extends State<_AnalyticsHub> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _RadarConfig extends StatefulWidget {
-  const _RadarConfig();
+  final RadarAdminConfig? config;
+  final bool isLoaded;
+  const _RadarConfig({required this.config, required this.isLoaded});
 
   @override
   State<_RadarConfig> createState() => _RadarConfigState();
 }
 
 class _RadarConfigState extends State<_RadarConfig> {
-  double _sensitivity = 0.7;
-  final List<String> _watchlist = ['XAUUSD', 'BTCUSD', 'EURUSD'];
+  double _sensitivity = 0;
+  final List<String> _watchlist = [];
   final _addCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _applyConfig(widget.config);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RadarConfig oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.config != widget.config) _applyConfig(widget.config);
+  }
+
+  void _applyConfig(RadarAdminConfig? config) {
+    if (config == null) return;
+    _watchlist
+      ..clear()
+      ..addAll(config.symbols);
+    _sensitivity = config.sensitivity;
+  }
 
   @override
   void dispose() {
@@ -1108,6 +1149,19 @@ class _RadarConfigState extends State<_RadarConfig> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isLoaded) {
+      return _buildUnavailableCard(
+        const CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (widget.config == null) {
+      return _buildUnavailableCard(
+        const Text(
+          'RADAR CONFIGURATION UNAVAILABLE',
+          style: TextStyle(color: Colors.white38, fontSize: 11),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -1223,12 +1277,6 @@ class _RadarConfigState extends State<_RadarConfig> {
                 context.read<AdminBloc>().add(
                   SaveRadarConfig(_watchlist, _sensitivity),
                 );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Radar config saved!'),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
               },
               child: const Text(
                 'SAVE CONFIG',
@@ -1241,6 +1289,19 @@ class _RadarConfigState extends State<_RadarConfig> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildUnavailableCard(Widget child) {
+    return Container(
+      height: 260,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      alignment: Alignment.center,
+      child: child,
     );
   }
 
@@ -1449,12 +1510,6 @@ class _SignalBlastPanelState extends State<_SignalBlastPanel> {
                         BroadcastRequested(_controller.text, _selectedTier),
                       );
                       _controller.clear();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Broadcast sent to $_selectedTier!'),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
                     }
                   },
                   child: Container(
@@ -1522,49 +1577,19 @@ class _GlobalAccessCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Center(
-                child: Icon(Icons.public, color: AppColors.secondary, size: 80),
+                child: Icon(Icons.public_off, color: Colors.white24, size: 64),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          _buildRegionBar('North America', 0.48),
-          const SizedBox(height: 12),
-          _buildRegionBar('Europe', 0.32),
-          const SizedBox(height: 12),
-          _buildRegionBar('Asia Pacific', 0.20),
+          const Center(
+            child: Text(
+              'REGIONAL ACCESS DATA UNAVAILABLE',
+              style: TextStyle(color: Colors.white38, fontSize: 11),
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRegionBar(String label, double val) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, color: Colors.white54),
-            ),
-            Text(
-              '${(val * 100).toInt()}%',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: val,
-          color: AppColors.primary,
-          backgroundColor: Colors.white10,
-          minHeight: 2,
-        ),
-      ],
     );
   }
 }
@@ -1638,7 +1663,7 @@ class _WebTopNavbar extends StatelessWidget {
           ),
           const SizedBox(width: 40),
           const Text(
-            'ADMIN PANEL v2.0',
+            'ADMIN PANEL v2.1',
             style: TextStyle(
               color: AppColors.primary,
               fontSize: 11,
@@ -1647,14 +1672,6 @@ class _WebTopNavbar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8)),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications, color: Color(0xFFc3c6d8)),
-          ),
           IconButton(
             onPressed: () =>
                 context.read<AuthBloc>().add(AuthLogoutRequested()),
@@ -1673,8 +1690,13 @@ class _WebTopNavbar extends StatelessWidget {
 class _AIConfigCard extends StatefulWidget {
   final AIConfig? aiConfig;
   final bool isSaving;
+  final bool isLoaded;
 
-  const _AIConfigCard({required this.aiConfig, required this.isSaving});
+  const _AIConfigCard({
+    required this.aiConfig,
+    required this.isSaving,
+    required this.isLoaded,
+  });
 
   @override
   State<_AIConfigCard> createState() => _AIConfigCardState();
@@ -1684,13 +1706,10 @@ class _AIConfigCardState extends State<_AIConfigCard> {
   late TextEditingController _promptController;
   int _charCount = 0;
 
-  static const String _defaultPrompt =
-      'You are an AI trading expert specializing in Smart Money Concepts (SMC), Wyckoff Method, and Volume Spread Analysis (VSA). Analyze the given market data and return a comprehensive JSON with trade signals including entry, stop loss, take profit levels, and probability scores.';
-
   @override
   void initState() {
     super.initState();
-    final initialText = widget.aiConfig?.masterPrompt ?? _defaultPrompt;
+    final initialText = widget.aiConfig?.masterPrompt ?? '';
     _promptController = TextEditingController(text: initialText);
     _charCount = initialText.length;
     _promptController.addListener(() {
@@ -1719,6 +1738,28 @@ class _AIConfigCardState extends State<_AIConfigCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.isLoaded) {
+      return const SizedBox(
+        height: 300,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    if (widget.aiConfig == null) {
+      return Container(
+        height: 300,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          'AI CONFIGURATION UNAVAILABLE',
+          style: TextStyle(color: Colors.white38, fontSize: 11),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
@@ -1855,11 +1896,12 @@ class _AIConfigCardState extends State<_AIConfigCard> {
                 onPressed: widget.isSaving
                     ? null
                     : () {
-                        _promptController.text = _defaultPrompt;
+                        _promptController.text =
+                            widget.aiConfig?.masterPrompt ?? '';
                       },
                 icon: const Icon(Icons.restart_alt, size: 16),
                 label: const Text(
-                  'RESET TO DEFAULT',
+                  'REVERT CHANGES',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 style: TextButton.styleFrom(foregroundColor: Colors.white38),
@@ -1874,16 +1916,6 @@ class _AIConfigCardState extends State<_AIConfigCard> {
                         if (_promptController.text.trim().isNotEmpty) {
                           context.read<AdminBloc>().add(
                             SaveAIConfig(_promptController.text.trim()),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'AI Configuration saved successfully!',
-                              ),
-                              backgroundColor: AppColors.primary,
-                              behavior: SnackBarBehavior.floating,
-                              duration: Duration(seconds: 2),
-                            ),
                           );
                         }
                       },

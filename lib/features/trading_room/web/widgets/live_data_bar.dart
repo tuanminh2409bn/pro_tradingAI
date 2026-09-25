@@ -13,13 +13,15 @@ class LiveDataBar extends StatelessWidget {
       builder: (context, state) {
         double balance = 0.0;
         double equity = 0.0;
-        int leverage = 500;
+        int leverage = 0;
         double spread = 0.0;
         double swap = 0.0;
+        var hasBrokerData = false;
 
         if (state is TradingRoomLoaded) {
-          balance = state.riskConfig?.balance ?? state.account.balance;
-          equity = state.account.equity > 0 ? state.account.equity : balance;
+          hasBrokerData = state.account.hasAuthoritativeBrokerData;
+          balance = state.account.balance;
+          equity = state.account.equity;
           leverage = state.account.leverage;
           spread = state.spread;
           swap = state.swap;
@@ -30,37 +32,45 @@ class LiveDataBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+            ),
           ),
           child: Row(
             children: [
               _DataBox(
                 label: 'BALANCE',
-                value: '\$${_formatNumber(balance)}',
+                value: hasBrokerData ? '\$${_formatNumber(balance)}' : '—',
                 valueColor: AppColors.primary,
               ),
               _divider(),
               _DataBox(
                 label: 'EQUITY',
-                value: '\$${_formatNumber(equity)}',
-                valueColor: equity >= balance ? AppColors.primary : AppColors.bear,
+                value: hasBrokerData ? '\$${_formatNumber(equity)}' : '—',
+                valueColor: equity >= balance
+                    ? AppColors.primary
+                    : AppColors.bear,
               ),
               _divider(),
               _DataBox(
                 label: 'LEVERAGE',
-                value: '1:$leverage',
+                value: hasBrokerData && leverage > 0 ? '1:$leverage' : '—',
                 valueColor: AppColors.accent,
               ),
               _divider(),
               _DataBox(
                 label: 'SPREAD',
-                value: '${spread.toStringAsFixed(1)} pips',
+                value: hasBrokerData
+                    ? '${spread.toStringAsFixed(1)} pips'
+                    : '—',
                 valueColor: Colors.white70,
               ),
               _divider(),
               _DataBox(
                 label: 'SWAP',
-                value: '${swap >= 0 ? '+' : ''}${swap.toStringAsFixed(2)}',
+                value: hasBrokerData
+                    ? '${swap >= 0 ? '+' : ''}${swap.toStringAsFixed(2)}'
+                    : '—',
                 valueColor: swap >= 0 ? AppColors.primary : AppColors.bear,
               ),
             ],

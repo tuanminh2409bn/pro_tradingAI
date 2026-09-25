@@ -23,9 +23,9 @@ class ProfileMobilePage extends StatelessWidget {
         authState.user?.uid ?? FirebaseAuth.instance.currentUser?.uid;
 
     return BlocProvider(
-      create: (context) =>
-          ProfileBloc(profileRepository: context.read<ProfileRepository>())
-            ..add(LoadProfileData(userId: userId)),
+      create: (context) => ProfileBloc(
+        profileRepository: context.read<ProfileRepository>(),
+      )..add(LoadProfileData(userId: userId)),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -423,6 +423,7 @@ class ProfileMobilePage extends StatelessWidget {
             quota.apiUsed,
             quota.apiLimit,
             AppColors.primary,
+            available: quota.hasApiQuota,
           ),
           const SizedBox(height: 16),
           _buildQuotaRow(
@@ -430,6 +431,7 @@ class ProfileMobilePage extends StatelessWidget {
             quota.backtestUsed,
             quota.backtestLimit,
             AppColors.secondary,
+            available: quota.hasBacktestQuota,
           ),
           const SizedBox(height: 16),
           _buildQuotaRow(
@@ -437,15 +439,21 @@ class ProfileMobilePage extends StatelessWidget {
             quota.storageUsed.toInt(),
             quota.storageLimit.toInt(),
             AppColors.accent,
+            available: quota.hasStorageQuota,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuotaRow(String label, int used, int limit, Color color) {
-    double progress = used / limit;
-    progress = progress.clamp(0.0, 1.0);
+  Widget _buildQuotaRow(
+    String label,
+    int used,
+    int limit,
+    Color color, {
+    required bool available,
+  }) {
+    final progress = available ? (used / limit).clamp(0.0, 1.0) : 0.0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -462,7 +470,7 @@ class ProfileMobilePage extends StatelessWidget {
               ),
             ),
             Text(
-              '$used / $limit',
+              available ? '$used / $limit' : '—',
               style: TextStyle(
                 fontSize: 10,
                 color: color,

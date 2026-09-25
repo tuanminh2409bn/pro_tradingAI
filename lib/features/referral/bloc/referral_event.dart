@@ -40,10 +40,6 @@ class UpdateRewardHistory extends ReferralEvent {
   List<Object?> get props => [history];
 }
 
-class WithdrawRewards extends ReferralEvent {
-  final double amount;
-  const WithdrawRewards(this.amount);
-
-  @override
-  List<Object?> get props => [amount];
+class ReferralStreamFailed extends ReferralEvent {
+  const ReferralStreamFailed();
 }

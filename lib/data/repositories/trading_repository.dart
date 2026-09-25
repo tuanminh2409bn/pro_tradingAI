@@ -5,12 +5,54 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:http/http.dart' as http;
 import '../models/trading_models.dart';
+import '../../core/constants/backend_endpoints.dart';
+
+/// Retains one key while a paper execution's outcome is unknown.
+class PaperIntentKeys {
+  final Map<String, String> _pending = {};
+
+  String forPayload(Map<String, dynamic> payload, String Function() newKey) =>
+      _pending.putIfAbsent(jsonEncode(payload), newKey);
+
+  void complete(Map<String, dynamic> payload) {
+    _pending.remove(jsonEncode(payload));
+  }
+}
+
+List<Map<String, dynamic>> buildPartialTradePayloads({
+  required String signalId,
+  required String signalChartId,
+  required String symbol,
+  required String type,
+  required double entryPrice,
+  required double slPrice,
+  required TakeProfitAllocationPlan plan,
+  required String userId,
+  required String tradingMode,
+}) {
+  return plan.legs
+      .map(
+        (leg) => <String, dynamic>{
+          'signalId': signalId,
+          'signalChartId': signalChartId,
+          'userId': userId,
+          'action': type,
+          'symbol': symbol,
+          'volume': leg.volume,
+          'entryPrice': entryPrice,
+          'slPrice': slPrice,
+          'tpPrices': [leg.targetPrice],
+          'tradingMode': tradingMode,
+        },
+      )
+      .toList(growable: false);
+}
 
 class TradingRepository {
   final FirebaseFirestore _firestore;
-  static const String _serverUrl = '103-69-189-243.sslip.io';
-  static const String _wsUrl = 'wss://$_serverUrl/ws/trading';
-  static const String _apiBaseUrl = 'https://$_serverUrl';
+  final PaperIntentKeys _paperIntentKeys = PaperIntentKeys();
+  static const String _wsUrl = '${BackendEndpoints.wsBaseUrl}/ws/trading';
+  static const String _apiBaseUrl = BackendEndpoints.apiBaseUrl;
 
   WebSocketChannel? _channel;
   final _accountController = StreamController<TradingAccount>.broadcast();
@@ -58,7 +100,6 @@ class TradingRepository {
   }
 
   void _initWebSocket() {
-    print('Attempting Global Connection: $_wsUrl');
     try {
       _channel?.sink.close();
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
@@ -71,15 +112,16 @@ class TradingRepository {
           if (msgType == 'heartbeat') return;
 
           // ── 2. Account info (only in init/update) ────────────────
-          if (data['account'] != null) {
+          if (data['account'] is Map) {
             final acc = data['account'];
             _accountController.add(
               TradingAccount(
-                balance: (acc['balance'] as num).toDouble(),
-                equity: (acc['equity'] as num).toDouble(),
-                margin: (acc['margin'] as num).toDouble(),
-                leverage: (acc['leverage'] as num).toInt(),
-                status: 'LIVE',
+                balance: (acc['balance'] as num?)?.toDouble() ?? 0.0,
+                equity: (acc['equity'] as num?)?.toDouble() ?? 0.0,
+                margin: (acc['margin'] as num?)?.toDouble() ?? 0.0,
+                leverage: (acc['leverage'] as num?)?.toInt() ?? 0,
+                status: (acc['status'] ?? 'UNAVAILABLE').toString(),
+                source: (acc['source'] ?? 'unavailable').toString(),
               ),
             );
           }
@@ -108,6 +150,7 @@ class TradingRepository {
                   high: (c['h'] as num).toDouble(),
                   low: (c['l'] as num).toDouble(),
                   close: (c['c'] as num).toDouble(),
+                  volume: (c['v'] as num?)?.toDouble() ?? 0.0,
                 );
                 final idx = _cache.indexWhere(
                   (candle) =>
@@ -121,9 +164,6 @@ class TradingRepository {
                 }
               }
               _candleController.add(List.from(_cache));
-              print(
-                'REPO: tick delta — ${delta.length} candle(s) merged. Cache: ${_cache.length}',
-              );
             }
             return;
           }
@@ -141,24 +181,21 @@ class TradingRepository {
                     high: (c['h'] as num).toDouble(),
                     low: (c['l'] as num).toDouble(),
                     close: (c['c'] as num).toDouble(),
+                    volume: (c['v'] as num?)?.toDouble() ?? 0.0,
                   ),
                 )
                 .toList();
             _candleController.add(_cache);
-            print('REPO: $msgType — full load ${_cache.length} candles');
           }
         },
-        onError: (e) {
-          print('REPO: Error: $e');
+        onError: (_) {
           _reconnect();
         },
         onDone: () {
-          print('REPO: Connection Closed');
           _reconnect();
         },
       );
-    } catch (e) {
-      print('REPO: Exception: $e');
+    } catch (_) {
       _reconnect();
     }
   }
@@ -173,7 +210,9 @@ class TradingRepository {
   }
 
   // ─── Firebase Auth Token Helper ───
-  Future<Map<String, String>> _getAuthHeaders() async {
+  Future<Map<String, String>> _getAuthHeaders({
+    bool requiredAuth = false,
+  }) async {
     final Map<String, String> headers = {'Content-Type': 'application/json'};
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -186,11 +225,16 @@ class TradingRepository {
     } catch (_) {
       // Không có token → gửi request không có auth (fallback)
     }
+    if (requiredAuth && !headers.containsKey('Authorization')) {
+      throw StateError('Authentication required');
+    }
     return headers;
   }
 
   // ─── Execute Trade via API ───
   Future<Position?> executeTrade({
+    required String signalId,
+    required String signalChartId,
     required String symbol,
     required String type,
     required double lotSize,
@@ -200,47 +244,99 @@ class TradingRepository {
     String userId = '',
     String tradingMode = 'scalping',
   }) async {
+    return _postTradePayload({
+      'signalId': signalId,
+      'signalChartId': signalChartId,
+      'userId': userId,
+      'action': type,
+      'symbol': symbol,
+      'volume': lotSize,
+      'entryPrice': entryPrice,
+      'slPrice': slPrice,
+      'tpPrices': tpPrices,
+      'tradingMode': tradingMode,
+    });
+  }
+
+  /// Sends one existing paper-trade request per TP leg without changing the
+  /// public `/api/trade` payload contract.
+  Future<List<Position>> executePartialTakeProfitTrade({
+    required String signalId,
+    required String signalChartId,
+    required String symbol,
+    required String type,
+    required double entryPrice,
+    required double slPrice,
+    required TakeProfitAllocationPlan plan,
+    String userId = '',
+    String tradingMode = 'scalping',
+  }) async {
+    final positions = <Position>[];
+    final payloads = buildPartialTradePayloads(
+      signalId: signalId,
+      signalChartId: signalChartId,
+      symbol: symbol,
+      type: type,
+      entryPrice: entryPrice,
+      slPrice: slPrice,
+      plan: plan,
+      userId: userId,
+      tradingMode: tradingMode,
+    );
+    for (final payload in payloads) {
+      final position = await _postTradePayload(payload);
+      if (position == null) break;
+      positions.add(position);
+    }
+    return positions;
+  }
+
+  Future<Position?> _postTradePayload(Map<String, dynamic> payload) async {
     try {
-      final headers = await _getAuthHeaders();
+      final headers = await _getAuthHeaders(requiredAuth: true);
+      headers['Idempotency-Key'] = _paperIntentKeys.forPayload(
+        payload,
+        () => _firestore.collection('_intent_ids').doc().id,
+      );
       final response = await http.post(
         Uri.parse('$_apiBaseUrl/api/trade'),
         headers: headers,
-        body: jsonEncode({
-          'userId': userId,
-          'action': type,
-          'symbol': symbol,
-          'volume': lotSize,
-          'entryPrice': entryPrice,
-          'slPrice': slPrice,
-          'tpPrices': tpPrices,
-          'tradingMode': tradingMode,
-        }),
+        body: jsonEncode(payload),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['status'] == 'success') {
+          _paperIntentKeys.complete(payload);
+          final tpPrices = (payload['tpPrices'] as List<dynamic>)
+              .map((price) => (price as num).toDouble())
+              .toList(growable: false);
           return Position(
             id: data['tradeId'] ?? '',
-            symbol: symbol,
-            type: type,
-            lotSize: lotSize,
-            openPrice: (data['entryPrice'] as num?)?.toDouble() ?? entryPrice,
+            symbol: payload['symbol'] as String,
+            type: payload['action'] as String,
+            lotSize: (payload['volume'] as num).toDouble(),
+            openPrice:
+                (data['entryPrice'] as num?)?.toDouble() ??
+                (payload['entryPrice'] as num).toDouble(),
             currentPrice:
-                (data['entryPrice'] as num?)?.toDouble() ?? entryPrice,
-            sl: slPrice,
+                (data['entryPrice'] as num?)?.toDouble() ??
+                (payload['entryPrice'] as num).toDouble(),
+            sl: (payload['slPrice'] as num).toDouble(),
             tp: tpPrices.isNotEmpty ? tpPrices.first : 0.0,
             tpLevels: tpPrices,
             profit: 0.0,
             status: 'OPEN',
-            tradingMode: tradingMode,
+            tradingMode: payload['tradingMode'] as String,
             openTime: DateTime.now(),
           );
         }
       }
+      if (response.statusCode >= 400 && response.statusCode < 500) {
+        _paperIntentKeys.complete(payload);
+      }
       return null;
-    } catch (e) {
-      print('REPO: Trade execution error: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -248,7 +344,7 @@ class TradingRepository {
   // ─── Close Trade via API ───
   Future<double?> closeTrade(String tradeId, {String userId = ''}) async {
     try {
-      final headers = await _getAuthHeaders();
+      final headers = await _getAuthHeaders(requiredAuth: true);
       final response = await http.post(
         Uri.parse('$_apiBaseUrl/api/trade/close'),
         headers: headers,
@@ -262,8 +358,7 @@ class TradingRepository {
         }
       }
       return null;
-    } catch (e) {
-      print('REPO: Close trade error: $e');
+    } catch (_) {
       return null;
     }
   }
@@ -278,7 +373,7 @@ class TradingRepository {
     const friendly =
         'Hệ thống AI đang thực hiện phân tích kỹ thuật tạm thời. Vui lòng thử lại sau vài giây.';
     try {
-      final headers = await _getAuthHeaders();
+      final headers = await _getAuthHeaders(requiredAuth: true);
       final response = await http.post(
         Uri.parse('$_apiBaseUrl/api/ai/chat'),
         headers: headers,
@@ -292,7 +387,8 @@ class TradingRepository {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text = (data['response'] ?? data['message'] ?? friendly).toString();
+        final text = (data['response'] ?? data['message'] ?? friendly)
+            .toString();
         final fallback = data['fallback'] == true || data['status'] == 'error';
         return (
           response: text,
@@ -307,62 +403,106 @@ class TradingRepository {
   }
 
   // ─── Risk Config ───
+  Future<DailyCutoffStatus> getDailyCutoffStatus(String userId) async {
+    if (userId.isEmpty) throw StateError('Authentication required');
+    final response = await http.get(
+      Uri.parse('$_apiBaseUrl/api/risk/cutoff/$userId'),
+      headers: await _getAuthHeaders(requiredAuth: true),
+    );
+    return _parseDailyCutoffResponse(response);
+  }
+
+  Future<DailyCutoffStatus> reviewDailyCutoff(String userId) =>
+      _postDailyCutoff(userId, 'review');
+
+  Future<DailyCutoffStatus> acknowledgeDailyCutoff(String userId) =>
+      _postDailyCutoff(userId, 'ack');
+
+  Future<DailyCutoffStatus> _postDailyCutoff(
+    String userId,
+    String action,
+  ) async {
+    if (userId.isEmpty) throw StateError('Authentication required');
+    final response = await http.post(
+      Uri.parse('$_apiBaseUrl/api/risk/cutoff/$action'),
+      headers: await _getAuthHeaders(requiredAuth: true),
+      body: jsonEncode({'userId': userId}),
+    );
+    return _parseDailyCutoffResponse(response);
+  }
+
+  DailyCutoffStatus _parseDailyCutoffResponse(http.Response response) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Cutoff status unavailable');
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) throw StateError('Cutoff status unavailable');
+    return DailyCutoffStatus.fromMap(Map<String, dynamic>.from(decoded));
+  }
+
   Future<void> saveRiskConfig(String userId, RiskConfig config) async {
-    try {
-      await http.post(
-        Uri.parse('$_apiBaseUrl/api/risk-config'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': userId,
-          'balance': config.balance,
-          'riskPerTrade': config.riskPerTrade,
-          'maxDailyLoss': config.maxDailyLoss,
-        }),
-      );
-    } catch (e) {
-      print('REPO: Save risk config error: $e');
+    if (userId.isEmpty) throw StateError('Authentication required');
+    final headers = await _getAuthHeaders(requiredAuth: true);
+    final response = await http.post(
+      Uri.parse('$_apiBaseUrl/api/risk-config'),
+      headers: headers,
+      body: jsonEncode({
+        'userId': userId,
+        'balance': config.balance,
+        'riskPerTrade': config.riskPerTrade,
+        'maxDailyLoss': config.maxDailyLoss,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Risk configuration request failed');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! Map || data['status'] != 'success') {
+      throw StateError('Risk configuration was not saved');
     }
   }
 
   Future<RiskConfig?> getRiskConfig(String userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_apiBaseUrl/api/risk-config/$userId'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['config'] != null) {
-          return RiskConfig.fromMap(data['config']);
-        }
-      }
-      return null;
-    } catch (e) {
-      print('REPO: Get risk config error: $e');
-      return null;
+    if (userId.isEmpty) throw StateError('Authentication required');
+    final headers = await _getAuthHeaders(requiredAuth: true);
+    final response = await http.get(
+      Uri.parse('$_apiBaseUrl/api/risk-config/$userId'),
+      headers: headers,
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Risk configuration request failed');
     }
+    final data = jsonDecode(response.body);
+    if (data is! Map || data['status'] != 'success') {
+      throw StateError('Risk configuration unavailable');
+    }
+    final config = data['config'];
+    if (config == null) return null;
+    if (config is! Map) throw StateError('Invalid risk configuration');
+    return RiskConfig.fromMap(Map<String, dynamic>.from(config));
   }
 
   // ─── Open Positions ───
   Future<List<Position>> getOpenPositions(String userId) async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_apiBaseUrl/api/trades/$userId'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['trades'] != null) {
-          return (data['trades'] as List)
-              .map((t) => Position.fromMap(t))
-              .toList();
-        }
-      }
-      return [];
-    } catch (e) {
-      print('REPO: Get open positions error: $e');
-      return [];
+    if (userId.isEmpty) throw StateError('Authentication required');
+    final headers = await _getAuthHeaders(requiredAuth: true);
+    final response = await http.get(
+      Uri.parse('$_apiBaseUrl/api/trades/$userId'),
+      headers: headers,
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Position request failed');
     }
+    final data = jsonDecode(response.body);
+    if (data is! Map ||
+        data['status'] != 'success' ||
+        data['trades'] is! List) {
+      throw StateError('Position data unavailable');
+    }
+    return (data['trades'] as List)
+        .whereType<Map>()
+        .map((trade) => Position.fromMap(Map<String, dynamic>.from(trade)))
+        .toList(growable: false);
   }
 
   // ─── Request AI Analysis (Day 4 MTF payload) ───
@@ -370,32 +510,18 @@ class TradingRepository {
     String symbol,
     String timeframe, {
     String userId = '',
-    List<Map<String, dynamic>>? candlesExecution,
-    List<Map<String, dynamic>>? candlesHtf1,
-    List<Map<String, dynamic>>? candlesHtf2,
-    Map<String, dynamic>? accountContext,
     String? tradingMode,
   }) async {
-    try {
-      await _firestore.collection('analysis_requests').add({
-        'symbol': symbol,
-        'timeframe': timeframe,
-        'userId': userId,
-        'status': 'PENDING',
-        'requestedAt': FieldValue.serverTimestamp(),
-        if (tradingMode != null) 'trading_mode': tradingMode,
-        if (candlesExecution != null) 'candles_execution': candlesExecution,
-        if (candlesHtf1 != null) 'candles_htf_1': candlesHtf1,
-        if (candlesHtf2 != null) 'candles_htf_2': candlesHtf2,
-        if (accountContext != null) 'account_context': accountContext,
-      });
-      print(
-        'REPO: Analysis request sent for $symbol ($timeframe) '
-        'candles=${candlesExecution?.length ?? 0} userId=$userId',
-      );
-    } catch (e) {
-      print('REPO: Error sending analysis request: $e');
-    }
+    if (userId.isEmpty) throw StateError('Authentication required');
+    await _firestore.collection('analysis_requests').add({
+      'symbol': symbol,
+      'timeframe': timeframe,
+      'execution_tf': timeframe,
+      'userId': userId,
+      'status': 'PENDING',
+      'requestedAt': FieldValue.serverTimestamp(),
+      if (tradingMode != null) 'trading_mode': tradingMode,
+    });
   }
 
   // ─── Streams ───
@@ -431,15 +557,15 @@ class TradingRepository {
     }
     return query.snapshots().map((snapshot) {
       if (snapshot.docs.isEmpty) {
-        print('REPO: No active signals for user $userId.');
         return <TradingSignal>[];
       }
 
       final signals = snapshot.docs
-          .map((doc) => TradingSignal.fromMap(doc.data()))
+          .map(
+            (doc) => TradingSignal.fromMap({...doc.data(), 'signalId': doc.id}),
+          )
           .toList();
 
-      print('REPO: Parsed ${signals.length} active signals for user $userId');
       return signals;
     });
   }
@@ -453,16 +579,12 @@ class TradingRepository {
     required ChatMessage message,
   }) async {
     if (userId.isEmpty) return;
-    try {
-      await _firestore
-          .collection('chat_history')
-          .doc(userId)
-          .collection(chatType)
-          .doc(message.id)
-          .set(message.toMap());
-    } catch (e) {
-      print('REPO: saveChatMessage error: $e');
-    }
+    await _firestore
+        .collection('chat_history')
+        .doc(userId)
+        .collection(chatType)
+        .doc(message.id)
+        .set(message.toMap());
   }
 
   /// Load chat history (most recent [limit] messages, ordered by timestamp asc)
@@ -472,24 +594,18 @@ class TradingRepository {
     int limit = 50,
   }) async {
     if (userId.isEmpty) return [];
-    try {
-      final snapshot = await _firestore
-          .collection('chat_history')
-          .doc(userId)
-          .collection(chatType)
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
+    final snapshot = await _firestore
+        .collection('chat_history')
+        .doc(userId)
+        .collection(chatType)
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .get();
 
-      final messages = snapshot.docs
-          .map((doc) => ChatMessage.fromMap(doc.data()))
-          .toList();
-      // Reverse so oldest is first (chat display order)
-      return messages.reversed.toList();
-    } catch (e) {
-      print('REPO: loadChatHistory error: $e');
-      return [];
-    }
+    final messages = snapshot.docs
+        .map((doc) => ChatMessage.fromMap(doc.data()))
+        .toList();
+    return messages.reversed.toList();
   }
 
   /// Delete all chat history for a user's specific chat type
@@ -498,20 +614,16 @@ class TradingRepository {
     required String chatType,
   }) async {
     if (userId.isEmpty) return;
-    try {
-      final batch = _firestore.batch();
-      final snapshot = await _firestore
-          .collection('chat_history')
-          .doc(userId)
-          .collection(chatType)
-          .get();
-      for (final doc in snapshot.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-    } catch (e) {
-      print('REPO: clearChatHistory error: $e');
+    final batch = _firestore.batch();
+    final snapshot = await _firestore
+        .collection('chat_history')
+        .doc(userId)
+        .collection(chatType)
+        .get();
+    for (final doc in snapshot.docs) {
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 
   void dispose() {

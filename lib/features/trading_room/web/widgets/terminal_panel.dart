@@ -38,10 +38,12 @@ class _TerminalPanelState extends State<TerminalPanel>
           return const SizedBox(height: 200);
         }
 
-        final openPositions =
-            state.positions.where((p) => p.status == 'OPEN').toList();
-        final closedPositions =
-            state.positions.where((p) => p.status == 'CLOSED').toList();
+        final openPositions = state.positions
+            .where((p) => p.status == 'OPEN')
+            .toList();
+        final closedPositions = state.positions
+            .where((p) => p.status == 'CLOSED')
+            .toList();
 
         return Container(
           height: 200,
@@ -55,16 +57,34 @@ class _TerminalPanelState extends State<TerminalPanel>
             children: [
               // ── Tab Bar ──
               _buildTabBar(context),
+              if (state.positionsStale)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  child: Text(
+                    context.tr('terminal_positions_stale'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.orange, fontSize: 10),
+                  ),
+                ),
               // ── Tab Content ──
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildTradeTab(context, openPositions),
-                    _buildExposureTab(context, openPositions),
-                    _buildHistoryTab(context, closedPositions),
-                  ],
-                ),
+                child: !state.positionsAvailable && state.positions.isEmpty
+                    ? Center(
+                        child: Text(
+                          context.tr('common_data_unavailable'),
+                          style: const TextStyle(color: Colors.white38),
+                        ),
+                      )
+                    : TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildTradeTab(context, openPositions),
+                          _buildExposureTab(context, openPositions),
+                          _buildHistoryTab(context, closedPositions),
+                        ],
+                      ),
               ),
               // ── Footer ──
               _buildFooter(context, state),
@@ -115,7 +135,10 @@ class _TerminalPanelState extends State<TerminalPanel>
       return Center(
         child: Text(
           context.tr('terminal_no_positions'),
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 14,
+          ),
         ),
       );
     }
@@ -168,30 +191,40 @@ class _TerminalPanelState extends State<TerminalPanel>
 
     return DataRow(
       cells: [
-        DataCell(Text('#${position.id.substring(0, 6).toUpperCase()}')),
+        DataCell(
+          Text(
+            '#${position.id.substring(0, position.id.length < 6 ? position.id.length : 6).toUpperCase()}',
+          ),
+        ),
         DataCell(Text(timeStr)),
-        DataCell(Text(
-          position.type,
-          style: TextStyle(color: typeColor, fontWeight: FontWeight.w700),
-        )),
+        DataCell(
+          Text(
+            position.type,
+            style: TextStyle(color: typeColor, fontWeight: FontWeight.w700),
+          ),
+        ),
         DataCell(Text(position.lotSize.toStringAsFixed(2))),
         DataCell(Text(position.symbol)),
         DataCell(Text(position.openPrice.toStringAsFixed(5))),
-        DataCell(Text(
-          position.sl > 0 ? position.sl.toStringAsFixed(5) : '---',
-          style: const TextStyle(color: AppColors.bear),
-        )),
-        DataCell(Text(
-          position.tp > 0 ? position.tp.toStringAsFixed(5) : '---',
-          style: const TextStyle(color: AppColors.tp),
-        )),
-        DataCell(Text(
-          '${position.profit >= 0 ? '+' : ''}\$${position.profit.toStringAsFixed(2)}',
-          style: TextStyle(color: profitColor, fontWeight: FontWeight.w700),
-        )),
         DataCell(
-          _buildCloseButton(context, position.id),
+          Text(
+            position.sl > 0 ? position.sl.toStringAsFixed(5) : '---',
+            style: const TextStyle(color: AppColors.bear),
+          ),
         ),
+        DataCell(
+          Text(
+            position.tp > 0 ? position.tp.toStringAsFixed(5) : '---',
+            style: const TextStyle(color: AppColors.tp),
+          ),
+        ),
+        DataCell(
+          Text(
+            '${position.profit >= 0 ? '+' : ''}\$${position.profit.toStringAsFixed(2)}',
+            style: TextStyle(color: profitColor, fontWeight: FontWeight.w700),
+          ),
+        ),
+        DataCell(_buildCloseButton(context, position.id)),
       ],
     );
   }
@@ -229,7 +262,10 @@ class _TerminalPanelState extends State<TerminalPanel>
       return Center(
         child: Text(
           context.tr('terminal_no_exposure'),
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 14,
+          ),
         ),
       );
     }
@@ -286,21 +322,24 @@ class _TerminalPanelState extends State<TerminalPanel>
                   ),
                   // Long
                   _exposureCell(
-                      context.tr('terminal_long'),
-                      '${e.longCount}x ${e.longLots.toStringAsFixed(2)}',
-                      AppColors.bull),
+                    context.tr('terminal_long'),
+                    '${e.longCount}x ${e.longLots.toStringAsFixed(2)}',
+                    AppColors.bull,
+                  ),
                   const SizedBox(width: 16),
                   // Short
                   _exposureCell(
-                      context.tr('terminal_short'),
-                      '${e.shortCount}x ${e.shortLots.toStringAsFixed(2)}',
-                      AppColors.bear),
+                    context.tr('terminal_short'),
+                    '${e.shortCount}x ${e.shortLots.toStringAsFixed(2)}',
+                    AppColors.bear,
+                  ),
                   const SizedBox(width: 16),
                   // Net
                   _exposureCell(
-                      context.tr('terminal_net'),
-                      '${netLots >= 0 ? '+' : ''}${netLots.toStringAsFixed(2)}',
-                      netLots >= 0 ? AppColors.bull : AppColors.bear),
+                    context.tr('terminal_net'),
+                    '${netLots >= 0 ? '+' : ''}${netLots.toStringAsFixed(2)}',
+                    netLots >= 0 ? AppColors.bull : AppColors.bear,
+                  ),
                   const Spacer(),
                   // PnL
                   Text(
@@ -326,26 +365,40 @@ class _TerminalPanelState extends State<TerminalPanel>
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.35),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5)),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.35),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 15, fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildHistoryTab(BuildContext context, List<Position> closedPositions) {
+  Widget _buildHistoryTab(
+    BuildContext context,
+    List<Position> closedPositions,
+  ) {
     if (closedPositions.isEmpty) {
       return Center(
         child: Text(
           context.tr('terminal_no_history'),
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 14),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.3),
+            fontSize: 14,
+          ),
         ),
       );
     }
@@ -380,24 +433,34 @@ class _TerminalPanelState extends State<TerminalPanel>
             DataColumn(label: Text(context.tr('terminal_col_profit'))),
           ],
           rows: closedPositions.map((p) {
-            final profitColor =
-                p.profit >= 0 ? AppColors.bull : AppColors.bear;
-            return DataRow(cells: [
-              DataCell(Text('#${p.id.substring(0, 6).toUpperCase()}')),
-              DataCell(Text(p.symbol)),
-              DataCell(Text(p.type,
-                  style: TextStyle(
+            final profitColor = p.profit >= 0 ? AppColors.bull : AppColors.bear;
+            return DataRow(
+              cells: [
+                DataCell(Text('#${p.id.substring(0, 6).toUpperCase()}')),
+                DataCell(Text(p.symbol)),
+                DataCell(
+                  Text(
+                    p.type,
+                    style: TextStyle(
                       color: p.type == 'BUY' ? AppColors.bull : AppColors.bear,
-                      fontWeight: FontWeight.w600))),
-              DataCell(Text(p.lotSize.toStringAsFixed(2))),
-              DataCell(Text(p.openPrice.toStringAsFixed(5))),
-              DataCell(Text(p.currentPrice.toStringAsFixed(5))),
-              DataCell(Text(
-                '${p.profit >= 0 ? '+' : ''}\$${p.profit.toStringAsFixed(2)}',
-                style: TextStyle(
-                    color: profitColor, fontWeight: FontWeight.w700),
-              )),
-            ]);
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                DataCell(Text(p.lotSize.toStringAsFixed(2))),
+                DataCell(Text(p.openPrice.toStringAsFixed(5))),
+                DataCell(Text(p.currentPrice.toStringAsFixed(5))),
+                DataCell(
+                  Text(
+                    '${p.profit >= 0 ? '+' : ''}\$${p.profit.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: profitColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            );
           }).toList(),
         ),
       ),
@@ -423,11 +486,17 @@ class _TerminalPanelState extends State<TerminalPanel>
       ),
       child: Row(
         children: [
-          _footerItem(context.tr('terminal_balance'),
-              '\$${balance.toStringAsFixed(2)}', Colors.white70),
+          _footerItem(
+            context.tr('terminal_balance'),
+            '\$${balance.toStringAsFixed(2)}',
+            Colors.white70,
+          ),
           const SizedBox(width: 24),
-          _footerItem(context.tr('terminal_equity'),
-              '\$${equity.toStringAsFixed(2)}', AppColors.accent),
+          _footerItem(
+            context.tr('terminal_equity'),
+            '\$${equity.toStringAsFixed(2)}',
+            AppColors.accent,
+          ),
           const SizedBox(width: 24),
           _footerItem(
             context.tr('terminal_total_pnl'),

@@ -5,16 +5,14 @@ class RadarRepository {
   final FirebaseFirestore _firestore;
 
   RadarRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Stream dữ liệu Radar từ Firestore — backend cập nhật mỗi 60s.
   Stream<List<RadarAsset>> getRadarAssets() {
-    return _firestore
-        .collection('radar')
-        .snapshots()
-        .map((snapshot) {
+    return _firestore.collection('radar').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         final data = doc.data();
+        final confirmedAt = data['confirmedAt'];
         return RadarAsset(
           symbol: data['symbol'] ?? doc.id,
           fullName: data['fullName'] ?? '',
@@ -24,6 +22,15 @@ class RadarRepository {
           hasAiConfirmation: data['hasAiConfirmation'] ?? false,
           aiSignal: data['aiSignal'] ?? 'NEUTRAL',
           sparklineData: List<double>.from(data['sparklineData'] ?? []),
+          confirmationId: data['confirmationId'] as String?,
+          rationale: data['rationale'] as String?,
+          model: data['model'] as String?,
+          provider: data['provider'] as String?,
+          licenseRef: data['licenseRef'] as String?,
+          timeframe: data['timeframe'] as String?,
+          confirmedAt: confirmedAt is Timestamp
+              ? confirmedAt.toDate()
+              : DateTime.tryParse(confirmedAt?.toString() ?? ''),
         );
       }).toList();
     });

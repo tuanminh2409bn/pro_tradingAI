@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../data/models/trading_models.dart';
 import '../../../../data/repositories/news_repository.dart';
 import '../../bloc/trading_room_bloc.dart';
 import '../../bloc/trading_room_event.dart';
@@ -16,7 +17,7 @@ class NewsRedZoneBinder extends StatefulWidget {
 
 class _NewsRedZoneBinderState extends State<NewsRedZoneBinder> {
   StreamSubscription? _sub;
-  String? _lastLabel;
+  RedZoneOverlay? _lastOverlay;
 
   @override
   void initState() {
@@ -33,20 +34,19 @@ class _NewsRedZoneBinderState extends State<NewsRedZoneBinder> {
       return;
     }
     _sub?.cancel();
-    _sub = repo.watchLatestHighImpactNews().listen((article) {
+    _sub = repo.watchNextScheduledHighImpactEvent().listen((overlay) {
       if (!mounted) return;
       final bloc = context.read<TradingRoomBloc>();
-      if (article == null) {
-        if (_lastLabel != null) {
-          _lastLabel = null;
+      if (overlay == null) {
+        if (_lastOverlay != null) {
+          _lastOverlay = null;
           bloc.add(const ClearNewsRedZone());
         }
         return;
       }
-      final label = 'NEWS ${article.title}';
-      if (label == _lastLabel) return;
-      _lastLabel = label;
-      bloc.add(ApplyNewsRedZone(label));
+      if (overlay == _lastOverlay) return;
+      _lastOverlay = overlay;
+      bloc.add(ApplyNewsRedZone(overlay));
     });
   }
 

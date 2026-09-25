@@ -13,6 +13,7 @@ import '../../referral/web/referral_web_page.dart';
 import '../../profile/web/profile_web_page.dart';
 import '../../admin/web/admin_web_page.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../../core/security/admin_access.dart';
 
 class WebDashboardShell extends StatelessWidget {
   const WebDashboardShell({super.key});
@@ -63,11 +64,16 @@ class WebDashboardShell extends StatelessWidget {
                               onMenuPressed: onMenuPressed,
                             );
                           case NavbarItem.backtestDojo:
-                            return const BacktestWebPage();
+                            return BacktestWebPage(
+                              userId: userId,
+                              onMenuPressed: onMenuPressed,
+                            );
                           case NavbarItem.community:
-                            return const CommunityWebPage();
+                            return CommunityWebPage(
+                              onMenuPressed: onMenuPressed,
+                            );
                           case NavbarItem.radar:
-                            return const RadarWebPage();
+                            return RadarWebPage(onMenuPressed: onMenuPressed);
                           case NavbarItem.referral:
                             return ReferralWebPage(
                               userId: userId,
@@ -79,7 +85,7 @@ class WebDashboardShell extends StatelessWidget {
                               onMenuPressed: onMenuPressed,
                             );
                           case NavbarItem.admin:
-                            return const AdminWebPage();
+                            return const AdminAccessGate(child: AdminWebPage());
                         }
                       },
                     ),

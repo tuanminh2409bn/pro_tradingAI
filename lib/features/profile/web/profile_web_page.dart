@@ -7,8 +7,10 @@ import '../../auth/bloc/auth_state.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_cubit.dart';
+import '../../../core/security/partner_access.dart';
 import '../../../data/models/profile_models.dart';
 import '../../../data/repositories/profile_repository.dart';
+import '../../../core/services/fcm_service.dart';
 import '../bloc/profile_bloc.dart';
 import '../bloc/profile_event.dart';
 import '../bloc/profile_state.dart';
@@ -23,17 +25,42 @@ class ProfileWebPage extends StatelessWidget {
     return BlocProvider(
       create: (context) => ProfileBloc(
         profileRepository: context.read<ProfileRepository>(),
+        fcmService: context.read<FCMService>(),
       )..add(LoadProfileData(userId: userId)),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: BlocBuilder<ProfileBloc, ProfileState>(
+        body: BlocConsumer<ProfileBloc, ProfileState>(
+          listenWhen: (previous, current) =>
+              previous is ProfileLoaded &&
+              current is ProfileLoaded &&
+              previous.actionResultNonce != current.actionResultNonce,
+          listener: (context, state) {
+            if (state is! ProfileLoaded || state.actionMessageKey.isEmpty) {
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr(state.actionMessageKey)),
+                backgroundColor: state.actionSucceeded
+                    ? AppColors.primary
+                    : AppColors.bear,
+              ),
+            );
+          },
           builder: (context, state) {
             if (state is ProfileLoading || state is ProfileInitial) {
-              return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              );
             }
 
             if (state is ProfileError) {
-              return Center(child: Text(state.message, style: const TextStyle(color: AppColors.bear)));
+              return Center(
+                child: Text(
+                  state.message,
+                  style: const TextStyle(color: AppColors.bear),
+                ),
+              );
             }
 
             if (state is ProfileLoaded) {
@@ -54,7 +81,10 @@ class ProfileWebPage extends StatelessWidget {
                               if (isMobile) ...[
                                 _buildProfileInfoCard(context, state.profile),
                                 const SizedBox(height: 24),
-                                _buildBrokerAccountsCard(context, state.brokerAccounts),
+                                _buildBrokerAccountsCard(
+                                  context,
+                                  state.brokerAccounts,
+                                ),
                                 const SizedBox(height: 24),
                                 _buildQuotaGrid(context, state.quota, isMobile),
                                 const SizedBox(height: 24),
@@ -69,9 +99,15 @@ class ProfileWebPage extends StatelessWidget {
                                       flex: 1,
                                       child: Column(
                                         children: [
-                                          _buildProfileInfoCard(context, state.profile),
+                                          _buildProfileInfoCard(
+                                            context,
+                                            state.profile,
+                                          ),
                                           const SizedBox(height: 24),
-                                          _buildBrokerAccountsCard(context, state.brokerAccounts),
+                                          _buildBrokerAccountsCard(
+                                            context,
+                                            state.brokerAccounts,
+                                          ),
                                           const SizedBox(height: 24),
                                           const _PreferencesCard(),
                                         ],
@@ -82,7 +118,11 @@ class ProfileWebPage extends StatelessWidget {
                                       flex: 1,
                                       child: Column(
                                         children: [
-                                          _buildQuotaGrid(context, state.quota, isMobile),
+                                          _buildQuotaGrid(
+                                            context,
+                                            state.quota,
+                                            isMobile,
+                                          ),
                                           const SizedBox(height: 24),
                                           _buildSecurityCard(context, state),
                                         ],
@@ -146,10 +186,16 @@ class ProfileWebPage extends StatelessWidget {
               // Real avatar with fallback
               CircleAvatar(
                 radius: 40,
-                backgroundImage: profile.avatarUrl.isNotEmpty ? NetworkImage(profile.avatarUrl) : null,
+                backgroundImage: profile.avatarUrl.isNotEmpty
+                    ? NetworkImage(profile.avatarUrl)
+                    : null,
                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 child: profile.avatarUrl.isEmpty
-                    ? const Icon(Icons.person, color: AppColors.primary, size: 40)
+                    ? const Icon(
+                        Icons.person,
+                        color: AppColors.primary,
+                        size: 40,
+                      )
                     : null,
               ),
               const SizedBox(width: 24),
@@ -171,8 +217,15 @@ class ProfileWebPage extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit, size: 14, color: Colors.white38),
-                          onPressed: () => _showEditUsernameDialog(context, profile.username),
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 14,
+                            color: Colors.white38,
+                          ),
+                          onPressed: () => _showEditUsernameDialog(
+                            context,
+                            profile.username,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
@@ -181,12 +234,18 @@ class ProfileWebPage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       profile.email,
-                      style: const TextStyle(color: Colors.white38, fontSize: 13),
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     // Tier badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -204,7 +263,10 @@ class ProfileWebPage extends StatelessWidget {
                     const SizedBox(height: 6),
                     // User ID badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(4),
@@ -229,8 +291,14 @@ class ProfileWebPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSimpleStat(context.tr('profile_trades'), '${profile.totalTrades}'),
-              _buildSimpleStat(context.tr('profile_win_rate'), '${profile.winRate}%'),
+              _buildSimpleStat(
+                context.tr('profile_trades'),
+                '${profile.totalTrades}',
+              ),
+              _buildSimpleStat(
+                context.tr('profile_win_rate'),
+                '${profile.winRate}%',
+              ),
               _buildSimpleStat(context.tr('profile_rank'), '#${profile.rank}'),
             ],
           ),
@@ -245,7 +313,10 @@ class ProfileWebPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text(context.tr('profile_edit_username'), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          context.tr('profile_edit_username'),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -263,14 +334,10 @@ class ProfileWebPage extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
-                context.read<ProfileBloc>().add(UpdateUsernameRequested(ctrl.text.trim()));
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(context.tr('profile_username_updated')),
-                    backgroundColor: AppColors.primary,
-                  ),
+                context.read<ProfileBloc>().add(
+                  UpdateUsernameRequested(ctrl.text.trim()),
                 );
+                Navigator.pop(ctx);
               }
             },
             child: Text(context.tr('profile_save')),
@@ -288,7 +355,10 @@ class ProfileWebPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text(context.tr('profile_change_key'), style: const TextStyle(color: Colors.white)),
+        title: Text(
+          context.tr('profile_change_key'),
+          style: const TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -368,10 +438,15 @@ class ProfileWebPage extends StatelessWidget {
                     );
                   }
                 }
-              } catch (e) {
+              } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text(
+                        context.tr('profile_password_change_failed'),
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               }
@@ -383,7 +458,10 @@ class ProfileWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildBrokerAccountsCard(BuildContext context, List<BrokerAccount> accounts) {
+  Widget _buildBrokerAccountsCard(
+    BuildContext context,
+    List<BrokerAccount> accounts,
+  ) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -406,15 +484,21 @@ class ProfileWebPage extends StatelessWidget {
                   letterSpacing: 1,
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _showLinkAccountDialog(context),
-                icon: const Icon(Icons.add, size: 16, color: AppColors.primary),
-                label: Text(
-                  context.tr('profile_link_new'),
-                  style: const TextStyle(
+              PartnerAccessGate(
+                child: TextButton.icon(
+                  onPressed: () => _showLinkAccountDialog(context),
+                  icon: const Icon(
+                    Icons.add,
+                    size: 16,
                     color: AppColors.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                  ),
+                  label: Text(
+                    context.tr('profile_link_new'),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -427,7 +511,10 @@ class ProfileWebPage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   context.tr('profile_no_accounts'),
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    fontSize: 12,
+                  ),
                 ),
               ),
             )
@@ -448,7 +535,10 @@ class ProfileWebPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(acc.platform == 'mt5' ? Icons.looks_5 : Icons.looks_4, color: AppColors.primary),
+          Icon(
+            acc.platform == 'mt5' ? Icons.looks_5 : Icons.looks_4,
+            color: AppColors.primary,
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -462,7 +552,10 @@ class ProfileWebPage extends StatelessWidget {
                     fontSize: 13,
                   ),
                 ),
-                Text(acc.server, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                Text(
+                  acc.server,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                ),
               ],
             ),
           ),
@@ -506,7 +599,7 @@ class ProfileWebPage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: 'mt4',
+              initialValue: 'mt4',
               dropdownColor: AppColors.surface,
               decoration: InputDecoration(
                 labelText: context.tr('profile_platform'),
@@ -575,16 +668,15 @@ class ProfileWebPage extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<ProfileBloc>().add(LinkBrokerAccountRequested(
-                platform: platformController.text,
-                server: serverController.text,
-                login: loginController.text,
-                password: passwordController.text,
-              ));
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.tr('profile_link_sent'))),
+              context.read<ProfileBloc>().add(
+                LinkBrokerAccountRequested(
+                  platform: platformController.text,
+                  server: serverController.text,
+                  login: loginController.text,
+                  password: passwordController.text,
+                ),
               );
+              Navigator.pop(dialogContext);
             },
             child: Text(context.tr('profile_link_account')),
           ),
@@ -596,14 +688,32 @@ class ProfileWebPage extends StatelessWidget {
   Widget _buildSimpleStat(String label, String value) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 9, color: Colors.white24, fontWeight: FontWeight.bold)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: Colors.white24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildQuotaGrid(BuildContext context, AccessQuota quota, bool isMobile) {
+  Widget _buildQuotaGrid(
+    BuildContext context,
+    AccessQuota quota,
+    bool isMobile,
+  ) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -611,16 +721,39 @@ class ProfileWebPage extends StatelessWidget {
       mainAxisSpacing: 16,
       childAspectRatio: 4,
       children: [
-        _buildQuotaCard(context.tr('profile_api_requests'), quota.apiUsed, quota.apiLimit, AppColors.primary),
-        _buildQuotaCard(context.tr('profile_backtest_sessions'), quota.backtestUsed, quota.backtestLimit, AppColors.secondary),
-        _buildQuotaCard(context.tr('profile_neural_storage'), quota.storageUsed.toInt(), quota.storageLimit.toInt(), AppColors.accent),
+        _buildQuotaCard(
+          context.tr('profile_api_requests'),
+          quota.apiUsed,
+          quota.apiLimit,
+          AppColors.primary,
+          available: quota.hasApiQuota,
+        ),
+        _buildQuotaCard(
+          context.tr('profile_backtest_sessions'),
+          quota.backtestUsed,
+          quota.backtestLimit,
+          AppColors.secondary,
+          available: quota.hasBacktestQuota,
+        ),
+        _buildQuotaCard(
+          context.tr('profile_neural_storage'),
+          quota.storageUsed.toInt(),
+          quota.storageLimit.toInt(),
+          AppColors.accent,
+          available: quota.hasStorageQuota,
+        ),
       ],
     );
   }
 
-  Widget _buildQuotaCard(String label, int used, int limit, Color color) {
-    double progress = used / limit;
-    progress = progress.clamp(0.0, 1.0);
+  Widget _buildQuotaCard(
+    String label,
+    int used,
+    int limit,
+    Color color, {
+    required bool available,
+  }) {
+    final progress = available ? (used / limit).clamp(0.0, 1.0) : 0.0;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -645,8 +778,12 @@ class ProfileWebPage extends StatelessWidget {
                 ),
               ),
               Text(
-                '$used / $limit',
-                style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+                available ? '$used / $limit' : '—',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -691,13 +828,13 @@ class ProfileWebPage extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
             subtitle: Text(
-              context.tr('profile_2fa_subtitle'),
+              context.tr('profile_2fa_unavailable'),
               style: const TextStyle(color: Colors.white38, fontSize: 12),
             ),
             trailing: Switch(
-              value: state.is2FAEnabled,
-              onChanged: (v) => context.read<ProfileBloc>().add(Toggle2FARequested(v)),
-              activeColor: AppColors.primary,
+              value: false,
+              onChanged: null,
+              activeThumbColor: AppColors.primary,
             ),
           ),
           const SizedBox(height: 8),
@@ -732,7 +869,7 @@ class _PreferencesCard extends StatelessWidget {
       builder: (context, profileState) {
         final loaded = profileState is ProfileLoaded ? profileState : null;
         final pushEnabled = loaded?.pushNotificationsEnabled ?? true;
-        final dataEnabled = loaded?.dataSharingEnabled ?? true;
+        final dataEnabled = loaded?.dataSharingEnabled ?? false;
 
         return BlocBuilder<LocaleCubit, String>(
           builder: (context, lang) {
@@ -759,19 +896,27 @@ class _PreferencesCard extends StatelessWidget {
                   // Push Notifications
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+                    leading: const Icon(
+                      Icons.notifications_active,
+                      color: AppColors.primary,
+                    ),
                     title: Text(
                       context.tr('profile_push_notifications'),
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
                     subtitle: Text(
                       context.tr('profile_push_notifications_subtitle'),
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
                     ),
                     trailing: Switch(
                       value: pushEnabled,
-                      onChanged: (v) => context.read<ProfileBloc>().add(UpdatePushNotificationsRequested(v)),
-                      activeColor: AppColors.primary,
+                      onChanged: (v) => context.read<ProfileBloc>().add(
+                        UpdatePushNotificationsRequested(v),
+                      ),
+                      activeThumbColor: AppColors.primary,
                     ),
                   ),
                   const Divider(color: Colors.white10),
@@ -789,11 +934,19 @@ class _PreferencesCard extends StatelessWidget {
                       underline: const SizedBox(),
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       items: [
-                        DropdownMenuItem(value: 'vi', child: Text(context.tr('profile_language_vi'))),
-                        DropdownMenuItem(value: 'en', child: Text(context.tr('profile_language_en'))),
+                        DropdownMenuItem(
+                          value: 'vi',
+                          child: Text(context.tr('profile_language_vi')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'en',
+                          child: Text(context.tr('profile_language_en')),
+                        ),
                       ],
                       onChanged: (v) {
-                        if (v != null) context.read<LocaleCubit>().setLanguage(v);
+                        if (v != null) {
+                          context.read<LocaleCubit>().setLanguage(v);
+                        }
                       },
                     ),
                   ),
@@ -808,12 +961,17 @@ class _PreferencesCard extends StatelessWidget {
                     ),
                     subtitle: Text(
                       context.tr('profile_data_sharing_subtitle'),
-                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
                     ),
                     trailing: Switch(
                       value: dataEnabled,
-                      onChanged: (v) => context.read<ProfileBloc>().add(UpdateDataSharingRequested(v)),
-                      activeColor: AppColors.primary,
+                      onChanged: (v) => context.read<ProfileBloc>().add(
+                        UpdateDataSharingRequested(v),
+                      ),
+                      activeThumbColor: AppColors.primary,
                     ),
                   ),
                 ],
@@ -865,7 +1023,9 @@ class _WebTopNavbar extends StatelessWidget {
               builder: (context, authState) {
                 final isAuth = authState.status == AuthStatus.authenticated;
                 return Text(
-                  isAuth ? context.tr('profile_system_online') : context.tr('profile_connecting'),
+                  isAuth
+                      ? context.tr('profile_system_online')
+                      : context.tr('profile_connecting'),
                   style: TextStyle(
                     color: isAuth ? AppColors.primary : Colors.orange,
                     fontSize: 10,
@@ -876,12 +1036,9 @@ class _WebTopNavbar extends StatelessWidget {
               },
             ),
           ),
-          const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 16),
-          const Icon(Icons.notifications, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 8),
           IconButton(
-            onPressed: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+            onPressed: () =>
+                context.read<AuthBloc>().add(AuthLogoutRequested()),
             icon: const Icon(Icons.logout, color: AppColors.bear, size: 18),
           ),
         ],

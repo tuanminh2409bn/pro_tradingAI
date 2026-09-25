@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
@@ -22,20 +24,34 @@ import 'data/repositories/profile_repository.dart';
 import 'data/repositories/admin_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'core/constants/colors.dart';
+import 'core/constants/local_qa_mode.dart';
 import 'core/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  if (kIsWeb && LocalQaMode.enabled) {
+    await FirebaseAuth.instance.useAuthEmulator(
+      LocalQaMode.host,
+      LocalQaMode.authPort,
+    );
+    FirebaseFirestore.instance.useFirestoreEmulator(
+      LocalQaMode.host,
+      LocalQaMode.firestorePort,
+    );
+  }
 
   // Initialize GoogleSignIn for version 7.2.0
-  await GoogleSignIn.instance.initialize(
-    clientId: kIsWeb ? '22073478183-vahcdn471c8psgepsv3mukbsmqj3jv3o.apps.googleusercontent.com' : null,
-  );
-  
+  if (!(kIsWeb && LocalQaMode.enabled)) {
+    await GoogleSignIn.instance.initialize(
+      clientId: kIsWeb
+          ? '22073478183-vahcdn471c8psgepsv3mukbsmqj3jv3o.apps.googleusercontent.com'
+          : null,
+    );
+  }
+
   final authRepository = AuthRepository();
   final tradingRepository = TradingRepository();
   final newsRepository = NewsRepository();
@@ -46,7 +62,8 @@ void main() async {
   final referralRepository = ReferralRepository();
   final profileRepository = ProfileRepository();
   final adminRepository = AdminRepository();
-  
+  final fcmService = FCMService();
+
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -60,20 +77,19 @@ void main() async {
         RepositoryProvider.value(value: referralRepository),
         RepositoryProvider.value(value: profileRepository),
         RepositoryProvider.value(value: adminRepository),
+        RepositoryProvider.value(value: fcmService),
       ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider(
-              create: (context) => AuthBloc(
-                authRepository: authRepository,
-                profileRepository: profileRepository,
-              ),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) => AuthBloc(
+              authRepository: authRepository,
+              profileRepository: profileRepository,
             ),
-            BlocProvider(
-              create: (context) => LocaleCubit(),
-            ),
-          ],
-          child: const ProTradingApp(),
+          ),
+          BlocProvider(create: (context) => LocaleCubit()),
+        ],
+        child: const ProTradingApp(),
       ),
     ),
   );
@@ -102,16 +118,23 @@ class ProTradingApp extends StatelessWidget {
           home: BlocListener<AuthBloc, AuthState>(
             listener: (context, state) {
               if (state.status == AuthStatus.authenticated) {
-                FCMService().initialize(state.user?.uid);
+                if (!kIsWeb) {
+                  context.read<FCMService>().enable(state.user?.uid);
+                }
+              } else if (state.status == AuthStatus.unauthenticated && kIsWeb) {
+                context.read<FCMService>().disable();
               }
             },
             child: BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
                 if (state.status == AuthStatus.authenticated) {
-                  FCMService().initialize(state.user?.uid);
-                  return kIsWeb ? const WebDashboardShell() : const MobileDashboardShell();
+                  return kIsWeb
+                      ? const WebDashboardShell()
+                      : const MobileDashboardShell();
                 } else if (state.status == AuthStatus.unauthenticated) {
-                  return kIsWeb ? const LoginWebPage() : const LoginMobilePage();
+                  return kIsWeb
+                      ? const LoginWebPage()
+                      : const LoginMobilePage();
                 }
                 return const Scaffold(
                   body: Center(

@@ -84,7 +84,10 @@ class JournalRepository {
     final winRate = (winningTrades.length / totalTrades) * 100;
 
     // Total Profit
-    final totalProfit = trades.fold<double>(0.0, (sum, t) => sum + t.netProfit);
+    final totalProfit = trades.fold<double>(
+      0.0,
+      (total, trade) => total + trade.netProfit,
+    );
 
     // Average Profit
     final avgProfit = totalProfit / totalTrades;
@@ -100,11 +103,11 @@ class JournalRepository {
     // Profit Factor = gross profit / gross loss
     final grossProfit = winningTrades.fold<double>(
       0.0,
-      (sum, t) => sum + t.netProfit,
+      (total, trade) => total + trade.netProfit,
     );
     final grossLoss = losingTrades.fold<double>(
       0.0,
-      (sum, t) => sum + t.netProfit.abs(),
+      (total, trade) => total + trade.netProfit.abs(),
     );
     final profitFactor = grossLoss > 0
         ? grossProfit / grossLoss
@@ -114,11 +117,17 @@ class JournalRepository {
 
     // Average R:R Ratio
     final avgWin = winningTrades.isNotEmpty
-        ? winningTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit) /
+        ? winningTrades.fold<double>(
+                0.0,
+                (total, trade) => total + trade.netProfit,
+              ) /
               winningTrades.length
         : 0.0;
     final avgLoss = losingTrades.isNotEmpty
-        ? losingTrades.fold<double>(0.0, (sum, t) => sum + t.netProfit.abs()) /
+        ? losingTrades.fold<double>(
+                0.0,
+                (total, trade) => total + trade.netProfit.abs(),
+              ) /
               losingTrades.length
         : 0.0;
     final rrRatio = avgLoss > 0
@@ -158,7 +167,7 @@ class JournalRepository {
     }
 
     // AI Insight generation from real data
-    final aiInsight = _generateAIInsight(
+    final aiInsight = buildJournalInsight(
       totalTrades: totalTrades,
       winRate: winRate,
       totalProfit: totalProfit,
@@ -182,72 +191,109 @@ class JournalRepository {
       heatmapData: heatmapMap.values.toList(),
     );
   }
+}
 
-  String _generateAIInsight({
-    required int totalTrades,
-    required double winRate,
-    required double totalProfit,
-    required double bestTrade,
-    required double worstTrade,
-    required double profitFactor,
-    required List<TradeRecord> trades,
-  }) {
-    final buffer = StringBuffer();
+String buildJournalInsight({
+  required int totalTrades,
+  required double winRate,
+  required double totalProfit,
+  required double bestTrade,
+  required double worstTrade,
+  required double profitFactor,
+  required List<TradeRecord> trades,
+}) {
+  final buffer = StringBuffer();
 
-    // Performance summary
-    if (totalProfit > 0) {
-      buffer.write(
-        'Strong performance with \$${totalProfit.toStringAsFixed(2)} total profit across $totalTrades trades. ',
-      );
-    } else {
-      buffer.write(
-        'Portfolio is down \$${totalProfit.abs().toStringAsFixed(2)} across $totalTrades trades. Focus on risk management. ',
-      );
-    }
-
-    // Win rate insight
-    if (winRate >= 60) {
-      buffer.write(
-        'Your ${winRate.toStringAsFixed(1)}% win rate is excellent — maintain your edge. ',
-      );
-    } else if (winRate >= 45) {
-      buffer.write(
-        'Win rate at ${winRate.toStringAsFixed(1)}% is acceptable but can be improved with better entries. ',
-      );
-    } else {
-      buffer.write(
-        'Win rate of ${winRate.toStringAsFixed(1)}% is below average — consider reviewing your entry criteria. ',
-      );
-    }
-
-    // Recent trend (last 7 trades)
-    if (trades.length >= 7) {
-      final recentTrades = trades.sublist(trades.length - 7);
-      final recentWins = recentTrades.where((t) => t.netProfit > 0).length;
-      final recentWinRate = (recentWins / 7) * 100;
-      final diff = recentWinRate - winRate;
-      if (diff > 5) {
-        buffer.write(
-          'Your win rate improved by ${diff.toStringAsFixed(1)}% in the last 7 trades — momentum is building. ',
-        );
-      } else if (diff < -5) {
-        buffer.write(
-          'Recent 7 trades show a ${diff.abs().toStringAsFixed(1)}% drop in win rate — consider taking a break. ',
-        );
-      }
-    }
-
-    // Profit factor
-    if (profitFactor.isFinite && profitFactor > 2.0) {
-      buffer.write(
-        'Profit factor of ${profitFactor.toStringAsFixed(2)} indicates a robust strategy.',
-      );
-    } else if (profitFactor.isFinite && profitFactor < 1.0) {
-      buffer.write(
-        'Profit factor below 1.0 — losses are exceeding gains. Tighten stop losses.',
-      );
-    }
-
-    return buffer.toString();
+  // Performance summary
+  if (totalProfit > 0) {
+    buffer.write(
+      'Strong performance with \$${totalProfit.toStringAsFixed(2)} total profit across $totalTrades trades. ',
+    );
+  } else {
+    buffer.write(
+      'Portfolio is down \$${totalProfit.abs().toStringAsFixed(2)} across $totalTrades trades. Focus on risk management. ',
+    );
   }
+
+  // Win rate insight
+  if (winRate >= 60) {
+    buffer.write(
+      'Your ${winRate.toStringAsFixed(1)}% win rate is excellent — maintain your edge. ',
+    );
+  } else if (winRate >= 45) {
+    buffer.write(
+      'Win rate at ${winRate.toStringAsFixed(1)}% is acceptable but can be improved with better entries. ',
+    );
+  } else {
+    buffer.write(
+      'Win rate of ${winRate.toStringAsFixed(1)}% is below average — consider reviewing your entry criteria. ',
+    );
+  }
+
+  // Recent trend (last 7 trades)
+  if (trades.length >= 7) {
+    final recentTrades = trades.sublist(trades.length - 7);
+    final recentWins = recentTrades.where((t) => t.netProfit > 0).length;
+    final recentWinRate = (recentWins / 7) * 100;
+    final diff = recentWinRate - winRate;
+    if (diff > 5) {
+      buffer.write(
+        'Your win rate improved by ${diff.toStringAsFixed(1)}% in the last 7 trades — momentum is building. ',
+      );
+    } else if (diff < -5) {
+      buffer.write(
+        'Recent 7 trades show a ${diff.abs().toStringAsFixed(1)}% drop in win rate — consider taking a break. ',
+      );
+    }
+  }
+
+  final lossSlots = <(int, int), ({double pnl, int count})>{};
+  for (final trade in trades.where((trade) => trade.netProfit < 0)) {
+    final closeTime = trade.closeTime.toUtc();
+    final key = (closeTime.weekday, closeTime.hour);
+    final current = lossSlots[key];
+    lossSlots[key] = (
+      pnl: (current?.pnl ?? 0) + trade.netProfit,
+      count: (current?.count ?? 0) + 1,
+    );
+  }
+  if (lossSlots.isNotEmpty) {
+    final ordered = lossSlots.entries.toList()
+      ..sort((left, right) {
+        final byLoss = left.value.pnl.compareTo(right.value.pnl);
+        if (byLoss != 0) return byLoss;
+        final byDay = left.key.$1.compareTo(right.key.$1);
+        return byDay != 0 ? byDay : left.key.$2.compareTo(right.key.$2);
+      });
+    final worst = ordered.first;
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    final hour = worst.key.$2.toString().padLeft(2, '0');
+    final tradeLabel = worst.value.count == 1 ? 'trade' : 'trades';
+    buffer.write(
+      'Measured loss concentration: ${weekdays[worst.key.$1 - 1]} '
+      '$hour:00 UTC, ${worst.value.count} measured losing $tradeLabel, '
+      '-\$${worst.value.pnl.abs().toStringAsFixed(2)} net. ',
+    );
+  }
+
+  // Profit factor
+  if (profitFactor.isFinite && profitFactor > 2.0) {
+    buffer.write(
+      'Profit factor of ${profitFactor.toStringAsFixed(2)} indicates a robust strategy.',
+    );
+  } else if (profitFactor.isFinite && profitFactor < 1.0) {
+    buffer.write(
+      'Profit factor below 1.0 — losses are exceeding gains. Tighten stop losses.',
+    );
+  }
+
+  return buffer.toString();
 }

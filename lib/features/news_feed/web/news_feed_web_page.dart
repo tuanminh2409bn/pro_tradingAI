@@ -1,9 +1,10 @@
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/constants/backend_endpoints.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../data/models/news_models.dart';
 import '../../../data/repositories/news_repository.dart';
@@ -49,7 +50,7 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
             if (state is NewsError) {
               return Center(
                 child: Text(
-                  state.message,
+                  context.tr(state.message),
                   style: const TextStyle(color: AppColors.bear),
                 ),
               );
@@ -154,6 +155,22 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
   Widget _buildSentimentPulse(SentimentPulse pulse) {
     return Builder(
       builder: (context) {
+        if (!pulse.isAvailable) {
+          return Container(
+            height: 180,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white10),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              context.tr('news_sentiment_unavailable'),
+              style: const TextStyle(color: Colors.white38),
+            ),
+          );
+        }
         String moodText;
         if (pulse.greedPercent > 60) {
           moodText = context.tr('news_bullish');
@@ -445,9 +462,13 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                       final isAi = msg['isAi'] as bool;
                       // Sentinel: __WELCOME__ → always render localized text
                       final rawText = msg['text'] as String;
-                      final text = rawText == '__WELCOME__'
-                          ? context.tr('news_ai_welcome')
-                          : rawText;
+                      final text = switch (rawText) {
+                        '__WELCOME__' => context.tr('news_ai_welcome'),
+                        '__AI_UNAVAILABLE__' => context.tr(
+                          'news_ai_unavailable',
+                        ),
+                        _ => rawText,
+                      };
                       return _ChatMessage(text: text, isAi: isAi);
                     },
                   ),
@@ -571,12 +592,15 @@ class _NewsCard extends StatelessWidget {
   final NewsArticle article;
   const _NewsCard({required this.article});
 
-  static const String _backendUrl = 'https://103-69-189-243.sslip.io';
+  static const String _backendUrl = BackendEndpoints.apiBaseUrl;
 
-  /// Route external image URLs through our backend proxy to bypass CORS.
-  String _proxyImage(String url) {
-    if (url.isEmpty) {
-      return 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80';
+  /// Route valid external image URLs through the constrained backend proxy.
+  String? _proxyImage(String url) {
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return null;
     }
     // Unsplash already has CORS headers — no need to proxy
     if (url.contains('unsplash.com')) return url;
@@ -584,12 +608,31 @@ class _NewsCard extends StatelessWidget {
     return '$_backendUrl/api/image-proxy?url=$encoded';
   }
 
+  Widget _articleImage(
+    String url, {
+    required double height,
+    required IconData fallbackIcon,
+  }) {
+    final imageSrc = _proxyImage(url);
+    Widget fallback() => Container(
+      height: height,
+      color: Colors.grey.shade900,
+      child: Center(child: Icon(fallbackIcon, color: Colors.white24, size: 40)),
+    );
+    if (imageSrc == null) return fallback();
+    return Image.network(
+      imageSrc,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => fallback(),
+    );
+  }
+
   void _showArticleDetail(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
-        final imageSrc = _proxyImage(article.imageUrl);
-
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(
@@ -620,24 +663,10 @@ class _NewsCard extends StatelessWidget {
                   // Image header with Close button
                   Stack(
                     children: [
-                      Image.network(
-                        imageSrc,
+                      _articleImage(
+                        article.imageUrl,
                         height: 240,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 240,
-                            color: Colors.grey.shade900,
-                            child: const Center(
-                              child: Icon(
-                                Icons.broken_image,
-                                color: Colors.white24,
-                                size: 48,
-                              ),
-                            ),
-                          );
-                        },
+                        fallbackIcon: Icons.broken_image,
                       ),
                       // Gradient overlay
                       Positioned.fill(
@@ -690,7 +719,10 @@ class _NewsCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                article.source.toUpperCase(),
+                                (article.source == '__SOURCE_UNAVAILABLE__'
+                                        ? context.tr('news_source_unavailable')
+                                        : article.source)
+                                    .toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 10,
@@ -700,7 +732,9 @@ class _NewsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              article.timeAgo,
+                              article.timeAgo == '__TIME_UNAVAILABLE__'
+                                  ? context.tr('news_time_unavailable')
+                                  : article.timeAgo,
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -756,7 +790,7 @@ class _NewsCard extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (article.impact.toUpperCase() == 'HIGH') ...[
+                        if (article.scheduledEvent != null) ...[
                           OutlinedButton(
                             onPressed: () {
                               Navigator.pop(context);
@@ -811,10 +845,17 @@ class _NewsCard extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            onPressed: () {
-                              // Use dart:html window.open() — the only 100% reliable
-                              // method to open external URLs on Flutter Web.
-                              html.window.open(article.url, '_blank');
+                            onPressed: () async {
+                              final uri = Uri.tryParse(article.url);
+                              if (uri == null ||
+                                  (uri.scheme != 'https' &&
+                                      uri.scheme != 'http')) {
+                                return;
+                              }
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
@@ -838,8 +879,6 @@ class _NewsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageSrc = _proxyImage(article.imageUrl);
-
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -863,24 +902,10 @@ class _NewsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Article Image
-                Image.network(
-                  imageSrc,
+                _articleImage(
+                  article.imageUrl,
                   height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 140,
-                      color: Colors.grey.shade900,
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.white12,
-                          size: 32,
-                        ),
-                      ),
-                    );
-                  },
+                  fallbackIcon: Icons.image_not_supported,
                 ),
                 // Article Content
                 Padding(
@@ -891,7 +916,9 @@ class _NewsCard extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            article.source,
+                            article.source == '__SOURCE_UNAVAILABLE__'
+                                ? context.tr('news_source_unavailable')
+                                : article.source,
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.primary,
@@ -921,7 +948,9 @@ class _NewsCard extends StatelessWidget {
                           ],
                           const Spacer(),
                           Text(
-                            article.timeAgo,
+                            article.timeAgo == '__TIME_UNAVAILABLE__'
+                                ? context.tr('news_time_unavailable')
+                                : article.timeAgo,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.white24,
@@ -1039,10 +1068,6 @@ class _WebTopNavbar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 16),
-          const Icon(Icons.notifications, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 8),
           IconButton(
             onPressed: () =>
                 context.read<AuthBloc>().add(AuthLogoutRequested()),

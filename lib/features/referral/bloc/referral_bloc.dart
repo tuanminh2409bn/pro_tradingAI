@@ -12,49 +12,60 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
   StreamSubscription? _historySubscription;
 
   ReferralBloc({required ReferralRepository referralRepository})
-      : _referralRepository = referralRepository,
-        super(ReferralInitial()) {
+    : _referralRepository = referralRepository,
+      super(ReferralInitial()) {
     on<LoadReferralData>(_onLoadData);
     on<UpdateReferralStats>(_onUpdateStats);
     on<UpdateReferralNetwork>(_onUpdateNetwork);
     on<UpdateRewardHistory>(_onUpdateHistory);
-    on<WithdrawRewards>(_onWithdraw);
+    on<ReferralStreamFailed>(_onStreamFailed);
   }
 
-  Future<void> _onLoadData(LoadReferralData event, Emitter<ReferralState> emit) async {
+  Future<void> _onLoadData(
+    LoadReferralData event,
+    Emitter<ReferralState> emit,
+  ) async {
     emit(ReferralLoading());
     try {
       final userId = event.userId;
-      
+
       _statsSubscription?.cancel();
       _networkSubscription?.cancel();
       _historySubscription?.cancel();
 
       if (userId != null && userId.isNotEmpty) {
-        _statsSubscription = _referralRepository.getReferralStats(userId).listen(
-          (stats) => add(UpdateReferralStats(stats)),
-          onError: (e) => print('ReferralBloc: Stats error: $e'),
-        );
+        _statsSubscription = _referralRepository
+            .getReferralStats(userId)
+            .listen(
+              (stats) => add(UpdateReferralStats(stats)),
+              onError: (_) => add(const ReferralStreamFailed()),
+            );
 
-        _networkSubscription = _referralRepository.getNetwork(userId).listen(
-          (network) => add(UpdateReferralNetwork(network)),
-          onError: (e) => print('ReferralBloc: Network error: $e'),
-        );
+        _networkSubscription = _referralRepository
+            .getNetwork(userId)
+            .listen(
+              (network) => add(UpdateReferralNetwork(network)),
+              onError: (_) => add(const ReferralStreamFailed()),
+            );
 
-        _historySubscription = _referralRepository.getRewardHistory(userId).listen(
-          (history) => add(UpdateRewardHistory(history)),
-          onError: (e) => print('ReferralBloc: History error: $e'),
-        );
+        _historySubscription = _referralRepository
+            .getRewardHistory(userId)
+            .listen(
+              (history) => add(UpdateRewardHistory(history)),
+              onError: (_) => add(const ReferralStreamFailed()),
+            );
       }
 
       // Emit initial Loaded state immediately to avoid infinite spinner
-      emit(const ReferralLoaded(
-        stats: ReferralStats(totalEarnings: 0.0, f1Count: 0, f2Count: 0, referralLink: 'https://protrading.ai/ref/demo'),
-        network: [],
-        history: [],
-      ));
-    } catch (e) {
-      emit(ReferralError(e.toString()));
+      emit(
+        const ReferralLoaded(
+          stats: ReferralStats.unavailable(),
+          network: [],
+          history: [],
+        ),
+      );
+    } catch (_) {
+      emit(const ReferralError('common_data_unavailable'));
     }
   }
 
@@ -64,20 +75,29 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     }
   }
 
-  void _onUpdateNetwork(UpdateReferralNetwork event, Emitter<ReferralState> emit) {
+  void _onUpdateNetwork(
+    UpdateReferralNetwork event,
+    Emitter<ReferralState> emit,
+  ) {
     if (state is ReferralLoaded) {
       emit((state as ReferralLoaded).copyWith(network: event.network));
     }
   }
 
-  void _onUpdateHistory(UpdateRewardHistory event, Emitter<ReferralState> emit) {
+  void _onUpdateHistory(
+    UpdateRewardHistory event,
+    Emitter<ReferralState> emit,
+  ) {
     if (state is ReferralLoaded) {
       emit((state as ReferralLoaded).copyWith(history: event.history));
     }
   }
 
-  Future<void> _onWithdraw(WithdrawRewards event, Emitter<ReferralState> emit) async {
-    // Withdrawal logic
+  void _onStreamFailed(
+    ReferralStreamFailed event,
+    Emitter<ReferralState> emit,
+  ) {
+    emit(const ReferralError('common_data_unavailable'));
   }
 
   @override

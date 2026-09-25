@@ -8,6 +8,7 @@ abstract class AdminState extends Equatable {
 }
 
 class AdminInitial extends AdminState {}
+
 class AdminLoading extends AdminState {}
 
 class AdminLoaded extends AdminState {
@@ -15,18 +16,32 @@ class AdminLoaded extends AdminState {
   final List<PendingRequest> requests;
   final AIConfig? aiConfig;
   final bool aiConfigSaving;
+  final bool aiConfigLoaded;
   final bool tradingEnabled;
   final List<ServiceStatus> serviceStatuses;
   final GlobalRiskConfig globalRisk;
+  final int actionResultNonce;
+  final String actionMessageKey;
+  final bool actionSucceeded;
+  final List<Map<String, dynamic>> dailyStats;
+  final RadarAdminConfig? radarConfig;
+  final bool radarConfigLoaded;
 
   const AdminLoaded({
     required this.stats,
     required this.requests,
     this.aiConfig,
     this.aiConfigSaving = false,
-    this.tradingEnabled = true,
+    this.aiConfigLoaded = false,
+    this.tradingEnabled = false,
     this.serviceStatuses = const [],
-    this.globalRisk = const GlobalRiskConfig(),
+    this.globalRisk = const GlobalRiskConfig.unavailable(),
+    this.actionResultNonce = 0,
+    this.actionMessageKey = '',
+    this.actionSucceeded = false,
+    this.dailyStats = const [],
+    this.radarConfig,
+    this.radarConfigLoaded = false,
   });
 
   AdminLoaded copyWith({
@@ -34,23 +49,52 @@ class AdminLoaded extends AdminState {
     List<PendingRequest>? requests,
     AIConfig? aiConfig,
     bool? aiConfigSaving,
+    bool? aiConfigLoaded,
     bool? tradingEnabled,
     List<ServiceStatus>? serviceStatuses,
     GlobalRiskConfig? globalRisk,
+    int? actionResultNonce,
+    String? actionMessageKey,
+    bool? actionSucceeded,
+    List<Map<String, dynamic>>? dailyStats,
+    RadarAdminConfig? radarConfig,
+    bool? radarConfigLoaded,
   }) {
     return AdminLoaded(
       stats: stats ?? this.stats,
       requests: requests ?? this.requests,
       aiConfig: aiConfig ?? this.aiConfig,
       aiConfigSaving: aiConfigSaving ?? this.aiConfigSaving,
+      aiConfigLoaded: aiConfigLoaded ?? this.aiConfigLoaded,
       tradingEnabled: tradingEnabled ?? this.tradingEnabled,
       serviceStatuses: serviceStatuses ?? this.serviceStatuses,
       globalRisk: globalRisk ?? this.globalRisk,
+      actionResultNonce: actionResultNonce ?? this.actionResultNonce,
+      actionMessageKey: actionMessageKey ?? this.actionMessageKey,
+      actionSucceeded: actionSucceeded ?? this.actionSucceeded,
+      dailyStats: dailyStats ?? this.dailyStats,
+      radarConfig: radarConfig ?? this.radarConfig,
+      radarConfigLoaded: radarConfigLoaded ?? this.radarConfigLoaded,
     );
   }
 
   @override
-  List<Object?> get props => [stats, requests, aiConfig, aiConfigSaving, tradingEnabled, serviceStatuses, globalRisk];
+  List<Object?> get props => [
+    stats,
+    requests,
+    aiConfig,
+    aiConfigSaving,
+    aiConfigLoaded,
+    tradingEnabled,
+    serviceStatuses,
+    globalRisk,
+    actionResultNonce,
+    actionMessageKey,
+    actionSucceeded,
+    dailyStats,
+    radarConfig,
+    radarConfigLoaded,
+  ];
 }
 
 class AdminError extends AdminState {

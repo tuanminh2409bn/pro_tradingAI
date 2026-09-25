@@ -11,6 +11,7 @@ import '../../auth/bloc/auth_event.dart';
 import '../bloc/journal_bloc.dart';
 import '../bloc/journal_event.dart';
 import '../bloc/journal_state.dart';
+import 'widgets/journal_audio_button.dart';
 
 class JournalWebPage extends StatelessWidget {
   final String? userId;
@@ -36,7 +37,7 @@ class JournalWebPage extends StatelessWidget {
             if (state is JournalError) {
               return Center(
                 child: Text(
-                  state.message,
+                  context.tr(state.message),
                   style: const TextStyle(color: AppColors.bear),
                 ),
               );
@@ -400,32 +401,7 @@ class JournalWebPage extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Tooltip(
-                message: context.tr('listen_ai_advice'),
-                child: InkWell(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.tr('journal_playing_voice')),
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.volume_up,
-                      color: AppColors.primary,
-                      size: 14,
-                    ),
-                  ),
-                ),
-              ),
+              JournalAudioButton(insight: stats.aiInsight),
             ],
           ),
           const SizedBox(height: 16),
@@ -500,10 +476,12 @@ class JournalWebPage extends StatelessWidget {
     double maxLoss = 0;
     double maxProfit = 0;
     for (final entry in heatmapLookup.values) {
-      if (entry.totalPnL < 0 && entry.totalPnL.abs() > maxLoss)
+      if (entry.totalPnL < 0 && entry.totalPnL.abs() > maxLoss) {
         maxLoss = entry.totalPnL.abs();
-      if (entry.totalPnL > 0 && entry.totalPnL > maxProfit)
+      }
+      if (entry.totalPnL > 0 && entry.totalPnL > maxProfit) {
         maxProfit = entry.totalPnL;
+      }
     }
 
     return Container(
@@ -817,6 +795,7 @@ class _TradeTable extends StatelessWidget {
         5: IntrinsicColumnWidth(),
         6: IntrinsicColumnWidth(),
         7: IntrinsicColumnWidth(),
+        8: IntrinsicColumnWidth(),
       },
       children: [
         _buildRow([
@@ -826,6 +805,7 @@ class _TradeTable extends StatelessWidget {
           context.tr('entry'),
           context.tr('exit'),
           context.tr('swap'),
+          context.tr('commission'),
           context.tr('slippage'),
           context.tr('net_pl'),
         ], isHeader: true),
@@ -836,13 +816,25 @@ class _TradeTable extends StatelessWidget {
             '${trade.lotSize} ${context.tr("journal_lots")}',
             trade.entryPrice.toStringAsFixed(2),
             trade.exitPrice.toStringAsFixed(2),
-            trade.swap.toStringAsFixed(2),
-            trade.slippage.toStringAsFixed(2),
+            _formatBrokerMetric(trade.swap, trade),
+            _formatBrokerMetric(trade.commission, trade),
+            _formatBrokerMetric(trade.slippage, trade, decimalPlaces: 5),
             '${trade.netProfit >= 0 ? '+' : ''}\$${trade.netProfit.toStringAsFixed(2)}',
           ], isPositive: trade.netProfit >= 0),
         ),
       ],
     );
+  }
+
+  String _formatBrokerMetric(
+    double? value,
+    TradeRecord trade, {
+    int decimalPlaces = 2,
+  }) {
+    final source = trade.metricSource;
+    final currency = trade.metricCurrency;
+    if (value == null || source == null || currency == null) return '—';
+    return '${value.toStringAsFixed(decimalPlaces)} $currency\n$source';
   }
 
   TableRow _buildRow(
@@ -916,10 +908,6 @@ class _WebTopNavbar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Icon(Icons.rss_feed, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 16),
-          const Icon(Icons.notifications, color: Color(0xFFc3c6d8), size: 18),
-          const SizedBox(width: 8),
           IconButton(
             onPressed: () =>
                 context.read<AuthBloc>().add(AuthLogoutRequested()),

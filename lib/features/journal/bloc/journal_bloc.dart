@@ -11,62 +11,82 @@ class JournalBloc extends Bloc<JournalEvent, JournalState> {
   StreamSubscription? _statsSubscription;
 
   JournalBloc({required JournalRepository journalRepository})
-      : _journalRepository = journalRepository,
-        super(JournalInitial()) {
+    : _journalRepository = journalRepository,
+      super(JournalInitial()) {
     on<LoadJournalData>(_onLoadJournalData);
     on<UpdateTradeHistory>(_onUpdateTradeHistory);
     on<UpdateJournalStats>(_onUpdateJournalStats);
+    on<JournalStreamFailed>(_onStreamFailed);
   }
 
-  Future<void> _onLoadJournalData(LoadJournalData event, Emitter<JournalState> emit) async {
+  Future<void> _onLoadJournalData(
+    LoadJournalData event,
+    Emitter<JournalState> emit,
+  ) async {
     emit(JournalLoading());
     try {
       final userId = event.userId;
-      
+
       _tradesSubscription?.cancel();
       _statsSubscription?.cancel();
 
       if (userId != null && userId.isNotEmpty) {
-        _tradesSubscription = _journalRepository.getTradeHistory(userId).listen(
-          (trades) => add(UpdateTradeHistory(trades)),
-          onError: (e) => print('JournalBloc: Trades error: $e'),
-        );
+        _tradesSubscription = _journalRepository
+            .getTradeHistory(userId)
+            .listen(
+              (trades) => add(UpdateTradeHistory(trades)),
+              onError: (_) => add(const JournalStreamFailed()),
+            );
 
-        _statsSubscription = _journalRepository.getJournalStats(userId).listen(
-          (stats) => add(UpdateJournalStats(stats)),
-          onError: (e) => print('JournalBloc: Stats error: $e'),
-        );
+        _statsSubscription = _journalRepository
+            .getJournalStats(userId)
+            .listen(
+              (stats) => add(UpdateJournalStats(stats)),
+              onError: (_) => add(const JournalStreamFailed()),
+            );
       }
 
       // Emit initial Loaded state with empty data while streams load
-      emit(const JournalLoaded(
-        trades: [],
-        stats: JournalStats(
-          totalProfit: 0.0,
-          winRate: 0.0,
-          profitFactor: 0.0,
-          rrRatio: '0:0',
-          equityData: [],
-          totalTrades: 0,
-          bestTrade: 0.0,
-          worstTrade: 0.0,
-          avgProfit: 0.0,
-          aiInsight: 'Loading trade data...',
-          heatmapData: [],
+      emit(
+        const JournalLoaded(
+          trades: [],
+          stats: JournalStats(
+            totalProfit: 0.0,
+            winRate: 0.0,
+            profitFactor: 0.0,
+            rrRatio: '0:0',
+            equityData: [],
+            totalTrades: 0,
+            bestTrade: 0.0,
+            worstTrade: 0.0,
+            avgProfit: 0.0,
+            aiInsight: 'Loading trade data...',
+            heatmapData: [],
+          ),
         ),
-      ));
-    } catch (e) {
-      emit(JournalError(e.toString()));
+      );
+    } catch (_) {
+      emit(const JournalError('common_data_unavailable'));
     }
   }
 
-  void _onUpdateTradeHistory(UpdateTradeHistory event, Emitter<JournalState> emit) {
+  void _onStreamFailed(JournalStreamFailed event, Emitter<JournalState> emit) {
+    emit(const JournalError('common_data_unavailable'));
+  }
+
+  void _onUpdateTradeHistory(
+    UpdateTradeHistory event,
+    Emitter<JournalState> emit,
+  ) {
     if (state is JournalLoaded) {
       emit((state as JournalLoaded).copyWith(trades: event.trades));
     }
   }
 
-  void _onUpdateJournalStats(UpdateJournalStats event, Emitter<JournalState> emit) {
+  void _onUpdateJournalStats(
+    UpdateJournalStats event,
+    Emitter<JournalState> emit,
+  ) {
     if (state is JournalLoaded) {
       emit((state as JournalLoaded).copyWith(stats: event.stats));
     }

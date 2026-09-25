@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -13,7 +14,8 @@ class LoginMobilePage extends StatefulWidget {
   State<LoginMobilePage> createState() => _LoginMobilePageState();
 }
 
-class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProviderStateMixin {
+class _LoginMobilePageState extends State<LoginMobilePage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
 
   @override
@@ -39,7 +41,10 @@ class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProv
         listener: (context, state) {
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.bear),
+              SnackBar(
+                content: Text(context.tr(state.errorMessage!)),
+                backgroundColor: AppColors.bear,
+              ),
             );
           }
         },
@@ -51,7 +56,9 @@ class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProv
                 animation: _animationController,
                 builder: (context, child) {
                   return CustomPaint(
-                    painter: MobileBackgroundPainter(_animationController.value),
+                    painter: MobileBackgroundPainter(
+                      _animationController.value,
+                    ),
                   );
                 },
               ),
@@ -100,9 +107,11 @@ class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProv
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state.status == AuthStatus.loading;
-        
+
         return GestureDetector(
-          onTap: isLoading ? null : () => context.read<AuthBloc>().add(AuthGoogleSignInRequested()),
+          onTap: isLoading
+              ? null
+              : () => context.read<AuthBloc>().add(AuthGoogleSignInRequested()),
           child: Container(
             height: 60,
             decoration: BoxDecoration(
@@ -123,13 +132,17 @@ class _LoginMobilePageState extends State<LoginMobilePage> with SingleTickerProv
                   const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.background,
+                    ),
                   )
                 else ...[
                   Image.asset(
                     'assets/google_logo.png',
                     height: 24,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.login, color: Colors.black),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.login, color: Colors.black),
                   ),
                   const SizedBox(width: 16),
                   const Text(
@@ -163,10 +176,14 @@ class MobileBackgroundPainter extends CustomPainter {
 
     // Draw some moving "data bubbles"
     for (int i = 0; i < 8; i++) {
-      double x = (size.width * (i / 8)) + (math.sin(animationValue * 2 * math.pi + i) * 30);
-      double y = (size.height * ((i * 1.3) % 1.0)) + (math.cos(animationValue * 2 * math.pi + i) * 50);
+      double x =
+          (size.width * (i / 8)) +
+          (math.sin(animationValue * 2 * math.pi + i) * 30);
+      double y =
+          (size.height * ((i * 1.3) % 1.0)) +
+          (math.cos(animationValue * 2 * math.pi + i) * 50);
       double radius = 50 + math.sin(animationValue * 2 * math.pi + i) * 20;
-      
+
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
 
@@ -188,4 +205,3 @@ class MobileBackgroundPainter extends CustomPainter {
     return oldDelegate.animationValue != animationValue;
   }
 }
-

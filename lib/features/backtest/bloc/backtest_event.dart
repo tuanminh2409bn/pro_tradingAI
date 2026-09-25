@@ -18,6 +18,24 @@ class StartBacktestSession extends BacktestEvent {
   List<Object?> get props => [symbol, initialBalance, userId];
 }
 
+class ReplayTick extends BacktestEvent {}
+
+class SeekReplayCursor extends BacktestEvent {
+  final int cursor;
+  const SeekReplayCursor(this.cursor);
+
+  @override
+  List<Object?> get props => [cursor];
+}
+
+class StepReplayCursor extends BacktestEvent {
+  final int direction;
+  const StepReplayCursor(this.direction);
+
+  @override
+  List<Object?> get props => [direction];
+}
+
 class TogglePlayback extends BacktestEvent {}
 
 class UpdateSpeed extends BacktestEvent {

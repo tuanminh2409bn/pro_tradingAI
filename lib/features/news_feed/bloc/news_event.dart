@@ -59,3 +59,7 @@ class NewsChatHistoryLoaded extends NewsEvent {
 class ClearNewsChatHistory extends NewsEvent {
   const ClearNewsChatHistory();
 }
+
+class NewsStreamFailed extends NewsEvent {
+  const NewsStreamFailed();
+}

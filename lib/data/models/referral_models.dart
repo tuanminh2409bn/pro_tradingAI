@@ -5,16 +5,33 @@ class ReferralStats extends Equatable {
   final int f1Count;
   final int f2Count;
   final String referralLink;
+  final bool isAvailable;
 
   const ReferralStats({
     required this.totalEarnings,
     required this.f1Count,
     required this.f2Count,
     required this.referralLink,
+    this.isAvailable = true,
   });
 
+  const ReferralStats.unavailable()
+    : totalEarnings = 0,
+      f1Count = 0,
+      f2Count = 0,
+      referralLink = '',
+      isAvailable = false;
+
+  bool get hasReferralLink => referralLink.trim().isNotEmpty;
+
   @override
-  List<Object?> get props => [totalEarnings, f1Count, f2Count, referralLink];
+  List<Object?> get props => [
+    totalEarnings,
+    f1Count,
+    f2Count,
+    referralLink,
+    isAvailable,
+  ];
 }
 
 class MemberNode extends Equatable {
@@ -53,4 +70,382 @@ class RewardTransaction extends Equatable {
 
   @override
   List<Object?> get props => [title, date, amount, status];
+}
+
+class ReferralIdentity extends Equatable {
+  final String code;
+  final Uri uri;
+
+  const ReferralIdentity._({required this.code, required this.uri});
+
+  factory ReferralIdentity.fromServerIssuedCode({
+    required Uri baseUri,
+    required String code,
+  }) {
+    final normalizedCode = code.trim();
+    if (baseUri.scheme != 'https' ||
+        baseUri.host.isEmpty ||
+        baseUri.hasQuery ||
+        baseUri.hasFragment ||
+        baseUri.userInfo.isNotEmpty ||
+        !RegExp(r'^[A-Za-z0-9_-]{6,64}$').hasMatch(normalizedCode)) {
+      throw ArgumentError('Invalid referral origin or server-issued code');
+    }
+    final segments = [
+      ...baseUri.pathSegments.where((segment) => segment.isNotEmpty),
+      normalizedCode,
+    ];
+    return ReferralIdentity._(
+      code: normalizedCode,
+      uri: baseUri.replace(pathSegments: segments),
+    );
+  }
+
+  String get qrPayload => uri.toString();
+
+  @override
+  List<Object?> get props => [code, uri];
+}
+
+enum MarketingAssetType { banner, video }
+
+enum MarketingKitStatus { readyForRenderer, unavailable }
+
+class MarketingAssetTemplate extends Equatable {
+  static const referralCodeToken = '{{REFERRAL_CODE}}';
+
+  final String id;
+  final MarketingAssetType type;
+  final Uri sourceUri;
+  final String licenseReference;
+  final bool isApproved;
+  final String overlayTemplate;
+
+  const MarketingAssetTemplate({
+    required this.id,
+    required this.type,
+    required this.sourceUri,
+    required this.licenseReference,
+    required this.isApproved,
+    required this.overlayTemplate,
+  });
+
+  @override
+  List<Object?> get props => [
+    id,
+    type,
+    sourceUri,
+    licenseReference,
+    isApproved,
+    overlayTemplate,
+  ];
+}
+
+class PersonalizedMarketingAsset extends Equatable {
+  final String templateId;
+  final MarketingAssetType type;
+  final Uri sourceUri;
+  final String licenseReference;
+  final String referralCode;
+  final String overlayText;
+
+  const PersonalizedMarketingAsset({
+    required this.templateId,
+    required this.type,
+    required this.sourceUri,
+    required this.licenseReference,
+    required this.referralCode,
+    required this.overlayText,
+  });
+
+  @override
+  List<Object?> get props => [
+    templateId,
+    type,
+    sourceUri,
+    licenseReference,
+    referralCode,
+    overlayText,
+  ];
+}
+
+class MarketingKitPreparation extends Equatable {
+  final MarketingKitStatus status;
+  final List<PersonalizedMarketingAsset> assets;
+  final String? unavailableReason;
+
+  MarketingKitPreparation._({
+    required this.status,
+    required List<PersonalizedMarketingAsset> assets,
+    required this.unavailableReason,
+  }) : assets = List<PersonalizedMarketingAsset>.unmodifiable(assets);
+
+  factory MarketingKitPreparation.prepare({
+    required ReferralIdentity identity,
+    required Iterable<MarketingAssetTemplate> templates,
+  }) {
+    final approved = templates.where(
+      (template) =>
+          template.isApproved && template.licenseReference.trim().isNotEmpty,
+    );
+    final seenIds = <String>{};
+    final personalized = <PersonalizedMarketingAsset>[];
+    for (final template in approved) {
+      final id = template.id.trim();
+      if (id.isEmpty ||
+          !seenIds.add(id) ||
+          template.sourceUri.scheme != 'https' ||
+          template.sourceUri.host.isEmpty ||
+          !template.overlayTemplate.contains(
+            MarketingAssetTemplate.referralCodeToken,
+          )) {
+        throw const FormatException('Invalid approved marketing asset');
+      }
+      personalized.add(
+        PersonalizedMarketingAsset(
+          templateId: id,
+          type: template.type,
+          sourceUri: template.sourceUri,
+          licenseReference: template.licenseReference.trim(),
+          referralCode: identity.code,
+          overlayText: template.overlayTemplate.replaceAll(
+            MarketingAssetTemplate.referralCodeToken,
+            identity.code,
+          ),
+        ),
+      );
+    }
+    if (personalized.isEmpty) {
+      return MarketingKitPreparation._(
+        status: MarketingKitStatus.unavailable,
+        assets: const [],
+        unavailableReason: 'no_approved_marketing_assets',
+      );
+    }
+    return MarketingKitPreparation._(
+      status: MarketingKitStatus.readyForRenderer,
+      assets: personalized,
+      unavailableReason: null,
+    );
+  }
+
+  @override
+  List<Object?> get props => [status, assets, unavailableReason];
+}
+
+enum LedgerDirection { credit, debit }
+
+enum LedgerEntryState { pending, settled, reversed }
+
+class ReferralLedgerEntry extends Equatable {
+  final String id;
+  final double amount;
+  final String currency;
+  final LedgerDirection direction;
+  final LedgerEntryState state;
+
+  const ReferralLedgerEntry({
+    required this.id,
+    required this.amount,
+    required this.currency,
+    required this.direction,
+    required this.state,
+  });
+
+  @override
+  List<Object?> get props => [id, amount, currency, direction, state];
+}
+
+class ReferralLedger extends Equatable {
+  final List<ReferralLedgerEntry> entries;
+  final String currency;
+  final double availableBalance;
+
+  factory ReferralLedger(Iterable<ReferralLedgerEntry> sourceEntries) {
+    final entries = sourceEntries.toList(growable: false);
+    if (entries.isEmpty) {
+      throw ArgumentError('Referral ledger requires authoritative entries');
+    }
+    final ids = <String>{};
+    String? currency;
+    var availableBalance = 0.0;
+    for (final entry in entries) {
+      final id = entry.id.trim();
+      final entryCurrency = entry.currency.trim().toUpperCase();
+      if (id.isEmpty ||
+          !ids.add(id) ||
+          !entry.amount.isFinite ||
+          entry.amount <= 0 ||
+          entryCurrency.isEmpty ||
+          (currency != null && currency != entryCurrency)) {
+        throw ArgumentError('Invalid or inconsistent referral ledger entry');
+      }
+      currency ??= entryCurrency;
+      if (entry.state == LedgerEntryState.settled) {
+        availableBalance += entry.direction == LedgerDirection.credit
+            ? entry.amount
+            : -entry.amount;
+      }
+    }
+    if (availableBalance < 0) {
+      throw const FormatException('Referral ledger has a negative balance');
+    }
+    return ReferralLedger._(
+      entries: entries,
+      currency: currency!,
+      availableBalance: availableBalance,
+    );
+  }
+
+  ReferralLedger._({
+    required List<ReferralLedgerEntry> entries,
+    required this.currency,
+    required this.availableBalance,
+  }) : entries = List<ReferralLedgerEntry>.unmodifiable(entries);
+
+  @override
+  List<Object?> get props => [entries, currency, availableBalance];
+}
+
+class WithdrawalPolicy extends Equatable {
+  final String currency;
+  final double minimumAmount;
+
+  const WithdrawalPolicy({required this.currency, required this.minimumAmount});
+
+  @override
+  List<Object?> get props => [currency, minimumAmount];
+}
+
+enum WithdrawalStatus { pending, approved, rejected }
+
+enum WithdrawalActorRole { user, superAdmin }
+
+class WithdrawalAuditEntry extends Equatable {
+  final WithdrawalStatus from;
+  final WithdrawalStatus to;
+  final String actorUid;
+  final DateTime occurredAt;
+  final String? reason;
+
+  const WithdrawalAuditEntry({
+    required this.from,
+    required this.to,
+    required this.actorUid,
+    required this.occurredAt,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [from, to, actorUid, occurredAt, reason];
+}
+
+class WithdrawalRequest extends Equatable {
+  final String id;
+  final String ownerUid;
+  final double amount;
+  final String currency;
+  final DateTime requestedAt;
+  final WithdrawalStatus status;
+  final int version;
+  final List<WithdrawalAuditEntry> auditTrail;
+
+  WithdrawalRequest._({
+    required this.id,
+    required this.ownerUid,
+    required this.amount,
+    required this.currency,
+    required this.requestedAt,
+    required this.status,
+    required this.version,
+    required List<WithdrawalAuditEntry> auditTrail,
+  }) : auditTrail = List<WithdrawalAuditEntry>.unmodifiable(auditTrail);
+
+  factory WithdrawalRequest.create({
+    required String id,
+    required String ownerUid,
+    required double amount,
+    required double availableBalance,
+    required WithdrawalPolicy policy,
+    required DateTime requestedAt,
+  }) {
+    final currency = policy.currency.trim().toUpperCase();
+    if (id.trim().isEmpty ||
+        ownerUid.trim().isEmpty ||
+        currency.isEmpty ||
+        !amount.isFinite ||
+        amount <= 0 ||
+        !availableBalance.isFinite ||
+        availableBalance < 0 ||
+        !policy.minimumAmount.isFinite ||
+        policy.minimumAmount <= 0 ||
+        amount < policy.minimumAmount) {
+      throw ArgumentError('Invalid withdrawal request or policy');
+    }
+    if (amount > availableBalance) {
+      throw StateError('Withdrawal exceeds the available balance');
+    }
+    return WithdrawalRequest._(
+      id: id.trim(),
+      ownerUid: ownerUid.trim(),
+      amount: amount,
+      currency: currency,
+      requestedAt: requestedAt.toUtc(),
+      status: WithdrawalStatus.pending,
+      version: 0,
+      auditTrail: const [],
+    );
+  }
+
+  WithdrawalRequest decide({
+    required WithdrawalStatus decision,
+    required String actorUid,
+    required WithdrawalActorRole actorRole,
+    required int expectedVersion,
+    required DateTime decidedAt,
+    String? reason,
+  }) {
+    if (status != WithdrawalStatus.pending || expectedVersion != version) {
+      throw StateError('Withdrawal is stale or already decided');
+    }
+    if (actorRole != WithdrawalActorRole.superAdmin ||
+        actorUid.trim().isEmpty) {
+      throw StateError('Only Super Admin can decide a withdrawal');
+    }
+    if (decision == WithdrawalStatus.pending ||
+        decidedAt.toUtc().isBefore(requestedAt) ||
+        (decision == WithdrawalStatus.rejected &&
+            (reason == null || reason.trim().isEmpty))) {
+      throw ArgumentError('Invalid withdrawal decision');
+    }
+    final audit = WithdrawalAuditEntry(
+      from: status,
+      to: decision,
+      actorUid: actorUid.trim(),
+      occurredAt: decidedAt.toUtc(),
+      reason: reason?.trim(),
+    );
+    return WithdrawalRequest._(
+      id: id,
+      ownerUid: ownerUid,
+      amount: amount,
+      currency: currency,
+      requestedAt: requestedAt,
+      status: decision,
+      version: version + 1,
+      auditTrail: [...auditTrail, audit],
+    );
+  }
+
+  @override
+  List<Object?> get props => [
+    id,
+    ownerUid,
+    amount,
+    currency,
+    requestedAt,
+    status,
+    version,
+    auditTrail,
+  ];
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
@@ -8,6 +9,59 @@ import 'chart_price_window.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Color _parseHexColor(String hex) {
+  if (!RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(hex)) {
+    return Colors.transparent;
+  }
+  return Color(int.parse('FF${hex.substring(1)}', radix: 16));
+}
+
+double takeProfitLineOpacity({
+  required int selectedTargetIndex,
+  required int lineIndex,
+}) {
+  return selectedTargetIndex == 2 && lineIndex < 2 ? 0.4 : 1.0;
+}
+
+String formatRedZoneCountdown({
+  required int startTime,
+  required int durationSeconds,
+  required int nowEpochSeconds,
+}) {
+  if (nowEpochSeconds < startTime) {
+    return ' T-${((startTime - nowEpochSeconds) / 60).ceil()}m';
+  }
+  if (nowEpochSeconds < startTime + durationSeconds) return ' LIVE';
+  return '';
+}
+
+typedef ChartViewportState = ({
+  double scaleX,
+  double scaleY,
+  double offsetX,
+  double priceOffset,
+});
+
+@visibleForTesting
+Offset mapAnalysisPoint({
+  required List<Candle> candles,
+  required int timestamp,
+  required double price,
+  required Size size,
+  required ChartViewportState viewport,
+}) {
+  if (candles.isEmpty) return Offset(size.width, size.height);
+  final coords = _ChartCoords(
+    candles: candles,
+    scaleX: viewport.scaleX,
+    offsetX: viewport.offsetX,
+    scaleY: viewport.scaleY,
+    priceOffset: viewport.priceOffset,
+    size: size,
+  );
+  return Offset(coords.getXFromTime(timestamp), coords.getY(price));
+}
 
 // ─── Drawing Object Models ───────────────────────────────────
 enum DrawingType {
@@ -145,6 +199,7 @@ class _ChartCoords {
 
   late final Rect chartRect;
   late final Rect yAxisRect;
+  late final Rect xAxisRect;
   late final double effectiveCandleWidth;
   late final double effectiveSpacing;
   late final double totalCandleWidth;
@@ -172,6 +227,12 @@ class _ChartCoords {
       size.height - xAxisHeight,
     );
     yAxisRect = Rect.fromLTWH(chartRect.width, 0, yAxisWidth, chartRect.height);
+    xAxisRect = Rect.fromLTWH(
+      0,
+      chartRect.height,
+      chartRect.width,
+      xAxisHeight,
+    );
     effectiveCandleWidth = baseCandleWidth * scaleX;
     effectiveSpacing = candleSpacing * scaleX;
     totalCandleWidth = effectiveCandleWidth + effectiveSpacing;
@@ -218,6 +279,7 @@ class _ChartCoords {
   }
 
   bool isOnYAxis(Offset local) => yAxisRect.contains(local);
+  bool isOnXAxis(Offset local) => xAxisRect.contains(local);
 
   double getY(double price) =>
       chartRect.height - ((price - minPrice) / priceRange) * chartRect.height;
@@ -225,6 +287,24 @@ class _ChartCoords {
   double getX(int index) {
     int rev = candles.length - 1 - index;
     return (chartRect.width - rightMargin) - (rev * totalCandleWidth) + offsetX;
+  }
+
+  double getXFromTime(int timestamp) {
+    for (int i = 0; i < candles.length; i++) {
+      if (candles[i].timestamp.millisecondsSinceEpoch ~/ 1000 >= timestamp) {
+        return getX(i);
+      }
+    }
+    final lastTime = candles.last.timestamp.millisecondsSinceEpoch ~/ 1000;
+    final diffSec = timestamp - lastTime;
+    final avgInterval = candles.length > 1
+        ? (candles.last.timestamp.millisecondsSinceEpoch -
+                  candles.first.timestamp.millisecondsSinceEpoch) /
+              (candles.length - 1) /
+              1000
+        : 300;
+    return getX(candles.length - 1) +
+        (diffSec / avgInterval) * totalCandleWidth;
   }
 
   /// Convert canvas pixel position to price
@@ -267,6 +347,10 @@ class KineticChart extends StatefulWidget {
   final TradingSignal? signal;
   final List<Candle> candles;
   final ChartTool activeTool;
+  final ValueChanged<String>? onTimeframeSelected;
+  final int selectedTakeProfitIndex;
+  final DateTime Function() now;
+  final ValueChanged<ChartViewportState>? onViewportChanged;
 
   const KineticChart({
     super.key,
@@ -274,6 +358,10 @@ class KineticChart extends StatefulWidget {
     this.signal,
     this.candles = const [],
     this.activeTool = ChartTool.pointer,
+    this.onTimeframeSelected,
+    this.selectedTakeProfitIndex = 2,
+    this.now = DateTime.now,
+    this.onViewportChanged,
   });
 
   @override
@@ -295,6 +383,7 @@ class _KineticChartState extends State<KineticChart> {
   double _dragStartPriceOffset = 0.0;
   Offset _dragStartPoint = Offset.zero;
   bool _gestureOnYAxis = false;
+  bool _gestureOnXAxis = false;
 
   // Crosshair state
   Offset? _crosshairPos;
@@ -306,13 +395,57 @@ class _KineticChartState extends State<KineticChart> {
   DrawingObject? _inProgressDrawing;
   int _drawingCounter = 0;
   bool _showAISignal = true;
+  Timer? _redZoneTimer;
 
   String _newId() => 'draw_${_drawingCounter++}';
+
+  void _notifyViewportChanged() {
+    widget.onViewportChanged?.call((
+      scaleX: _scaleX,
+      scaleY: _scaleY,
+      offsetX: _offsetX,
+      priceOffset: _priceOffset,
+    ));
+  }
+
+  bool _hasLiveRedZone() {
+    final nowSeconds = widget.now().millisecondsSinceEpoch ~/ 1000;
+    for (final layer in widget.signal?.layers ?? const []) {
+      if (layer['layer'] != 5 || layer['items'] is! List) continue;
+      for (final raw in layer['items'] as List) {
+        if (raw is! Map || raw['type'] != 'red_zone') continue;
+        final start = raw['start_time'];
+        final duration = raw['duration_min'];
+        if (start is num && duration is num) {
+          final end = start.toInt() + (duration.toDouble() * 60).round();
+          if (end > nowSeconds) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  void _syncRedZoneTimer() {
+    if (!_hasLiveRedZone()) {
+      _redZoneTimer?.cancel();
+      _redZoneTimer = null;
+      return;
+    }
+    _redZoneTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (!_hasLiveRedZone()) {
+        _redZoneTimer?.cancel();
+        _redZoneTimer = null;
+      }
+      setState(() {});
+    });
+  }
 
   @override
   void initState() {
     super.initState();
     _initPrefs();
+    _syncRedZoneTimer();
   }
 
   Future<void> _initPrefs() async {
@@ -320,9 +453,7 @@ class _KineticChartState extends State<KineticChart> {
       _prefs = await SharedPreferences.getInstance();
       _prefsInitialized = true;
       _loadDrawings();
-    } catch (e) {
-      print('KineticChart: Error initializing prefs: $e');
-    }
+    } catch (_) {}
   }
 
   @override
@@ -331,6 +462,15 @@ class _KineticChartState extends State<KineticChart> {
     if (oldWidget.symbol != widget.symbol && _prefsInitialized) {
       _loadDrawings();
     }
+    if (oldWidget.signal != widget.signal || oldWidget.now != widget.now) {
+      _syncRedZoneTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _redZoneTimer?.cancel();
+    super.dispose();
   }
 
   void _loadDrawings() {
@@ -347,9 +487,7 @@ class _KineticChartState extends State<KineticChart> {
           _drawings.clear();
         });
       }
-    } catch (e) {
-      print('KineticChart: Error loading drawings: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _saveDrawings() async {
@@ -357,9 +495,7 @@ class _KineticChartState extends State<KineticChart> {
     try {
       final jsonStr = serializeDrawings(_drawings);
       await _prefs.setString('drawings_${widget.symbol}', jsonStr);
-    } catch (e) {
-      print('KineticChart: Error saving drawings: $e');
-    }
+    } catch (_) {}
   }
 
   void _zoom(double factor, Size size) {
@@ -381,12 +517,14 @@ class _KineticChartState extends State<KineticChart> {
         maxOffset,
       );
     });
+    _notifyViewportChanged();
   }
 
   void _zoomY(double factor) {
     setState(() {
       _scaleY = (_scaleY * factor).clamp(0.25, 8.0);
     });
+    _notifyViewportChanged();
   }
 
   void _resetView() {
@@ -396,6 +534,7 @@ class _KineticChartState extends State<KineticChart> {
       _scaleY = 1.0;
       _priceOffset = 0.0;
     });
+    _notifyViewportChanged();
   }
 
   void _handlePointerSignal(PointerSignalEvent event, Size size) {
@@ -747,6 +886,10 @@ class _KineticChartState extends State<KineticChart> {
                         _gestureOnYAxis =
                             d.localFocalPoint.dx >=
                             size.width - _ChartCoords.yAxisWidth;
+                        _gestureOnXAxis =
+                            !_gestureOnYAxis &&
+                            d.localFocalPoint.dy >=
+                                size.height - _ChartCoords.xAxisHeight;
                       }
                     },
                     onScaleUpdate: (d) {
@@ -764,10 +907,9 @@ class _KineticChartState extends State<KineticChart> {
 
                         if (_gestureOnYAxis) {
                           // Drag price axis: compress/expand visible price range (TV-like).
-                          final zoomFactor = math.exp(-deltaY / 180.0);
-                          _scaleY = (_previousScaleY * zoomFactor).clamp(
-                            0.25,
-                            8.0,
+                          _scaleY = computePriceAxisDragScale(
+                            initialScale: _previousScaleY,
+                            verticalDelta: deltaY,
                           );
                           if (d.pointerCount >= 2 && d.scale != 1.0) {
                             _scaleY = (_previousScaleY * d.scale).clamp(
@@ -775,6 +917,16 @@ class _KineticChartState extends State<KineticChart> {
                               8.0,
                             );
                           }
+                          return;
+                        }
+
+                        final double deltaX =
+                            d.localFocalPoint.dx - _dragStartPoint.dx;
+                        if (_gestureOnXAxis) {
+                          _scaleX = computeTimeAxisDragScale(
+                            initialScale: _previousScale,
+                            horizontalDelta: deltaX,
+                          );
                           return;
                         }
 
@@ -793,8 +945,6 @@ class _KineticChartState extends State<KineticChart> {
                         final maxOffset =
                             (widget.candles.length - 1) * totalCandleWidth;
 
-                        final double deltaX =
-                            d.localFocalPoint.dx - _dragStartPoint.dx;
                         _offsetX = (_dragStartOffset + deltaX).clamp(
                           minOffset,
                           maxOffset,
@@ -806,6 +956,7 @@ class _KineticChartState extends State<KineticChart> {
                             _dragStartPriceOffset -
                             (deltaY / chartHeight) * visibleRange;
                       });
+                      _notifyViewportChanged();
                     },
                     onTapDown: (d) => _handleTapDown(d, coords),
                     child: CustomPaint(
@@ -822,6 +973,9 @@ class _KineticChartState extends State<KineticChart> {
                         ],
                         crosshairPos: _showCrosshair ? _crosshairPos : null,
                         activeTool: widget.activeTool,
+                        selectedTakeProfitIndex: widget.selectedTakeProfitIndex,
+                        nowEpochSeconds:
+                            widget.now().millisecondsSinceEpoch ~/ 1000,
                       ),
                       size: Size.infinite,
                     ),
@@ -829,7 +983,7 @@ class _KineticChartState extends State<KineticChart> {
 
                   // Overlay widgets from signal (Wyckoff phase, HTF trend)
                   if (widget.signal != null && _showAISignal)
-                    ..._buildOverlayWidgets(widget.signal!),
+                    ..._buildOverlayWidgets(widget.signal!, coords),
 
                   // Reset + Zoom + Erase All buttons
                   Positioned(
@@ -993,6 +1147,13 @@ class _KineticChartState extends State<KineticChart> {
             widget.activeTool == ChartTool.crosshair)) {
       return SystemMouseCursors.resizeUpDown;
     }
+    if (coords != null &&
+        probe != null &&
+        coords.isOnXAxis(probe) &&
+        (widget.activeTool == ChartTool.pointer ||
+            widget.activeTool == ChartTool.crosshair)) {
+      return SystemMouseCursors.resizeLeftRight;
+    }
     switch (widget.activeTool) {
       case ChartTool.crosshair:
         return SystemMouseCursors.precise;
@@ -1057,24 +1218,59 @@ class _KineticChartState extends State<KineticChart> {
     );
   }
 
-  List<Widget> _buildOverlayWidgets(TradingSignal signal) {
+  List<Widget> _buildOverlayWidgets(TradingSignal signal, _ChartCoords coords) {
     final widgets = <Widget>[];
     for (final layer in signal.layers) {
       if (layer['layer'] == 5 && layer['type'] == 'overlay') {
         final items = layer['items'] as List<dynamic>? ?? [];
         for (final item in items) {
           final itemMap = Map<String, dynamic>.from(item as Map);
-          if (itemMap['type'] == 'wyckoff_phase') {
+          if (itemMap['type'] == 'ghost_box' &&
+              itemMap['x'] is num &&
+              itemMap['x_end'] is num &&
+              itemMap['y_top'] is num &&
+              itemMap['y_bottom'] is num &&
+              itemMap['tooltip'] is String) {
+            final left = _xForTime((itemMap['x'] as num).toInt(), coords);
+            final right = _xForTime((itemMap['x_end'] as num).toInt(), coords);
+            final top = coords.getY((itemMap['y_top'] as num).toDouble());
+            final bottom = coords.getY((itemMap['y_bottom'] as num).toDouble());
+            final rect = Rect.fromLTRB(
+              math.min(left, right),
+              math.min(top, bottom),
+              math.max(left, right),
+              math.max(top, bottom),
+            ).intersect(coords.chartRect);
+            if (!rect.isEmpty) {
+              widgets.add(
+                Positioned.fromRect(
+                  rect: rect,
+                  child: Tooltip(
+                    key: ValueKey('ghost-box-${itemMap['x']}'),
+                    message: itemMap['tooltip'] as String,
+                    triggerMode: TooltipTriggerMode.tap,
+                    onTriggered: () => _focusGhostBox(itemMap, coords),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              );
+            }
+          }
+          if (itemMap['type'] == 'phase_tracker_text' ||
+              itemMap['type'] == 'wyckoff_phase') {
+            final color = itemMap['color'] is String
+                ? _parseHexColor(itemMap['color'] as String)
+                : Colors.transparent;
             widgets.add(
               Positioned(
                 bottom: 45,
                 left: 20,
                 child: Text(
-                  itemMap['text'] ?? '',
+                  itemMap['label'] ?? itemMap['text'] ?? '',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white.withValues(alpha: 0.15),
+                    color: color.withValues(alpha: 0.15),
                     letterSpacing: 4,
                   ),
                 ),
@@ -1082,6 +1278,9 @@ class _KineticChartState extends State<KineticChart> {
             );
           }
           if (itemMap['type'] == 'htf_trend') {
+            final color = itemMap['color'] is String
+                ? _parseHexColor(itemMap['color'] as String)
+                : Colors.transparent;
             widgets.add(
               Positioned(
                 top: 10,
@@ -1115,11 +1314,13 @@ class _KineticChartState extends State<KineticChart> {
                       _htfRow(
                         itemMap['htf1_label'] ?? 'H4',
                         itemMap['htf1_trend'] ?? '',
+                        color,
                       ),
                       const SizedBox(height: 4),
                       _htfRow(
                         itemMap['htf2_label'] ?? 'D1',
                         itemMap['htf2_trend'] ?? '',
+                        color,
                       ),
                     ],
                   ),
@@ -1133,34 +1334,76 @@ class _KineticChartState extends State<KineticChart> {
     return widgets;
   }
 
-  Widget _htfRow(String label, String trend) {
-    final isBullish = trend.toLowerCase().contains('bullish');
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            color: Colors.white38,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
+  double _xForTime(int timestamp, _ChartCoords coords) {
+    for (var index = 0; index < widget.candles.length; index++) {
+      final candleTime =
+          widget.candles[index].timestamp.millisecondsSinceEpoch ~/ 1000;
+      if (candleTime >= timestamp) return coords.getX(index);
+    }
+    if (widget.candles.isEmpty) return coords.chartRect.width;
+    final lastTime =
+        widget.candles.last.timestamp.millisecondsSinceEpoch ~/ 1000;
+    final averageInterval = widget.candles.length > 1
+        ? (widget.candles.last.timestamp.millisecondsSinceEpoch -
+                  widget.candles.first.timestamp.millisecondsSinceEpoch) /
+              (widget.candles.length - 1) /
+              1000
+        : 300.0;
+    return coords.getX(widget.candles.length - 1) +
+        ((timestamp - lastTime) / averageInterval) * coords.totalCandleWidth;
+  }
+
+  void _focusGhostBox(Map<String, dynamic> item, _ChartCoords coords) {
+    final startX = _xForTime((item['x'] as num).toInt(), coords);
+    final endX = _xForTime((item['x_end'] as num).toInt(), coords);
+    final targetX = (startX + endX) / 2;
+    final targetPrice =
+        ((item['y_top'] as num).toDouble() +
+            (item['y_bottom'] as num).toDouble()) /
+        2;
+    final autoCenter = (coords.maxPrice + coords.minPrice) / 2;
+    setState(() {
+      _scaleX = (_scaleX * 1.25).clamp(0.2, 10.0);
+      _scaleY = (_scaleY * 1.25).clamp(0.25, 8.0);
+      _offsetX += coords.chartRect.center.dx - targetX;
+      _priceOffset += targetPrice - autoCenter;
+    });
+  }
+
+  Widget _htfRow(String label, String trend, Color color) {
+    return Semantics(
+      button: true,
+      label: 'Open $label chart',
+      child: InkWell(
+        key: ValueKey('htf-trend-$label'),
+        onTap: widget.onTimeframeSelected == null
+            ? null
+            : () => widget.onTimeframeSelected!(label),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$label: ',
+                style: const TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                trend,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
         ),
-        Icon(
-          isBullish ? Icons.arrow_upward : Icons.arrow_downward,
-          size: 12,
-          color: isBullish ? AppColors.primary : AppColors.bear,
-        ),
-        const SizedBox(width: 2),
-        Text(
-          trend,
-          style: TextStyle(
-            color: isBullish ? AppColors.primary : AppColors.bear,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1178,6 +1421,8 @@ class _KineticChartPainter extends CustomPainter {
   final List<DrawingObject> drawings;
   final Offset? crosshairPos;
   final ChartTool activeTool;
+  final int selectedTakeProfitIndex;
+  final int nowEpochSeconds;
 
   _KineticChartPainter({
     required this.candles,
@@ -1189,6 +1434,8 @@ class _KineticChartPainter extends CustomPainter {
     required this.drawings,
     required this.crosshairPos,
     required this.activeTool,
+    required this.selectedTakeProfitIndex,
+    required this.nowEpochSeconds,
   });
 
   // These are set in paint()
@@ -1330,7 +1577,7 @@ class _KineticChartPainter extends CustomPainter {
       Offset(0, y),
       Offset(_c.chartRect.width, y),
       Paint()
-        ..color = AppColors.primary
+        ..color = const Color(0xFF0000FF)
         ..strokeWidth = 1.0
         ..style = PaintingStyle.stroke,
     );
@@ -1575,53 +1822,105 @@ class _KineticChartPainter extends CustomPainter {
       if (layer['layer'] != 5) continue;
       final items = _getItems(layer);
       for (final item in items) {
-        final type = item['type'] ?? '';
+        final type = item['type'] ?? item['kind'] ?? '';
         if (type == 'ghost_box') {
-          final priceTop = (item['price_top'] as num?)?.toDouble();
-          final priceBottom = (item['price_bottom'] as num?)?.toDouble();
+          final priceTop = ((item['y_top'] ?? item['price_top']) as num?)
+              ?.toDouble();
+          final priceBottom =
+              ((item['y_bottom'] ?? item['price_bottom']) as num?)?.toDouble();
           if (priceTop == null || priceBottom == null) continue;
-          final zoneType = item['zone_type'] ?? 'danger';
-          final color = zoneType == 'danger'
-              ? AppColors.bear
-              : AppColors.primary;
-          final label = item['label'] ?? '';
+          if (item['color'] is! String) continue;
+          final color = _parseHexColor(item['color'] as String);
+          final label = item['tooltip'] ?? item['label'] ?? '';
           final top = _c.getY(priceTop);
           final bottom = _c.getY(priceBottom);
+          final left = _getXFromTime(
+            ((item['x'] ?? item['time_start']) as num?)?.toInt() ?? 0,
+          );
+          final right = _getXFromTime(
+            ((item['x_end'] ?? item['time_end']) as num?)?.toInt() ?? 0,
+          );
           canvas.drawRect(
-            Rect.fromLTRB(0, top, _c.chartRect.width, bottom),
+            Rect.fromLTRB(left, top, right, bottom),
             Paint()
-              ..color = color.withValues(alpha: 0.05)
+              ..color = color.withValues(alpha: 0.15)
               ..style = PaintingStyle.fill,
           );
           _drawDashedRect(
             canvas,
-            Rect.fromLTRB(10, top, _c.chartRect.width - 10, bottom),
+            Rect.fromLTRB(left, top, right, bottom),
             Paint()
-              ..color = color.withValues(alpha: 0.25)
+              ..color = color.withValues(alpha: 0.4)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 1.0,
           );
           _drawLabel(
             canvas,
-            Offset(15, top + 5),
+            Offset(left + 4, top + 5),
             '#$label',
             color.withValues(alpha: 0.4),
             Colors.white70,
           );
         }
-        if (type == 'news_column') {
+        if ((type == 'red_zone' || type == 'news_column') &&
+            (item['start_time'] ?? item['time_x']) is num &&
+            item['duration_min'] is num &&
+            item['color'] is String) {
+          final startTime = ((item['start_time'] ?? item['time_x']) as num)
+              .toInt();
+          final durationSeconds =
+              ((item['duration_min'] as num).toDouble() * 60).round();
+          if (nowEpochSeconds >= startTime + durationSeconds) continue;
+          final left = _getXFromTime(startTime);
+          final right = _getXFromTime(startTime + durationSeconds);
+          final color = _parseHexColor(item['color'] as String);
+          final countdown = formatRedZoneCountdown(
+            startTime: startTime,
+            durationSeconds: durationSeconds,
+            nowEpochSeconds: nowEpochSeconds,
+          );
           canvas.drawRect(
-            Rect.fromLTWH(_c.chartRect.width - 40, 0, 40, _c.chartRect.height),
+            Rect.fromLTRB(left, 0, right, _c.chartRect.height),
             Paint()
-              ..color = AppColors.bear.withValues(alpha: 0.08)
+              ..color = color.withValues(alpha: 0.08)
               ..style = PaintingStyle.fill,
           );
           _drawLabel(
             canvas,
-            Offset(_c.chartRect.width - 38, 8),
-            item['text'] ?? 'NEWS',
-            AppColors.bear.withValues(alpha: 0.5),
+            Offset(left + 2, 8),
+            '${item['label'] ?? item['text']}$countdown',
+            color.withValues(alpha: 0.5),
             Colors.white,
+          );
+        }
+        if ((type == 'phase_tracker_text' || type == 'wyckoff_phase') &&
+            (item['label'] ?? item['text']) is String &&
+            item['color'] is String) {
+          final color = _parseHexColor(item['color'] as String);
+          _drawText(
+            canvas,
+            (item['label'] ?? item['text']) as String,
+            Offset(_c.chartRect.width * 0.32, _c.chartRect.height * 0.42),
+            color.withValues(alpha: 0.08),
+            48,
+            fontWeight: FontWeight.w900,
+          );
+        }
+        if (type == 'htf_trend') {
+          if (item['color'] is! String) continue;
+          final color = _parseHexColor(item['color'] as String);
+          final htf1 =
+              '${item['htf1_label'] ?? ''}: ${item['htf1_trend'] ?? ''}';
+          final htf2Label = item['htf2_label'];
+          final htf2 = htf2Label == null
+              ? ''
+              : '  |  $htf2Label: ${item['htf2_trend'] ?? ''}';
+          _drawLabel(
+            canvas,
+            const Offset(12, 12),
+            '$htf1$htf2',
+            Colors.black.withValues(alpha: 0.65),
+            color,
           );
         }
       }
@@ -1636,18 +1935,30 @@ class _KineticChartPainter extends CustomPainter {
       if (layer['layer'] != 1) continue;
       final items = _getItems(layer);
       for (final item in items) {
-        final color = _parseColor(item['color'] ?? 'green_opacity');
-        if (item.containsKey('price_top') && item.containsKey('price_bottom')) {
-          final top = _c.getY((item['price_top'] as num).toDouble());
-          final bottom = _c.getY((item['price_bottom'] as num).toDouble());
-          final left = _getXFromTime(item['time_start'] as int? ?? 0);
-          final right = _getXFromTime(item['time_end'] as int? ?? 0);
-          canvas.drawRect(
-            Rect.fromLTRB(left, top, right, bottom),
-            Paint()
-              ..color = color.withValues(alpha: 0.08)
-              ..style = PaintingStyle.fill,
+        if (item['color'] is! String) continue;
+        final color = _parseHexColor(item['color'] as String);
+        final kind = item['type'] ?? item['kind'];
+        final priceTop = item['y_top'] ?? item['price_top'];
+        final priceBottom = item['y_bottom'] ?? item['price_bottom'];
+        if ((kind == 'solid_box' || kind == 'bordered_box') &&
+            priceTop is num &&
+            priceBottom is num) {
+          final top = _c.getY(priceTop.toDouble());
+          final bottom = _c.getY(priceBottom.toDouble());
+          final left = _getXFromTime(
+            ((item['x'] ?? item['time_start']) as num?)?.toInt() ?? 0,
           );
+          final right = _getXFromTime(
+            ((item['x_end'] ?? item['time_end']) as num?)?.toInt() ?? 0,
+          );
+          if (kind == 'solid_box') {
+            canvas.drawRect(
+              Rect.fromLTRB(left, top, right, bottom),
+              Paint()
+                ..color = color.withValues(alpha: 0.08)
+                ..style = PaintingStyle.fill,
+            );
+          }
           canvas.drawRect(
             Rect.fromLTRB(left, top, right, bottom),
             Paint()
@@ -1655,13 +1966,25 @@ class _KineticChartPainter extends CustomPainter {
               ..style = PaintingStyle.stroke
               ..strokeWidth = 1.0,
           );
-        } else if (item.containsKey('price_y')) {
-          final y = _c.getY((item['price_y'] as num).toDouble());
-          final x = _getXFromTime(item['time_x'] as int? ?? 0);
+        } else if (kind == 'dashed_line' &&
+            (item['y1'] ?? item['price_start']) is num &&
+            (item['y2'] ?? item['price_end']) is num) {
+          final start = Offset(
+            _getXFromTime(
+              ((item['x1'] ?? item['time_start']) as num?)?.toInt() ?? 0,
+            ),
+            _c.getY(((item['y1'] ?? item['price_start']) as num).toDouble()),
+          );
+          final end = Offset(
+            _getXFromTime(
+              ((item['x2'] ?? item['time_end']) as num?)?.toInt() ?? 0,
+            ),
+            _c.getY(((item['y2'] ?? item['price_end']) as num).toDouble()),
+          );
           _drawDashedLine(
             canvas,
-            Offset(x, y),
-            Offset(_c.chartRect.width, y),
+            start,
+            end,
             Paint()
               ..color = color
               ..strokeWidth = 1.0,
@@ -1679,11 +2002,21 @@ class _KineticChartPainter extends CustomPainter {
       if (layer['layer'] != 1) continue;
       final items = _getItems(layer);
       for (final item in items) {
-        final label = item['label'] ?? '';
-        final color = _parseColor(item['color'] ?? 'green_opacity');
-        if (item.containsKey('price_top') && item.containsKey('price_bottom')) {
-          final top = _c.getY((item['price_top'] as num).toDouble());
-          final left = _getXFromTime(item['time_start'] as int? ?? 0);
+        if (item['label'] is! String || item['color'] is! String) continue;
+        final rawLabel = item['label'] as String;
+        final label = rawLabel.length <= 4
+            ? rawLabel
+            : rawLabel.substring(0, 4);
+        final color = _parseHexColor(item['color'] as String);
+        final kind = item['type'] ?? item['kind'];
+        if ((kind == 'solid_box' || kind == 'bordered_box') &&
+            (item['y_top'] ?? item['price_top']) is num) {
+          final top = _c.getY(
+            ((item['y_top'] ?? item['price_top']) as num).toDouble(),
+          );
+          final left = _getXFromTime(
+            ((item['x'] ?? item['time_start']) as num?)?.toInt() ?? 0,
+          );
           _drawLabel(
             canvas,
             Offset(left + 4, top + 3),
@@ -1691,9 +2024,14 @@ class _KineticChartPainter extends CustomPainter {
             color.withValues(alpha: 0.6),
             Colors.white,
           );
-        } else if (item.containsKey('price_y')) {
-          final y = _c.getY((item['price_y'] as num).toDouble());
-          final x = _getXFromTime(item['time_x'] as int? ?? 0);
+        } else if (kind == 'dashed_line' &&
+            (item['y2'] ?? item['price_end']) is num) {
+          final y = _c.getY(
+            ((item['y2'] ?? item['price_end']) as num).toDouble(),
+          );
+          final x = _getXFromTime(
+            ((item['x2'] ?? item['time_end']) as num?)?.toInt() ?? 0,
+          );
           _drawLabel(canvas, Offset(x + 2, y - 12), label, color, Colors.black);
         }
       }
@@ -1704,23 +2042,65 @@ class _KineticChartPainter extends CustomPainter {
     for (final layer in layers) {
       if (layer['layer'] != 2) continue;
       for (final item in _getItems(layer)) {
-        final color = _parseColor(item['color'] ?? 'yellow');
-        final x = _getXFromTime(item['time_x'] as int? ?? 0);
-        final y = _c.getY((item['price_y'] as num?)?.toDouble() ?? 0);
+        final kind = item['type'] ?? item['kind'];
+        final text = kind == 'arrow' ? item['label'] : item['text'];
+        if (item['color'] is! String || text is! String) continue;
+        final color = _parseHexColor(item['color'] as String);
+        final x = _getXFromTime(
+          ((item['x'] ?? item['time_x']) as num?)?.toInt() ?? 0,
+        );
+        final y = _c.getY(
+          ((item['y'] ?? item['price_y']) as num?)?.toDouble() ?? 0,
+        );
+        if (kind == 'arrow') {
+          final direction = item['direction'];
+          if (direction != 'up' && direction != 'down') continue;
+          final tipY = direction == 'up' ? y - 18 : y + 18;
+          final shaftEndY = direction == 'up' ? tipY + 8 : tipY - 8;
+          final arrowPaint = Paint()
+            ..color = color
+            ..strokeWidth = 1.5
+            ..style = PaintingStyle.stroke;
+          canvas.drawLine(Offset(x, y), Offset(x, tipY), arrowPaint);
+          canvas.drawLine(
+            Offset(x, tipY),
+            Offset(x - 4, shaftEndY),
+            arrowPaint,
+          );
+          canvas.drawLine(
+            Offset(x, tipY),
+            Offset(x + 4, shaftEndY),
+            arrowPaint,
+          );
+          _drawText(
+            canvas,
+            text,
+            Offset(x + 6, direction == 'up' ? tipY - 5 : y + 2),
+            color,
+            11,
+            fontWeight: FontWeight.bold,
+          );
+          continue;
+        }
+        if (item['background_color'] is String) {
+          _drawLabel(
+            canvas,
+            Offset(x - 8, y - 20),
+            text,
+            _parseHexColor(
+              item['background_color'] as String,
+            ).withValues(alpha: 0.35),
+            color,
+          );
+          continue;
+        }
         _drawText(
           canvas,
-          _getIconString(item['icon'] ?? 'arrow'),
+          text,
           Offset(x - 8, y - 20),
           color,
           16,
           fontWeight: FontWeight.bold,
-        );
-        _drawLabel(
-          canvas,
-          Offset(x - 4, y + 4),
-          item['text'] ?? '',
-          color.withValues(alpha: 0.7),
-          Colors.white,
         );
       }
     }
@@ -1732,9 +2112,10 @@ class _KineticChartPainter extends CustomPainter {
     for (final layer in signal!.layers) {
       if (layer['layer'] != 3) continue;
       for (final item in _getItems(layer)) {
-        overrides[item['candle_time'] as int? ?? 0] = Map<String, dynamic>.from(
-          item,
-        );
+        final timestamp = item['timestamp'] ?? item['candle_time'];
+        if (timestamp is num) {
+          overrides[timestamp.toInt()] = Map<String, dynamic>.from(item);
+        }
       }
     }
     return overrides;
@@ -1745,18 +2126,30 @@ class _KineticChartPainter extends CustomPainter {
       final candle = candles[i];
       final x = _c.getX(i);
       if (x < -_c.totalCandleWidth ||
-          x > _c.chartRect.width + _c.totalCandleWidth)
+          x > _c.chartRect.width + _c.totalCandleWidth) {
         continue;
+      }
       final openY = _c.getY(candle.open);
       final closeY = _c.getY(candle.close);
       final highY = _c.getY(candle.high);
       final lowY = _c.getY(candle.low);
       final override = layer3[candle.timestamp.millisecondsSinceEpoch ~/ 1000];
       Color candleColor;
-      String? labelBottom;
+      String? label;
+      Color? borderColor;
       if (override != null) {
-        candleColor = _parseColor(override['fill_color'] ?? 'purple');
-        labelBottom = override['label_bottom'];
+        candleColor = override['fill_color'] is String
+            ? _parseHexColor(override['fill_color'] as String)
+            : (candle.close >= candle.open
+                  ? const Color(0xFF00FF7F)
+                  : const Color(0xFFFF3B30));
+        final rawLabel =
+            override['text'] ??
+            override['label_top'] ??
+            override['label_bottom'];
+        label = rawLabel is String ? rawLabel : null;
+        final rawBorder = override['border'] ?? override['border_color'];
+        borderColor = rawBorder is String ? _parseHexColor(rawBorder) : null;
       } else {
         // V2.1 P0#4: body is ONLY bull green / bear red unless Layer 3 overrides
         candleColor = candle.close >= candle.open
@@ -1770,24 +2163,48 @@ class _KineticChartPainter extends CustomPainter {
       canvas.drawLine(Offset(x, highY), Offset(x, lowY), paint);
       final bodyTop = math.min(openY, closeY);
       final bodyHeight = math.max(1.0, math.max(openY, closeY) - bodyTop);
-      canvas.drawRect(
-        Rect.fromLTWH(
-          x - (_c.effectiveCandleWidth / 2),
-          bodyTop,
-          _c.effectiveCandleWidth,
-          bodyHeight,
-        ),
-        paint,
+      final bodyRect = Rect.fromLTWH(
+        x - (_c.effectiveCandleWidth / 2),
+        bodyTop,
+        _c.effectiveCandleWidth,
+        bodyHeight,
       );
-      if (labelBottom != null)
+      canvas.drawRect(bodyRect, paint);
+      if (borderColor != null) {
+        canvas.drawRect(
+          bodyRect,
+          Paint()
+            ..color = borderColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
+      }
+      if (label != null) {
         _drawText(
           canvas,
-          labelBottom,
-          Offset(x - 10, lowY + 4),
+          label.length <= 2 ? label : label.substring(0, 2),
+          Offset(x - 6, highY - 12),
           candleColor,
           8,
           fontWeight: FontWeight.bold,
         );
+      }
+      final divergenceDirection =
+          override?['divergence'] ?? override?['divergence_direction'];
+      if ((divergenceDirection == 'up' || divergenceDirection == 'down') &&
+          override?['divergence_color'] is String) {
+        final divergenceColor = _parseHexColor(
+          override!['divergence_color'] as String,
+        );
+        _drawText(
+          canvas,
+          divergenceDirection == 'up' ? '↑' : '↓',
+          Offset(x - 5, divergenceDirection == 'up' ? lowY + 2 : highY - 18),
+          divergenceColor,
+          12,
+          fontWeight: FontWeight.bold,
+        );
+      }
     }
   }
 
@@ -1798,11 +2215,14 @@ class _KineticChartPainter extends CustomPainter {
     final List<_RightLabel> labels = [];
     for (final layer in layers) {
       if (layer['layer'] != 4) continue;
-      final entryLine = layer['entry_line'];
-      if (entryLine != null) {
+      final canonical = layer['active'] == true;
+      final entryLine = canonical
+          ? {'price': layer['entry'], 'color': layer['entry_color']}
+          : layer['entry_line'];
+      if (entryLine is Map && entryLine['color'] is String) {
         final double price = (entryLine['price'] as num).toDouble();
         final y = _c.getY(price);
-        final color = _parseColor(entryLine['color'] ?? 'cyan');
+        final color = _parseHexColor(entryLine['color'] as String);
         canvas.drawLine(
           Offset(0, y),
           Offset(_c.chartRect.width, y),
@@ -1812,8 +2232,9 @@ class _KineticChartPainter extends CustomPainter {
         );
         labels.add(
           _RightLabel(
-            text:
-                '${price.toStringAsFixed(price > 100 ? 2 : 5)} (${signal?.probability}%)',
+            text: signal?.probabilityAvailable == true
+                ? '${price.toStringAsFixed(price > 100 ? 2 : 5)} (${signal?.probability}%)'
+                : price.toStringAsFixed(price > 100 ? 2 : 5),
             targetY: y,
             bgColor: color,
             textColor: Colors.black,
@@ -1822,53 +2243,104 @@ class _KineticChartPainter extends CustomPainter {
           ),
         );
       }
-      final slLine = layer['sl_line'];
-      if (slLine != null) {
+      final slLine = canonical
+          ? {'price': layer['sl'], 'color': layer['sl_color']}
+          : layer['sl_line'];
+      if (slLine is Map && slLine['color'] is String) {
         final double price = (slLine['price'] as num).toDouble();
         final y = _c.getY(price);
+        final color = _parseHexColor(slLine['color'] as String);
         _drawDashedLine(
           canvas,
           Offset(0, y),
           Offset(_c.chartRect.width, y),
           Paint()
-            ..color = AppColors.bear
+            ..color = color
             ..strokeWidth = 1.5,
         );
         labels.add(
           _RightLabel(
             text: 'SL: ${price.toStringAsFixed(price > 100 ? 2 : 5)}',
             targetY: y,
-            bgColor: AppColors.bear,
+            bgColor: color,
             textColor: Colors.white,
           ),
         );
       }
-      final tpLines = layer['tp_lines'] as List<dynamic>? ?? [];
-      for (final tp in tpLines) {
+      final canonicalTargets = layer['tp'];
+      final tpLines = canonical && canonicalTargets is List
+          ? [
+              for (var index = 0; index < canonicalTargets.length; index++)
+                {
+                  'price': canonicalTargets[index],
+                  'label': 'TP${index + 1}',
+                  'color': layer['tp_color'],
+                },
+            ]
+          : layer['tp_lines'] as List<dynamic>? ?? [];
+      for (var tpIndex = 0; tpIndex < tpLines.length; tpIndex++) {
+        final tp = tpLines[tpIndex];
         final tpMap = Map<String, dynamic>.from(tp as Map);
+        if (tpMap['color'] is! String) continue;
         final double price = (tpMap['price'] as num).toDouble();
         final y = _c.getY(price);
         final label = tpMap['label'] ?? 'TP';
+        final baseColor = _parseHexColor(tpMap['color'] as String);
+        final color = baseColor.withValues(
+          alpha: takeProfitLineOpacity(
+            selectedTargetIndex: selectedTakeProfitIndex,
+            lineIndex: tpIndex,
+          ),
+        );
         _drawDashedLine(
           canvas,
           Offset(0, y),
           Offset(_c.chartRect.width, y),
           Paint()
-            ..color = const Color(0xFF3772FF)
+            ..color = color
             ..strokeWidth = 1.0,
         );
         labels.add(
           _RightLabel(
             text: '$label: ${price.toStringAsFixed(price > 100 ? 2 : 5)}',
             targetY: y,
-            bgColor: const Color(0xFF3772FF),
-            textColor: Colors.white,
+            bgColor: color,
+            textColor: Colors.black,
           ),
         );
       }
       final curves = layer['curves'] as List<dynamic>? ?? [];
       for (final curve in curves) {
         _drawBezierCurve(canvas, Map<String, dynamic>.from(curve as Map));
+      }
+      final momentum = layer['momentum'];
+      if (momentum is Map &&
+          momentum['color'] is String &&
+          momentum['label'] is String &&
+          (momentum['arrow'] == 'up' || momentum['arrow'] == 'down') &&
+          entryLine is Map &&
+          entryLine['price'] is num) {
+        final color = _parseHexColor(momentum['color'] as String);
+        final x = math.min(72.0, _c.chartRect.width * 0.12);
+        final baseY = _c.getY((entryLine['price'] as num).toDouble());
+        final up = momentum['arrow'] == 'up';
+        final tipY = up ? baseY - 36 : baseY + 36;
+        final headY = up ? tipY + 10 : tipY - 10;
+        final paint = Paint()
+          ..color = color
+          ..strokeWidth = 3
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(Offset(x, baseY), Offset(x, tipY), paint);
+        canvas.drawLine(Offset(x, tipY), Offset(x - 7, headY), paint);
+        canvas.drawLine(Offset(x, tipY), Offset(x + 7, headY), paint);
+        _drawText(
+          canvas,
+          momentum['label'] as String,
+          Offset(x + 12, tipY - 8),
+          color,
+          14,
+          fontWeight: FontWeight.w900,
+        );
       }
     }
 
@@ -1910,11 +2382,12 @@ class _KineticChartPainter extends CustomPainter {
     );
     labels.add(
       _RightLabel(
-        text:
-            '${entryPrice.toStringAsFixed(entryPrice > 100 ? 2 : 5)} (${signal.probability}%)',
+        text: signal.probabilityAvailable
+            ? '${entryPrice.toStringAsFixed(entryPrice > 100 ? 2 : 5)} (${signal.probability}%)'
+            : entryPrice.toStringAsFixed(entryPrice > 100 ? 2 : 5),
         targetY: entryY,
-        bgColor: AppColors.primary,
-        textColor: Colors.black,
+        bgColor: const Color(0xFF0000FF),
+        textColor: Colors.white,
         isBadge: true,
         badgeTitle: 'ENTRY',
       ),
@@ -1927,14 +2400,14 @@ class _KineticChartPainter extends CustomPainter {
       Offset(0, slY),
       Offset(_c.chartRect.width, slY),
       Paint()
-        ..color = AppColors.bear
+        ..color = const Color(0xFFFF0000)
         ..strokeWidth = 1.5,
     );
     labels.add(
       _RightLabel(
         text: 'SL: ${slPrice.toStringAsFixed(slPrice > 100 ? 2 : 5)}',
         targetY: slY,
-        bgColor: AppColors.bear,
+        bgColor: const Color(0xFFFF0000),
         textColor: Colors.white,
       ),
     );
@@ -1947,15 +2420,15 @@ class _KineticChartPainter extends CustomPainter {
         Offset(0, tpY),
         Offset(_c.chartRect.width, tpY),
         Paint()
-          ..color = const Color(0xFF3772FF)
+          ..color = const Color(0xFF00FF00)
           ..strokeWidth = 1.5,
       );
       labels.add(
         _RightLabel(
           text: 'TP: ${tpPrice.toStringAsFixed(tpPrice > 100 ? 2 : 5)}',
           targetY: tpY,
-          bgColor: const Color(0xFF3772FF),
-          textColor: Colors.white,
+          bgColor: const Color(0xFF00FF00),
+          textColor: Colors.black,
         ),
       );
     }
@@ -2254,12 +2727,13 @@ class _KineticChartPainter extends CustomPainter {
   void _drawBezierCurve(Canvas canvas, Map<String, dynamic> curveData) {
     final points = curveData['points'] as List<dynamic>? ?? [];
     if (points.length < 3) return;
-    final color = _parseHexColor(curveData['color'] ?? '#00FFFF');
+    if (curveData['color'] is! String) return;
+    final color = _parseHexColor(curveData['color'] as String);
     final mappedPoints = points.map((p) {
       final pm = Map<String, dynamic>.from(p as Map);
       return Offset(
-        _getXFromTime((pm['x_time'] as num).toInt()),
-        _c.getY((pm['y_price'] as num).toDouble()),
+        _getXFromTime(((pm['x'] ?? pm['x_time']) as num).toInt()),
+        _c.getY(((pm['y'] ?? pm['y_price']) as num).toDouble()),
       );
     }).toList();
     final path = Path()..moveTo(mappedPoints[0].dx, mappedPoints[0].dy);
@@ -2333,73 +2807,7 @@ class _KineticChartPainter extends CustomPainter {
   }
 
   double _getXFromTime(int timestamp) {
-    for (int i = 0; i < candles.length; i++) {
-      if (candles[i].timestamp.millisecondsSinceEpoch ~/ 1000 >= timestamp)
-        return _c.getX(i);
-    }
-    if (candles.isNotEmpty) {
-      final lastTime = candles.last.timestamp.millisecondsSinceEpoch ~/ 1000;
-      final diffSec = timestamp - lastTime;
-      final avgInterval = candles.length > 1
-          ? (candles.last.timestamp.millisecondsSinceEpoch -
-                    candles.first.timestamp.millisecondsSinceEpoch) /
-                (candles.length - 1) /
-                1000
-          : 300;
-      return _c.getX(candles.length - 1) +
-          (diffSec / avgInterval) * _c.totalCandleWidth;
-    }
-    return _c.chartRect.width;
-  }
-
-  Color _parseColor(String name) {
-    switch (name.toLowerCase()) {
-      case 'green_opacity':
-      case 'green':
-        return AppColors.primary;
-      case 'red_opacity':
-      case 'red':
-        return AppColors.bear;
-      case 'cyan':
-        return const Color(0xFF00FFFF);
-      case 'yellow':
-        return const Color(0xFFF0E68C);
-      case 'purple':
-        return const Color(0xFF8A2BE2);
-      case 'white':
-        return Colors.white;
-      case 'blue':
-        return const Color(0xFF3772FF);
-      case 'orange':
-        return Colors.orange;
-      default:
-        if (name.startsWith('#')) return _parseHexColor(name);
-        return Colors.white;
-    }
-  }
-
-  Color _parseHexColor(String hex) {
-    hex = hex.replaceAll('#', '');
-    if (hex.length == 6) hex = 'FF$hex';
-    return Color(int.parse(hex, radix: 16));
-  }
-
-  String _getIconString(String iconType) {
-    switch (iconType.toLowerCase()) {
-      case 'dollar':
-        return '\$\$\$';
-      case 'skull':
-        return '☠';
-      case 'arrow':
-      case 'down_arrow':
-        return '↓';
-      case 'up_arrow':
-        return '↑';
-      case 'warning':
-        return '⚠';
-      default:
-        return '●';
-    }
+    return _c.getXFromTime(timestamp);
   }
 
   List<Map<String, dynamic>> _getItems(Map<String, dynamic> layer) {
@@ -2419,6 +2827,8 @@ class _KineticChartPainter extends CustomPainter {
     if (crosshairPos != old.crosshairPos) return true;
     if (signal != old.signal) return true;
     if (activeTool != old.activeTool) return true;
+    if (selectedTakeProfitIndex != old.selectedTakeProfitIndex) return true;
+    if (nowEpochSeconds != old.nowEpochSeconds) return true;
     if (drawings.length != old.drawings.length) return true;
     // Check if the last candle changed (most frequent tick update)
     if (candles.isNotEmpty && old.candles.isNotEmpty) {
@@ -2426,8 +2836,9 @@ class _KineticChartPainter extends CustomPainter {
       final oldLast = old.candles.last;
       if (last.close != oldLast.close ||
           last.high != oldLast.high ||
-          last.low != oldLast.low)
+          last.low != oldLast.low) {
         return true;
+      }
     }
     return false;
   }

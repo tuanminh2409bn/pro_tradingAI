@@ -1,0 +1,167 @@
+[
+  {
+    "name": "soft_bullish",
+    "contract": {
+      "chart_id": "XAUUSD_5_1700000000",
+      "setup_ready": false,
+      "veto": false,
+      "veto_data": null,
+      "fallback": true,
+      "forecast_text": "SOFT ALERT: waiting for price to tap OB/FVG zone (setup_ready=false).",
+      "layers": {
+        "layer1_structural": [
+          {
+            "type": "solid_box",
+            "color": "#00FF7F",
+            "x": 1699999700,
+            "x_end": 1700000000,
+            "y_top": 100.2,
+            "y_bottom": 99.8,
+            "evidence": {
+              "source": "candle",
+              "source_id": "5:1699999700:OB",
+              "timestamp": 1699999700
+            },
+            "label": "OB"
+          }
+        ],
+        "layer2_trap": [],
+        "layer3_candle": [],
+        "layer4_execution": null,
+        "layer5_overlay": []
+      }
+    }
+  },
+  {
+    "name": "hard_bullish",
+    "contract": {
+      "chart_id": "XAUUSD_5_1700000000",
+      "setup_ready": true,
+      "veto": false,
+      "veto_data": null,
+      "fallback": true,
+      "forecast_text": "HARD SETUP: confirmed structural execution levels.",
+      "layers": {
+        "layer1_structural": [],
+        "layer2_trap": [],
+        "layer3_candle": [],
+        "layer4_execution": {
+          "active": true,
+          "entry": 100.0,
+          "entry_color": "#0000FF",
+          "sl": 99.4,
+          "sl_color": "#FF0000",
+          "tp": [101.2, 101.8, 102.4],
+          "tp_color": "#00FF00",
+          "prob": null,
+          "momentum": {
+            "arrow": "up",
+            "label": "SIG",
+            "color": "#00FF7F"
+          },
+          "curves": [
+            {
+              "id": "SIG_1",
+              "type": "bezier_quadratic",
+              "style": "dashed",
+              "color": "#00F0FF",
+              "points": [
+                {"x": 1700000000, "y": 100.0},
+                {"x": 1700000900, "y": 100.6},
+                {"x": 1700001800, "y": 102.4}
+              ]
+            },
+            {
+              "id": "SIG_2",
+              "type": "bezier_cubic",
+              "style": "dashed",
+              "color": "#1E90FF",
+              "points": [
+                {"x": 1700000000, "y": 100.0},
+                {"x": 1700000600, "y": 99.7},
+                {"x": 1700001500, "y": 100.6},
+                {"x": 1700002400, "y": 102.4}
+              ]
+            }
+          ]
+        },
+        "layer5_overlay": []
+      }
+    }
+  },
+  {
+    "name": "hard_bearish",
+    "contract": {
+      "chart_id": "EURUSD_15_1700000900",
+      "setup_ready": true,
+      "veto": false,
+      "veto_data": null,
+      "fallback": true,
+      "forecast_text": "HARD SETUP: confirmed structural execution levels.",
+      "layers": {
+        "layer1_structural": [],
+        "layer2_trap": [],
+        "layer3_candle": [],
+        "layer4_execution": {
+          "active": true,
+          "entry": 1.1,
+          "entry_color": "#0000FF",
+          "sl": 1.1006,
+          "sl_color": "#FF0000",
+          "tp": [1.0988, 1.0982, 1.0976],
+          "tp_color": "#00FF00",
+          "prob": null,
+          "momentum": {
+            "arrow": "down",
+            "label": "SIG",
+            "color": "#FF3B30"
+          },
+          "curves": [
+            {
+              "id": "SIG_1",
+              "type": "bezier_quadratic",
+              "style": "dashed",
+              "color": "#00F0FF",
+              "points": [
+                {"x": 1700000900, "y": 1.1},
+                {"x": 1700003600, "y": 1.0994},
+                {"x": 1700006300, "y": 1.0976}
+              ]
+            },
+            {
+              "id": "SIG_2",
+              "type": "bezier_cubic",
+              "style": "dashed",
+              "color": "#1E90FF",
+              "points": [
+                {"x": 1700000900, "y": 1.1},
+                {"x": 1700002700, "y": 1.1003},
+                {"x": 1700005400, "y": 1.0994},
+                {"x": 1700008100, "y": 1.0976}
+              ]
+            }
+          ]
+        },
+        "layer5_overlay": []
+      }
+    }
+  },
+  {
+    "name": "fallback_unavailable",
+    "contract": {
+      "chart_id": "GBPUSD_60_1700001800",
+      "setup_ready": false,
+      "veto": false,
+      "veto_data": null,
+      "fallback": true,
+      "forecast_text": "DATA UNAVAILABLE: expected_120_candles",
+      "layers": {
+        "layer1_structural": [],
+        "layer2_trap": [],
+        "layer3_candle": [],
+        "layer4_execution": null,
+        "layer5_overlay": []
+      }
+    }
+  }
+]

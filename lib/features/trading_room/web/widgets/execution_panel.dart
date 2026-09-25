@@ -17,13 +17,18 @@ class ExecutionPanel extends StatefulWidget {
 
 class _ExecutionPanelState extends State<ExecutionPanel>
     with SingleTickerProviderStateMixin {
-  final List<bool> _tpActive = [true, true, false];
   late AnimationController _glowController;
   final TextEditingController _balanceController = TextEditingController();
   final TextEditingController _riskController = TextEditingController();
   final TextEditingController _maxLossController = TextEditingController();
+  final List<TextEditingController> _tpAllocationControllers = [
+    TextEditingController(text: '30'),
+    TextEditingController(text: '30'),
+    TextEditingController(text: '40'),
+  ];
   bool _isInitialized = false;
   int _lastPanelResetNonce = -1;
+  int _lastActionResultNonce = 0;
 
   @override
   void initState() {
@@ -40,27 +45,45 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     _balanceController.dispose();
     _riskController.dispose();
     _maxLossController.dispose();
+    for (final controller in _tpAllocationControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   void _resetPanelForSymbol() {
-    _tpActive[0] = true;
-    _tpActive[1] = true;
-    _tpActive[2] = false;
+    _tpAllocationControllers[0].text = '30';
+    _tpAllocationControllers[1].text = '30';
+    _tpAllocationControllers[2].text = '40';
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TradingRoomBloc, TradingRoomState>(
       listenWhen: (prev, curr) {
-        if (prev is! TradingRoomLoaded || curr is! TradingRoomLoaded)
+        if (prev is! TradingRoomLoaded || curr is! TradingRoomLoaded) {
           return false;
+        }
         return prev.panelResetNonce != curr.panelResetNonce ||
-            prev.currentSymbol != curr.currentSymbol;
+            prev.currentSymbol != curr.currentSymbol ||
+            prev.actionResultNonce != curr.actionResultNonce;
       },
       listener: (context, state) {
         if (state is TradingRoomLoaded) {
-          setState(_resetPanelForSymbol);
+          if (state.panelResetNonce != _lastPanelResetNonce) {
+            setState(_resetPanelForSymbol);
+          }
+          if (state.actionResultNonce != _lastActionResultNonce) {
+            _lastActionResultNonce = state.actionResultNonce;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.tr(state.actionMessageKey)),
+                backgroundColor: state.actionSucceeded
+                    ? AppColors.primary
+                    : AppColors.bear,
+              ),
+            );
+          }
         }
       },
       builder: (context, state) {
@@ -82,27 +105,29 @@ class _ExecutionPanelState extends State<ExecutionPanel>
         }
         final matchedSignal =
             signal != null &&
-                signal.symbol.toUpperCase() == state.currentSymbol.toUpperCase()
+                signal.contractError == null &&
+                (isSignalForCurrentChart(state, signal) ||
+                    (signal.chartId == null &&
+                        !signal.canExecute &&
+                        signal.symbol.toUpperCase() ==
+                            state.currentSymbol.toUpperCase()))
             ? signal
             : null;
-        final hardSetup =
-            matchedSignal != null &&
-            matchedSignal.setupReady &&
-            !matchedSignal.veto;
-        final tradeLocked = matchedSignal?.veto == true;
+        final hardSetup = matchedSignal != null && matchedSignal.canExecute;
 
         final isBuy = matchedSignal?.type == 'BUY' || matchedSignal == null;
         final currentPrice = state.candles.isNotEmpty
             ? state.candles.last.close
             : (state.symbolPrices[state.currentSymbol.toUpperCase()] ?? 0.0);
+        final hasMarketPrice = currentPrice.isFinite && currentPrice > 0;
         final entryPrice = hardSetup ? matchedSignal.entryPrice : currentPrice;
-        
+
         // ── Bid/Ask from SymbolMeta (not leftover foreign symbol) ──
         final spread = meta.typicalSpread;
         final bid = currentPrice - spread / 2;
         final ask = currentPrice + spread / 2;
         final digits = meta.digits;
-        
+
         // Single SL only (V2.1 P0#10)
         final slDistance = hardSetup
             ? (entryPrice - matchedSignal.slPrice).abs()
@@ -110,7 +135,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
         final selectedSLPrice = hardSetup
             ? matchedSignal.slPrice
             : (isBuy ? entryPrice - slDistance : entryPrice + slDistance);
-        
+
         // Calculate TP levels (max 3 per PDF)
         final tpPrices = hardSetup ? matchedSignal.tpPrices : <double>[];
         final defaultTPs = List.generate(3, (i) {
@@ -140,6 +165,35 @@ class _ExecutionPanelState extends State<ExecutionPanel>
           if (suggestedLot > meta.maxLot) suggestedLot = meta.maxLot;
         }
 
+        final allocationPercentages = _tpAllocationControllers
+            .map((controller) => double.tryParse(controller.text.trim()))
+            .toList(growable: false);
+        final allocationTotal = allocationPercentages.fold<double>(
+          0,
+          (total, percentage) => total + (percentage ?? 0),
+        );
+        TakeProfitAllocationPlan? takeProfitPlan;
+        String? allocationError;
+        if (hardSetup) {
+          if (allocationPercentages.any((percentage) => percentage == null) ||
+              (allocationTotal - 100).abs() > 1e-6) {
+            allocationError = context.tr('exec_tp_allocation_invalid');
+          } else {
+            try {
+              takeProfitPlan = TakeProfitAllocationPlan.create(
+                totalVolume: suggestedLot,
+                targetPrices: displayTPs,
+                percentages: allocationPercentages.cast<double>(),
+                lotStep: meta.lotStep,
+                minLot: meta.minLot,
+              );
+            } on ArgumentError {
+              allocationError = context.tr('exec_tp_volume_too_small');
+            }
+          }
+        }
+        final tradeLocked = !hardSetup || takeProfitPlan == null;
+
         return Container(
           width: 380,
           padding: const EdgeInsets.all(16),
@@ -156,10 +210,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 // ── ANALYZE AI Button (prominent) ──
                 _buildAnalyzeButton(context, state),
                 const SizedBox(height: 12),
-                if (signal != null &&
-                    signal.symbol.toUpperCase() ==
-                        state.currentSymbol.toUpperCase())
-                  _buildStageBanner(signal),
+                if (matchedSignal != null) _buildStageBanner(matchedSignal),
 
                 // ── Bid / Ask Price Display ──
                 _buildBidAskDisplay(
@@ -168,6 +219,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   spread,
                   digits,
                   state.currentSymbol,
+                  hasMarketPrice,
                 ),
                 const SizedBox(height: 16),
 
@@ -178,134 +230,239 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 const SizedBox(height: 16),
 
                 // Lot Size + Risk
-                _infoRow(
-                  context,
-                  context.tr('exec_suggested_lot'),
-                  suggestedLot.toStringAsFixed(2),
-                  AppColors.accent,
-                ),
+                if (hardSetup)
+                  _infoRow(
+                    context,
+                    context.tr('exec_suggested_lot'),
+                    suggestedLot.toStringAsFixed(2),
+                    AppColors.accent,
+                  ),
                 const SizedBox(height: 6),
-                _infoRow(
-                  context,
-                  context.tr('exec_risk'),
-                  '\$${riskAmount.toStringAsFixed(2)} (${riskPct.toStringAsFixed(1)}%)',
-                  riskPct > 3 ? AppColors.bear : AppColors.primary,
-                ),
+                if (hardSetup)
+                  _infoRow(
+                    context,
+                    context.tr('exec_risk'),
+                    '\$${riskAmount.toStringAsFixed(2)} (${riskPct.toStringAsFixed(1)}%)',
+                    riskPct > 3 ? AppColors.bear : AppColors.primary,
+                  ),
                 const SizedBox(height: 4),
-                _infoRow(
-                  context,
-                  context.tr('exec_entry'),
-                  (signal != null &&
-                          signal.symbol.toUpperCase() ==
-                              state.currentSymbol.toUpperCase() &&
-                          signal.setupReady &&
-                          !signal.veto)
-                      ? entryPrice.toStringAsFixed(digits)
-                      : currentPrice.toStringAsFixed(digits),
-                  Colors.white,
-                ),
+                if (hardSetup)
+                  _infoRow(
+                    context,
+                    context.tr('exec_entry'),
+                    entryPrice.toStringAsFixed(digits),
+                    Colors.white,
+                  ),
 
                 const SizedBox(height: 16),
 
                 // Stop Loss — SINGLE level only
-                _sectionTitle(context, context.tr('exec_stop_loss')),
+                if (hardSetup)
+                  _sectionTitle(context, context.tr('exec_stop_loss')),
                 const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 10,
-                    horizontal: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.bear.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: AppColors.bear.withValues(alpha: 0.45),
+                if (hardSetup)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bear.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppColors.bear.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'SL',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.bear,
+                          ),
+                        ),
+                        Text(
+                          selectedSLPrice.toStringAsFixed(digits),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.bear,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'SL',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.bear,
-                        ),
-                      ),
-                      Text(
-                        selectedSLPrice.toStringAsFixed(digits),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.bear,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
 
                 const SizedBox(height: 16),
 
                 // Take Profit Section (TP1–TP3)
-                _sectionTitle(context, context.tr('exec_take_profit')),
+                if (hardSetup)
+                  _sectionTitle(context, context.tr('exec_take_profit')),
                 const SizedBox(height: 8),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  children: List.generate(3, (i) {
-                    return GestureDetector(
-                      onTap: () => setState(() => _tpActive[i] = !_tpActive[i]),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 100,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _tpActive[i]
-                              ? AppColors.primary.withValues(alpha: 0.1)
-                              : Colors.white.withValues(alpha: 0.03),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: _tpActive[i]
-                                ? AppColors.primary.withValues(alpha: 0.5)
-                                : Colors.white.withValues(alpha: 0.08),
+                if (hardSetup)
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: List.generate(3, (i) {
+                      final selected = state.selectedTakeProfitIndex == i;
+                      final opacity =
+                          state.selectedTakeProfitIndex == 2 && i < 2
+                          ? 0.4
+                          : 1.0;
+                      return GestureDetector(
+                        onTap: () => context.read<TradingRoomBloc>().add(
+                          SelectTakeProfit(i),
+                        ),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: opacity,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 100,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.primary.withValues(alpha: 0.1)
+                                  : Colors.white.withValues(alpha: 0.03),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primary.withValues(alpha: 0.5)
+                                    : Colors.white.withValues(alpha: 0.08),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'TP${i + 1}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: selected
+                                        ? AppColors.primary
+                                        : Colors.white54,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  displayTPs[i].toStringAsFixed(digits),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: selected
+                                        ? AppColors.primary
+                                        : Colors.white70,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'TP${i + 1}',
-                              style: TextStyle(
+                      );
+                    }),
+                  ),
+                if (hardSetup) const SizedBox(height: 10),
+                if (hardSetup)
+                  Row(
+                    children: List.generate(3, (i) {
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                          child: TextField(
+                            key: ValueKey('tp-allocation-${i + 1}'),
+                            controller: _tpAllocationControllers[i],
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d{0,3}(\.\d{0,2})?$'),
+                              ),
+                            ],
+                            onChanged: (_) => setState(() {}),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              labelText: 'TP${i + 1} %',
+                              labelStyle: const TextStyle(
+                                color: Colors.white54,
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: _tpActive[i]
-                                    ? AppColors.primary
-                                    : Colors.white38,
+                              ),
+                              suffixText: '%',
+                              suffixStyle: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 10,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white.withValues(alpha: 0.03),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                borderSide: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              displayTPs[i].toStringAsFixed(digits),
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: _tpActive[i]
-                                    ? AppColors.primary
-                                    : Colors.white54,
-                              ),
-                            ),
-                          ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                if (hardSetup) const SizedBox(height: 6),
+                if (hardSetup)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.tr('exec_tp_allocation'),
+                        style: const TextStyle(
+                          color: Colors.white54,
+                          fontSize: 10,
                         ),
                       ),
-                    );
-                  }),
-                ),
+                      Text(
+                        '${context.tr('exec_tp_total')}: ${allocationTotal.toStringAsFixed(allocationTotal == allocationTotal.roundToDouble() ? 0 : 1)}%',
+                        style: TextStyle(
+                          color: allocationError == null
+                              ? AppColors.primary
+                              : AppColors.bear,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (hardSetup && allocationError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      allocationError,
+                      style: const TextStyle(
+                        color: AppColors.bear,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 20),
 
                 // ── Dual BUY / SELL Buttons ──
-                if (state.isCutoffActive)
+                if (!hardSetup)
+                  const SizedBox.shrink()
+                else if (state.isCutoffActive)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -345,7 +502,11 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: (state.isTradeExecuting || tradeLocked)
+                              key: const ValueKey('execute-sell'),
+                              onTap:
+                                  (state.isTradeExecuting ||
+                                      tradeLocked ||
+                                      isBuy)
                                   ? null
                                   : () => _executeTrade(
                                       context,
@@ -354,7 +515,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                       suggestedLot,
                                       entryPrice,
                                       selectedSLPrice,
-                                      displayTPs,
+                                      takeProfitPlan!,
                                     ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -415,11 +576,13 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                         color: Colors.white70,
                                       ),
                                     ),
-                                    if (signal != null && !isBuy)
+                                    if (!isBuy)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
                                         child: Text(
-                                          'AI ▼ ${signal.probability}%',
+                                          matchedSignal.probabilityAvailable
+                                              ? 'AI ▼ ${matchedSignal.probability}%'
+                                              : 'AI ▼',
                                           style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w900,
@@ -471,7 +634,11 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                           ),
                           Expanded(
                             child: GestureDetector(
-                              onTap: (state.isTradeExecuting || tradeLocked)
+                              key: const ValueKey('execute-buy'),
+                              onTap:
+                                  (state.isTradeExecuting ||
+                                      tradeLocked ||
+                                      !isBuy)
                                   ? null
                                   : () => _executeTrade(
                                       context,
@@ -480,7 +647,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                       suggestedLot,
                                       entryPrice,
                                       selectedSLPrice,
-                                      displayTPs,
+                                      takeProfitPlan!,
                                     ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -541,11 +708,13 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                         color: Colors.black54,
                                       ),
                                     ),
-                                    if (signal != null && isBuy)
+                                    if (isBuy)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
                                         child: Text(
-                                          'AI ▲ ${signal.probability}%',
+                                          matchedSignal.probabilityAvailable
+                                              ? 'AI ▲ ${matchedSignal.probability}%'
+                                              : 'AI ▲',
                                           style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.w900,
@@ -567,10 +736,8 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 const SizedBox(height: 20),
                 _buildModeAndTfSection(context, state),
                 const SizedBox(height: 16),
-                if (signal != null &&
-                    signal.symbol.toUpperCase() ==
-                        state.currentSymbol.toUpperCase())
-                  _buildSignalCard(context, signal),
+                if (matchedSignal != null)
+                  _buildSignalCard(context, matchedSignal),
               ],
             ),
           ),
@@ -586,15 +753,11 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     if (signal.veto) {
       color = AppColors.bear;
       title = 'VETO — ENTRY FROZEN';
-      body =
-          signal.forecastText ??
-          'HTF opposing supply/demand. Wait for clear structure.';
+      body = 'HTF opposing supply/demand. Wait for clear structure.';
     } else if (!signal.setupReady) {
       color = AppColors.accent;
       title = 'SOFT ALERT — WAITING ZONE';
-      body =
-          signal.forecastText ??
-          'Zones only. Entry/SL/TP unlock when setup_ready=true.';
+      body = 'Zones only. Entry/SL/TP unlock when setup_ready=true.';
     } else {
       color = AppColors.primary;
       title = 'HARD SETUP — READY';
@@ -803,12 +966,13 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   AppColors.bear,
                 ),
               ],
-              _infoRow(
-                context,
-                context.tr('exec_probability'),
-                '${signal.probability}%',
-                AppColors.accent,
-              ),
+              if (signal.probabilityAvailable)
+                _infoRow(
+                  context,
+                  context.tr('exec_probability'),
+                  '${signal.probability}%',
+                  AppColors.accent,
+                ),
             ],
           ),
         ),
@@ -823,54 +987,29 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     double lot,
     double entry,
     double sl,
-    List<double> tps,
+    TakeProfitAllocationPlan takeProfitPlan,
   ) {
-    final activeTPs = <double>[];
-    for (int i = 0; i < _tpActive.length && i < tps.length; i++) {
-      if (_tpActive[i]) activeTPs.add(tps[i]);
-    }
-
     context.read<TradingRoomBloc>().add(
       ExecuteTrade(
+        signalChartId: state.currentSignal?.chartId ?? '',
         type: isBuy ? 'BUY' : 'SELL',
         lotSize: lot,
         entryPrice: entry,
         slPrice: sl,
-        tpPrices: activeTPs,
-      ),
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${isBuy ? "BUY" : "SELL"} order submitted: $lot lots @ ${entry.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: isBuy ? AppColors.primary : AppColors.bear,
-        duration: const Duration(seconds: 2),
+        tpPrices: takeProfitPlan.legs
+            .map((leg) => leg.targetPrice)
+            .toList(growable: false),
+        takeProfitPlan: takeProfitPlan,
       ),
     );
   }
 
   Widget _buildAnalyzeButton(BuildContext context, TradingRoomLoaded state) {
     return GestureDetector(
-      onTap: state.isAnalyzing
+      onTap: state.isAnalyzing || state.isCutoffActive
           ? null
           : () {
               context.read<TradingRoomBloc>().add(const RequestAnalysis());
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    context.tr('analyzing_request'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  backgroundColor: AppColors.primary,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
             },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1103,27 +1242,28 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     final risk = double.tryParse(_riskController.text) ?? 1.0;
     final maxLoss = double.tryParse(_maxLossController.text) ?? 5.0;
 
-    final isVi = Localizations.localeOf(context).languageCode == 'vi';
-
     if (balance <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isVi ? 'Số dư phải lớn hơn 0' : 'Balance must be greater than 0',
-          ),
+          content: Text(context.tr('risk_config_balance_error')),
           backgroundColor: AppColors.bear,
         ),
       );
       return;
     }
-    if (risk <= 0 || risk > 100) {
+    if (risk < 0.1 || risk > 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isVi
-                ? 'Rủi ro không hợp lệ (0-100%)'
-                : 'Invalid risk percentage (0-100%)',
-          ),
+          content: Text(context.tr('risk_config_risk_error')),
+          backgroundColor: AppColors.bear,
+        ),
+      );
+      return;
+    }
+    if (maxLoss < 1 || maxLoss > 50) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('risk_config_max_loss_error')),
           backgroundColor: AppColors.bear,
         ),
       );
@@ -1137,29 +1277,21 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     );
 
     context.read<TradingRoomBloc>().add(SaveRiskConfig(config));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isVi
-              ? 'Đã lưu cấu hình thành công!'
-              : 'Configuration saved successfully!',
-        ),
-        backgroundColor: AppColors.primary,
-      ),
-    );
   }
 
   // ─── Bid/Ask Helpers ─────────────────────────────────────────
 
   static String _formatSpreadPips(double spread, String symbol) {
     final s = symbol.toUpperCase();
-    if (s.contains('XAU'))
+    if (s.contains('XAU')) {
       return (spread * 10).toStringAsFixed(1); // Gold: 1 pip = 0.1
+    }
     if (s.contains('JPY')) return (spread * 100).toStringAsFixed(1);
     if (s.contains('BTC')) return spread.toStringAsFixed(0);
     if (s.contains('ETH')) return spread.toStringAsFixed(1);
-    if (s.contains('US30') || s.contains('US500') || s.contains('US100'))
+    if (s.contains('US30') || s.contains('US500') || s.contains('US100')) {
       return spread.toStringAsFixed(1);
+    }
     return (spread * 10000).toStringAsFixed(1); // Forex: 1 pip = 0.0001
   }
 
@@ -1169,6 +1301,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     double spread,
     int digits,
     String symbol,
+    bool hasMarketPrice,
   ) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1203,7 +1336,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    bid.toStringAsFixed(digits),
+                    hasMarketPrice ? bid.toStringAsFixed(digits) : '—',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -1231,7 +1364,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _formatSpreadPips(spread, symbol),
+                  hasMarketPrice ? _formatSpreadPips(spread, symbol) : '—',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -1269,7 +1402,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    ask.toStringAsFixed(digits),
+                    hasMarketPrice ? ask.toStringAsFixed(digits) : '—',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,

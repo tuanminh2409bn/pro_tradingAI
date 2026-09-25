@@ -9,6 +9,13 @@ class RadarAsset extends Equatable {
   final bool hasAiConfirmation;
   final String aiSignal; // 'BUY', 'SELL', 'NEUTRAL'
   final List<double> sparklineData;
+  final String? confirmationId;
+  final String? rationale;
+  final String? model;
+  final String? provider;
+  final String? licenseRef;
+  final String? timeframe;
+  final DateTime? confirmedAt;
 
   const RadarAsset({
     required this.symbol,
@@ -19,8 +26,33 @@ class RadarAsset extends Equatable {
     required this.hasAiConfirmation,
     required this.aiSignal,
     required this.sparklineData,
+    this.confirmationId,
+    this.rationale,
+    this.model,
+    this.provider,
+    this.licenseRef,
+    this.timeframe,
+    this.confirmedAt,
   });
 
+  bool get hasVerifiedAiConfirmation =>
+      hasAiConfirmation &&
+      (aiSignal == 'BUY' || aiSignal == 'SELL') &&
+      confirmationId?.trim().isNotEmpty == true &&
+      rationale?.trim().isNotEmpty == true &&
+      model?.trim().isNotEmpty == true &&
+      provider?.trim().isNotEmpty == true &&
+      licenseRef?.trim().isNotEmpty == true &&
+      timeframe?.trim().isNotEmpty == true &&
+      confirmedAt != null;
+
   @override
-  List<Object?> get props => [symbol, price, changePercent, aiSignal];
+  List<Object?> get props => [
+    symbol,
+    price,
+    changePercent,
+    aiSignal,
+    confirmationId,
+    confirmedAt,
+  ];
 }

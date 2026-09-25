@@ -1,0 +1,11 @@
+# V2.1 Web paper-trade API checkpoint — 2026-09-17
+
+Local source only; not a staging or production acceptance claim. Supersedes the T27 backend status in `checkpoint-2026-09-17-web-t27.md`.
+
+- `/api/trade` now requires a verified Firebase ID token, matches any claimed UID, loads the exact signal document, and rejects non-Hard, vetoed, stale, cross-user, cross-chart, or altered execution intents. It remains paper-only.
+- A per-intent `Idempotency-Key` maps to an owner-scoped Firestore trade ID. The signal check and create run in one Firestore transaction; a repeated identical request replays the first result and a changed payload gets 409. The Web client sends signal/chart IDs and reuses the key after an uncertain retry within the same app session. It does not yet persist that key across refresh or devices.
+- Close/list/risk routes also verify UID. Firestore Rules limit signal and analysis-request reads to the owner, deny direct client trade writes, and require an owner for analysis-request creation. A `status`+`userId` signal-query index is declared.
+- Python: 150 non-emulator tests pass; three Firestore Emulator tests pass for owner/cross-user signal and analysis-request access plus backend-only trade writes. The default Python discovery reports 153 tests with those three skipped when the emulator is absent. Flutter: 97/97 tests and changed-file analyzer pass; final release Web build passes. Repository-wide analyzer has no errors or warnings but 11 pre-existing info diagnostics.
+- Production remains on the previous contract. No VPS credential, production write, push, Firebase deployment, or server restart was used. Deploy only as a coordinated backend/Web/Rules/index change after runtime tests and rollback preparation.
+- The host Python lacks FastAPI and the backend runtime packages, so actual ASGI/Firebase Admin integration could not be exercised locally; handler-body tests use an isolated in-memory Firestore boundary, and Rules checks use the real local Firestore Emulator.
+- Remaining T27/T29 risks: analysis requests still accept client-supplied candle data, so signal provenance is not yet trusted; server does not yet enforce a persisted daily-loss cutoff or review/unlock flow. Other money/private endpoints outside this slice require the T04/T05 audit.

@@ -7,14 +7,19 @@ import asyncio
 import os
 import hashlib
 from datetime import datetime, timezone
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from urllib.parse import urljoin
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Header, HTTPException
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import websockets
 import httpx
 from metaapi_cloud_sdk import MetaApi
 import firebase_admin
-from firebase_admin import credentials, firestore, messaging
+from firebase_admin import auth, credentials, firestore, messaging
+from google.api_core.exceptions import Conflict
+from google.cloud import firestore as cloud_firestore
+from google.auth.credentials import AnonymousCredentials
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -23,32 +28,93 @@ from analysis_cache import (
     analysis_cache_key,
     ttl_for_timeframe,
 )
+from analysis_contract import validate_client_analysis_request
+from admin_controls import (
+    BackendOperation,
+    MasterPromptCache,
+    ensure_backend_operation_allowed,
+)
 from feature_engine import (
     apply_stage_gates,
     build_mtf_feature_pack,
     build_signal_from_features,
+    build_unavailable_signal,
     candle_interval_sec,
     features_prompt_block,
+    is_executable_signal,
+    market_analysis_features,
+    strip_user_specific_analysis,
 )
+from observability import (
+    FailureCode,
+    Operation,
+    OperationMetric,
+    OperationOutcome,
+    OperationRecorder,
+)
+from trade_gate import (
+    AuthDenied, TradeDenied, trade_document_id, validate_trade_intent,
+    verify_user_identity,
+)
+from daily_loss_guard import DailyLossPolicyError, evaluate_daily_loss
+from cutoff_state import cutoff_active, utc_session
+from http_boundary import UnsafeExternalUrl, validate_public_https_url, web_allowed_origins
+from market_history import (
+    TrustedMtfHistory, symbol_bound_chat_context, symbol_bound_price,
+)
+from oanda_history import fetch_oanda_mtf_history
+from push_preferences import push_recipient_opted_in
 
-load_dotenv()
+LOCAL_QA_MODE = os.environ.get("PROTRADING_LOCAL_QA", "") == "1"
+if LOCAL_QA_MODE:
+    if (
+        os.environ.get("FIRESTORE_EMULATOR_HOST") != "127.0.0.1:8080"
+        or os.environ.get("FIREBASE_AUTH_EMULATOR_HOST") != "127.0.0.1:9099"
+        or not os.environ.get("GCLOUD_PROJECT")
+    ):
+        raise RuntimeError("Local QA requires loopback Firebase Emulators and a project ID")
+else:
+    load_dotenv()
+
+
+def _emit_operation_metric(metric: OperationMetric) -> None:
+    print(json.dumps({
+        "metric": "backend_operation",
+        "operation": metric.operation.value,
+        "outcome": metric.outcome.value,
+        "latency_ms": metric.latency_ms,
+        "fallback": metric.fallback,
+        "error_code": metric.error_code.value if metric.error_code else None,
+    }, sort_keys=True))
+
+
+operation_recorder = OperationRecorder(sink=_emit_operation_metric)
 
 # Initialize Firebase Admin
 if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate("firebase-adminsdk.json")
-        firebase_admin.initialize_app(cred)
-    except Exception as e:
-        print(f"Firebase Local Init Warning: {e}. Trying ApplicationDefault for Cloud Run.")
+    if LOCAL_QA_MODE:
+        firebase_admin.initialize_app(options={"projectId": os.environ["GCLOUD_PROJECT"]})
+    else:
         try:
-            cred = credentials.ApplicationDefault()
+            cred = credentials.Certificate("firebase-adminsdk.json")
             firebase_admin.initialize_app(cred)
-        except Exception as e2:
-            print(f"Could not init Firebase: {e2}")
+        except Exception:
+            print("Firebase local credential unavailable; trying Application Default Credentials")
+            try:
+                cred = credentials.ApplicationDefault()
+                firebase_admin.initialize_app(cred)
+            except Exception:
+                print("Firebase initialization failed")
 
-db = firestore.client()
+db = (
+    cloud_firestore.Client(
+        project=os.environ["GCLOUD_PROJECT"], credentials=AnonymousCredentials()
+    )
+    if LOCAL_QA_MODE
+    else firestore.client()
+)
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_KEY = "" if LOCAL_QA_MODE else os.environ.get("DEEPSEEK_API_KEY", "")
 if not DEEPSEEK_API_KEY:
     print("⚠️ DEEPSEEK_API_KEY not set — AI calls will use rule-based fallback")
 ai_client = OpenAI(api_key=DEEPSEEK_API_KEY or "sk-missing", base_url="https://api.deepseek.com")
@@ -106,49 +172,57 @@ def calc_pnl(symbol: str, trade_type: str, open_price: float, mark_price: float,
     return round(pips * pip_value * float(lot_size), 2)
 
 # ─── Master Prompt Cache (tránh Firestore read mỗi request) ───
-_master_prompt_cache: dict = {"prompt": None, "fetched_at": 0}
-_MASTER_PROMPT_CACHE_TTL = 300  # 5 phút
+_MASTER_PROMPT_CACHE_TTL = int(MasterPromptCache.TTL_SECONDS)
+
+
+def _load_chat_master_prompt() -> str:
+    config_doc = db.collection("AdminSettings").document("ai_config").get()
+    if not config_doc.exists:
+        raise RuntimeError("AI master prompt is unavailable")
+    data = config_doc.to_dict()
+    if not isinstance(data, dict):
+        raise RuntimeError("AI master prompt is unavailable")
+    return data.get("ai_master_prompt", "")
+
+
+_master_prompt_cache = MasterPromptCache(loader=_load_chat_master_prompt)
+
+
+def _load_trading_enabled() -> bool:
+    config_doc = db.collection("admin").document("system_config").get()
+    if not config_doc.exists:
+        raise RuntimeError("Global operation state is unavailable")
+    data = config_doc.to_dict()
+    if not isinstance(data, dict):
+        raise RuntimeError("Global operation state is unavailable")
+    return data.get("tradingEnabled")
+
+
+async def require_backend_operation(operation: BackendOperation) -> None:
+    trading_enabled = await asyncio.to_thread(_load_trading_enabled)
+    ensure_backend_operation_allowed(
+        trading_enabled=trading_enabled,
+        operation=operation,
+    )
 
 async def get_chat_master_prompt() -> str:
-    """Lấy master prompt từ Firestore (có cache 5 phút).
-    Admin config path: AdminSettings/ai_config → field: ai_master_prompt
-    """
-    global _master_prompt_cache
-    now = time.time()
-    # Dùng cache nếu còn hạn
-    if _master_prompt_cache["prompt"] and (now - _master_prompt_cache["fetched_at"]) < _MASTER_PROMPT_CACHE_TTL:
-        return _master_prompt_cache["prompt"]
-    # Fetch từ Firestore
-    try:
-        config_doc = db.collection('AdminSettings').document('ai_config').get()
-        if config_doc.exists:
-            data = config_doc.to_dict()
-            custom_prompt = data.get('ai_master_prompt', '').strip()
-            if len(custom_prompt) > 50:
-                _master_prompt_cache["prompt"] = custom_prompt
-                _master_prompt_cache["fetched_at"] = now
-                print(f"✅ [Master Prompt] Đã load từ Firestore ({len(custom_prompt)} ký tự)")
-                return custom_prompt
-    except Exception as e:
-        print(f"⚠️ [Master Prompt] Lỗi đọc Firestore: {e}")
-    # Fallback: prompt mặc định chuyên nghiệp
-    default_prompt = (
-        "Bạn là ProTrading AI Assistant V3.2 - chuyên gia phân tích kỹ thuật hàng đầu, "
-        "thành thạo Smart Money Concepts (SMC), Wyckoff Method, Volume Spread Analysis (VSA). "
-        "Phân tích dữ liệu thị trường và đưa ra lời khuyên giao dịch ngắn gọn, thực tế, có cơ sở kỹ thuật. "
-        "Trả lời bằng tiếng Việt, dùng bullet points, tối đa 200 từ."
-    )
-    _master_prompt_cache["prompt"] = default_prompt
-    _master_prompt_cache["fetched_at"] = now
-    return default_prompt
+    """Load the authoritative Admin prompt without blocking the event loop."""
+
+    return await asyncio.to_thread(_master_prompt_cache.get)
 
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(web_allowed_origins()),
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+)
 
 TV_WS_URL = "wss://data.tradingview.com/socket.io/websocket"
 TV_SYMBOL = "OANDA:XAUUSD"
-META_API_TOKEN = os.environ.get("META_API_TOKEN", "YOUR_META_API_TOKEN")
+META_API_TOKEN = "" if LOCAL_QA_MODE else os.environ.get("META_API_TOKEN", "YOUR_META_API_TOKEN")
 
 class LinkAccountRequest(BaseModel):
     userId: str
@@ -159,6 +233,8 @@ class LinkAccountRequest(BaseModel):
 
 class TradeRequest(BaseModel):
     userId: str = ""
+    signalId: str
+    signalChartId: str
     action: str  # BUY or SELL
     symbol: str = "XAUUSD"
     volume: float = 0.1
@@ -183,18 +259,52 @@ class RiskConfigRequest(BaseModel):
     riskPerTrade: float
     maxDailyLoss: float
 
+
+class CutoffOwnerRequest(BaseModel):
+    userId: str
+
+
+class CommunityLikeRequest(BaseModel):
+    postId: str
+    userId: str = ""
+
+
+async def verified_user_id(
+    authorization: str | None,
+    claimed_uid: str = "",
+    *,
+    required_role: str | None = None,
+) -> str:
+    """Resolve a private-operation owner from a verified Firebase ID token."""
+    try:
+        return await verify_user_identity(
+            authorization, claimed_uid, auth.verify_id_token,
+            invalid_errors=(auth.InvalidIdTokenError, auth.ExpiredIdTokenError, ValueError),
+            required_role=required_role,
+        )
+    except AuthDenied as error:
+        raise HTTPException(status_code=error.status_code, detail=str(error)) from None
+
 class TradingViewStreamer:
-    def __init__(self):
+    def __init__(self, shared_last_prices: dict | None = None):
         self.candle_map = {}
-        self.last_price = 4800.0
+        self.last_price = 0.0
         # Independent mark prices per clean symbol — NEVER reuse chart price for other symbols' PnL
-        self.last_prices: dict = {"XAUUSD": 4800.0}
-        self.account_info = {"balance": 0.0, "equity": 0.0, "margin": 0.0, "leverage": 500}
+        self.last_prices: dict = shared_last_prices if shared_last_prices is not None else {}
+        self.account_info = {
+            "balance": 0.0,
+            "equity": 0.0,
+            "margin": 0.0,
+            "leverage": 0,
+            "status": "UNAVAILABLE",
+            "source": "unavailable",
+        }
         self.connections = set()
         self.is_running = False
         self.interval = "5"
         self.symbol = "OANDA:XAUUSD"
         self.ws_task = None
+        self._heartbeat_task = None
         # ─── Rate limiting & Delta tracking ───
         self._last_broadcast_time = 0.0   # monotonic timestamp of last tick broadcast
         self._pending_delta: dict = {}     # candles changed since last broadcast
@@ -222,7 +332,7 @@ class TradingViewStreamer:
             return cached
         # Fallback: Yahoo last close for symbols not currently streamed
         yahoo = YAHOO_TICKER_MAP.get(clean)
-        if yahoo:
+        if yahoo and not LOCAL_QA_MODE:
             try:
                 url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo}?range=1d&interval=1m"
                 async with httpx.AsyncClient(timeout=10) as client:
@@ -235,8 +345,8 @@ class TradingViewStreamer:
                             if price:
                                 self.set_last_price(clean, float(price))
                                 return float(price)
-            except Exception as e:
-                print(f"[PRICE] Yahoo fallback failed for {clean}: {e}")
+            except Exception:
+                print(f"[PRICE] Yahoo fallback failed for {clean}")
         # Last resort: only if this IS the active chart symbol
         if clean == self.chart_symbol_clean() and self.last_price > 0:
             return self.last_price
@@ -250,10 +360,26 @@ class TradingViewStreamer:
         return "cs_" + "".join(random.choice(string.ascii_lowercase) for _ in range(12))
 
     async def start(self):
-        if self.ws_task: self.ws_task.cancel()
+        if self.ws_task and not self.ws_task.done():
+            self.ws_task.cancel()
+            await asyncio.gather(self.ws_task, return_exceptions=True)
+        self.is_running = True
         self.ws_task = asyncio.create_task(self.stream_data())
-        if not hasattr(self, '_heartbeat_task'):
+        if self._heartbeat_task is None or self._heartbeat_task.done():
             self._heartbeat_task = asyncio.create_task(self.heartbeat())
+
+    async def stop(self):
+        """Release the upstream stream and heartbeat owned by this session."""
+        self.is_running = False
+        tasks = [task for task in (self.ws_task, self._heartbeat_task) if task]
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self.ws_task = None
+        self._heartbeat_task = None
+        self.connections.clear()
 
     async def heartbeat(self):
         while True:
@@ -310,11 +436,11 @@ class TradingViewStreamer:
                                     print(f"SERVER: Series completed for {self.symbol}. {len(self.candle_map)} candles loaded.")
                                     self._pending_delta = {}  # clear pending — full init coming
                                     await self.broadcast_update("init")
-                            except Exception as e:
-                                print(f"Packet Parse Error: {e}")
+                            except Exception:
+                                print("[TradingView] Packet parse failed")
                                 continue
-            except Exception as e:
-                print(f"Stream Error: {e}")
+            except Exception:
+                print("[TradingView] Stream failed; retrying")
                 await asyncio.sleep(5)
 
     def _parse_packets(self, raw):
@@ -345,7 +471,8 @@ class TradingViewStreamer:
                                 "o": float(v_data[1]), 
                                 "h": float(v_data[2]), 
                                 "l": float(v_data[3]), 
-                                "c": float(v_data[4])
+                                "c": float(v_data[4]),
+                                "v": float(v_data[5]) if len(v_data) > 5 and v_data[5] is not None else 0.0,
                             })
         return extracted
 
@@ -402,42 +529,30 @@ class TradingViewStreamer:
 streamer = TradingViewStreamer()
 main_loop = None
 
-def send_push_notification_to_all(symbol: str, signal_type: str, entry: float, sl: float, tp: list, probability: int):
+def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry: float, sl: float, tp: list, probability: int):
     try:
-        # 1. Fetch all FCM tokens
-        token_docs = db.collection('fcm_tokens').get()
+        if not user_id:
+            return
+        # A signal is owner-scoped; never broadcast its prices to other users.
+        token_docs = db.collection('fcm_tokens').where('userId', '==', user_id).get()
         if not token_docs:
             print("[PUSH] No registered FCM tokens found.")
             return
 
-        tokens_by_user = {}
+        target_tokens = []
         for doc in token_docs:
             data = doc.to_dict()
             token = data.get('token')
-            user_id = data.get('userId')
-            if token and user_id:
-                if user_id not in tokens_by_user:
-                    tokens_by_user[user_id] = []
-                tokens_by_user[user_id].append(token)
-
-        if not tokens_by_user:
-            print("[PUSH] No valid token groupings found.")
-            return
-
-        # 2. Get user preferences to filter out opt-outs
-        target_tokens = []
-        for user_id, tokens in tokens_by_user.items():
-            user_doc = db.collection('users').document(user_id).get()
-            if user_doc.exists:
-                user_data = user_doc.to_dict()
-                push_enabled = user_data.get('pushNotificationsEnabled', True)
-                if not push_enabled:
-                    print(f"[PUSH] User {user_id} has push notifications disabled. Skipping.")
-                    continue
-            target_tokens.extend(tokens)
+            if token and data.get('userId') == user_id:
+                target_tokens.append(token)
 
         if not target_tokens:
-            print("[PUSH] No users with push notifications enabled.")
+            print("[PUSH] No owner tokens found.")
+            return
+
+        user_doc = db.collection('users').document(user_id).get()
+        if not user_doc.exists or not push_recipient_opted_in(user_doc.to_dict()):
+            print("[PUSH] Notification preference disabled; skipping recipient")
             return
 
         # 3. Create the payload
@@ -449,6 +564,7 @@ def send_push_notification_to_all(symbol: str, signal_type: str, entry: float, s
         
         # 4. Construct Multicast message
         message = messaging.MulticastMessage(
+            tokens=target_tokens,
             notification=messaging.Notification(
                 title=title,
                 body=body,
@@ -476,77 +592,32 @@ def send_push_notification_to_all(symbol: str, signal_type: str, entry: float, s
             for idx, resp in enumerate(response.responses):
                 if not resp.success:
                     failed_token = target_tokens[idx]
-                    print(f"[PUSH] Failed token (will delete): {failed_token} - Error: {resp.exception}")
+                    print("[PUSH] Invalid token will be retired")
                     try:
                         db.collection('fcm_tokens').document(failed_token).delete()
-                    except Exception as e:
-                        print(f"[PUSH] Error deleting failed token: {e}")
+                    except Exception:
+                        print("[PUSH] Failed to retire invalid token")
 
-    except Exception as e:
-        print(f"❌ [PUSH] Error sending notifications: {e}")
+    except Exception:
+        print("❌ [PUSH] Notification delivery failed")
 
-DEFAULT_MASTER_PROMPT = """You are an AI trading Aggregator coordinating Execution / HTF1 / HTF2 agents (SMC, Wyckoff, VSA).
-
-You receive PRECOMPUTED multi-timeframe feature summaries only. Do NOT invent OHLC series.
-
-Return JSON with EXACT keys:
-{
-  "symbol": "XAUUSD",
-  "type": "BUY" or "SELL",
-  "entryPrice": number,
-  "slPrice": number,
-  "tpPrices": [TP1, TP2, TP3],
-  "probability": 0-100,
-  "setup_ready": boolean,
-  "veto": boolean,
-  "veto_data": object|null,
-  "fallback": false,
-  "forecast_text": string,
-  "layers": [ /* layers 1-5 */ ]
-}
-
-RULES:
-- Respect SETUP_READY and VETO from features: if setup_ready=false OR veto=true, OMIT layer 4 (no Entry/SL/TP/SIG curves).
-- If veto=true, type may still reflect bias but forecast_text must explain HTF freeze.
-- Prices must align with CURRENT_PRICE and feature levels
-- Layer 4 only when setup_ready=true and veto=false
-- Timestamps are Unix seconds; SIG_1=3 points, SIG_2=4 points
-- Prefer BIAS from execution features; keep output deterministic
-"""
-
-
-def _normalize_candle_list(raw) -> list:
-    out = []
-    if not isinstance(raw, list):
-        return out
-    for c in raw:
-        if not isinstance(c, dict):
-            continue
-        try:
-            out.append({
-                "t": int(c.get("t") or c.get("time") or 0),
-                "o": float(c.get("o") if c.get("o") is not None else c.get("open")),
-                "h": float(c.get("h") if c.get("h") is not None else c.get("high")),
-                "l": float(c.get("l") if c.get("l") is not None else c.get("low")),
-                "c": float(c.get("c") if c.get("c") is not None else c.get("close")),
-            })
-        except (TypeError, ValueError):
-            continue
-    return [x for x in out if x["t"] > 0]
-
-
-def _streamer_candles_list() -> list:
-    return [streamer.candle_map[t] for t in sorted(streamer.candle_map.keys())]
+def _create_seeded_analysis_completion(create_kwargs: dict):
+    try:
+        return ai_client.chat.completions.create(**create_kwargs, seed=42)
+    except TypeError:
+        return ai_client.chat.completions.create(**create_kwargs)
 
 
 async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) -> dict:
     """LLM (temp=0) or deterministic FeatureEngine fallback. No random.*."""
-    config_record = db.collection('AdminSettings').document('ai_config').get()
-    master_prompt = DEFAULT_MASTER_PROMPT
-    if config_record.exists and 'ai_master_prompt' in config_record.to_dict():
-        custom_prompt = config_record.to_dict()['ai_master_prompt']
-        if custom_prompt and len(custom_prompt.strip()) > 50:
-            master_prompt = custom_prompt
+    if not bool(features.get("analysis_available")):
+        return build_unavailable_signal(features)
+
+    try:
+        master_prompt = await get_chat_master_prompt()
+    except Exception:
+        print("AI master prompt unavailable; using deterministic fallback")
+        return build_signal_from_features(features)
 
     gate = {
         "setup_ready": bool(features.get("setup_ready")),
@@ -564,7 +635,6 @@ async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) ->
 {features_prompt_block(features)}
 
 CANDLE INTERVAL: {interval} seconds
-ACCOUNT_CONTEXT: {features.get('account_context')}
 
 Generate COMPLETE analysis JSON.
 - If SETUP_READY is false OR VETO is true: do NOT include layer 4.
@@ -582,10 +652,10 @@ Generate COMPLETE analysis JSON.
             response_format={"type": "json_object"},
             temperature=0.0,
         )
-        try:
-            response = ai_client.chat.completions.create(**create_kwargs, seed=42)
-        except TypeError:
-            response = ai_client.chat.completions.create(**create_kwargs)
+        response = await asyncio.to_thread(
+            _create_seeded_analysis_completion,
+            create_kwargs,
+        )
         ai_result = json.loads(response.choices[0].message.content)
         ai_result["fallback"] = False
         ai_result = apply_stage_gates(ai_result, gate)
@@ -594,8 +664,8 @@ Generate COMPLETE analysis JSON.
             f"setup_ready={ai_result.get('setup_ready')} veto={ai_result.get('veto')}"
         )
         return ai_result
-    except Exception as e:
-        print(f"DeepSeek API Error: {e}. Using deterministic FeatureEngine fallback.")
+    except Exception:
+        print("DeepSeek API failed; using deterministic FeatureEngine fallback")
         return build_signal_from_features(features)
 
 
@@ -605,22 +675,38 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
       cache_key = analysis:{symbol}:{tf}:{last_closed_candle_timestamp}
       MTF FeatureEngine → setup_ready / veto → LLM(temp=0) → cache
     """
+    metric_timer = operation_recorder.start(Operation.ANALYSIS)
     try:
+        await require_backend_operation(BackendOperation.ANALYSIS)
+        await require_daily_loss_capacity(user_id)
         print(f"⏳ [AI Engine] Processing {symbol} ({timeframe})...")
         doc_ref = db.collection('analysis_requests').document(doc_id)
-        doc_ref.update({'status': 'PROCESSING'})
-        payload = req_payload or {}
-
+        await asyncio.to_thread(doc_ref.update, {'status': 'PROCESSING'})
         clean_symbol = normalize_symbol(symbol)
-        candles_exec = _normalize_candle_list(payload.get("candles_execution"))
-        if not candles_exec:
-            candles_exec = _streamer_candles_list()
-        candles_htf1 = _normalize_candle_list(payload.get("candles_htf_1"))
-        candles_htf2 = _normalize_candle_list(payload.get("candles_htf_2"))
+        oanda_account = "" if LOCAL_QA_MODE else os.environ.get("OANDA_PRACTICE_ACCOUNT_ID", "").strip()
+        oanda_token = "" if LOCAL_QA_MODE else os.environ.get("OANDA_PRACTICE_TOKEN", "").strip()
+        if oanda_account and oanda_token:
+            async with httpx.AsyncClient() as provider_client:
+                trusted_history = await fetch_oanda_mtf_history(
+                    symbol=clean_symbol,
+                    execution_timeframe=timeframe,
+                    account_id=oanda_account,
+                    token=oanda_token,
+                    client=provider_client,
+                    now_ts=int(time.time()),
+                )
+        else:
+            trusted_history = TrustedMtfHistory(
+                False, "oanda_practice_not_configured",
+                source="oanda_practice_tick_volume",
+            )
+        candles_exec = list(trusted_history.execution)
+        candles_htf1 = list(trusted_history.htf1)
+        candles_htf2 = list(trusted_history.htf2)
 
-        current_price = streamer.get_cached_price(clean_symbol) or streamer.last_price
-        if current_price <= 0 and candles_exec:
-            current_price = float(candles_exec[-1].get("c") or 0)
+        current_price = symbol_bound_price(
+            clean_symbol, {}, candles_exec
+        )
 
         features = build_mtf_feature_pack(
             symbol=clean_symbol,
@@ -630,88 +716,116 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
             candles_htf_1=candles_htf1 or None,
             candles_htf_2=candles_htf2 or None,
         )
-        features["account_context"] = payload.get("account_context") or {}
+        features["history_source"] = trusted_history.source
+        features["history_unavailable_reason"] = trusted_history.reason or None
+        features = market_analysis_features(features)
 
         last_closed_ts = int(features["last_closed_candle_timestamp"])
         cache_key = analysis_cache_key(clean_symbol, timeframe, last_closed_ts)
-        ttl = ttl_for_timeframe(timeframe)
-        cache_hit = False
-
-        ai_result = await analysis_cache.get(cache_key)
-        if ai_result is not None:
-            cache_hit = True
-            print(f"⚡ [AI Cache HIT] {cache_key} backend={analysis_cache.backend}")
+        if not trusted_history.available or not features.get("analysis_available"):
+            # A provider outage must be rechecked on the next request, even
+            # when the closed-candle key has not changed.
+            ai_result = build_unavailable_signal(features)
+            cache_hit = False
         else:
-            got_lock = await analysis_cache.acquire_lock(cache_key, ttl=90)
-            if not got_lock:
-                print(f"⏳ [AI Stampede] waiting on {cache_key}")
-                ai_result = await analysis_cache.wait_for(cache_key, timeout_sec=60)
-                if ai_result is None:
-                    print(f"⚠️ [AI Stampede] timeout — computing fallback for {cache_key}")
-                    ai_result = build_signal_from_features(features)
-                    await analysis_cache.set(cache_key, ai_result, ttl)
-                else:
-                    cache_hit = True
-                    print(f"⚡ [AI Cache HIT after wait] {cache_key}")
-            else:
-                try:
-                    ai_result = await analysis_cache.get(cache_key)
-                    if ai_result is not None:
-                        cache_hit = True
-                        print(f"⚡ [AI Cache HIT after lock] {cache_key}")
-                    else:
-                        ai_result = await _run_analysis_pipeline(clean_symbol, timeframe, features)
-                        await analysis_cache.set(cache_key, ai_result, ttl)
-                        print(
-                            f"💾 [AI Cache SET] {cache_key} ttl={ttl}s "
-                            f"fallback={ai_result.get('fallback')} setup_ready={ai_result.get('setup_ready')}"
-                        )
-                finally:
-                    await analysis_cache.release_lock(cache_key)
+            ttl = ttl_for_timeframe(timeframe)
 
-        ai_result = dict(ai_result)
+            async def produce_market_artifact() -> dict:
+                result = await _run_analysis_pipeline(clean_symbol, timeframe, features)
+                return strip_user_specific_analysis(result)
+
+            ai_result, cache_hit = await analysis_cache.get_or_compute(
+                cache_key,
+                ttl,
+                produce_market_artifact,
+                timeout_factory=lambda: strip_user_specific_analysis(
+                    build_signal_from_features(features)
+                ),
+            )
+            print(
+                f"[AI Cache] {'HIT' if cache_hit else 'SET'} {cache_key} "
+                f"backend={analysis_cache.backend}"
+            )
+
+        ai_result = strip_user_specific_analysis(ai_result)
         ai_result["symbol"] = clean_symbol
+        ai_result["market_source"] = trusted_history.source
+        ai_result["market_closed_at"] = (
+            int(candles_exec[-1]["t"]) if candles_exec else None
+        )
         ai_result["cache_hit"] = cache_hit
         ai_result["cache_key"] = cache_key
         ai_result["status"] = "ACTIVE"
         ai_result["createdAt"] = firestore.SERVER_TIMESTAMP
         ai_result["userId"] = user_id
 
-        doc_ref.update({
-            "status": "COMPLETED",
-            "cache_hit": cache_hit,
-            "cache_key": cache_key,
-            "setup_ready": bool(ai_result.get("setup_ready")),
-            "veto": bool(ai_result.get("veto")),
-        })
+        await asyncio.to_thread(
+            doc_ref.update,
+            {
+                "status": "COMPLETED",
+                "cache_hit": cache_hit,
+                "cache_key": cache_key,
+                "setup_ready": bool(ai_result.get("setup_ready")),
+                "veto": bool(ai_result.get("veto")),
+            },
+        )
 
         old_signals_query = db.collection("signals").where("symbol", "==", clean_symbol)
         if user_id:
             old_signals_query = old_signals_query.where("userId", "==", user_id)
-        for doc in old_signals_query.get():
-            db.collection("signals").document(doc.id).update({"status": "CLOSED"})
+        old_signals = await asyncio.to_thread(old_signals_query.get)
+        for doc in old_signals:
+            old_signal_ref = db.collection("signals").document(doc.id)
+            await asyncio.to_thread(
+                old_signal_ref.update,
+                {"status": "CLOSED"},
+            )
 
-        db.collection("signals").add(ai_result)
+        signals_ref = db.collection("signals")
+        await asyncio.to_thread(signals_ref.add, ai_result)
         print(
-            f"✅ AI Signal for {clean_symbol} (user={user_id}, cache_hit={cache_hit}, "
+            f"✅ AI Signal for {clean_symbol} (cache_hit={cache_hit}, "
             f"setup_ready={ai_result.get('setup_ready')}, veto={ai_result.get('veto')}) → Firebase"
         )
 
-        try:
-            send_push_notification_to_all(
-                symbol=clean_symbol,
-                signal_type=ai_result.get("type", "BUY"),
-                entry=float(ai_result.get("entryPrice", 0.0)),
-                sl=float(ai_result.get("slPrice", 0.0)),
-                tp=ai_result.get("tpPrices", []),
-                probability=int(ai_result.get("probability", 0)),
+        if is_executable_signal(ai_result):
+            try:
+                await asyncio.to_thread(
+                    send_signal_push_to_owner,
+                    user_id=user_id,
+                    symbol=clean_symbol,
+                    signal_type=ai_result.get("type", "BUY"),
+                    entry=float(ai_result["entryPrice"]),
+                    sl=float(ai_result["slPrice"]),
+                    tp=ai_result["tpPrices"],
+                    probability=int(ai_result.get("probability", 0)),
+                )
+            except Exception:
+                print("FCM multicast trigger failed")
+        if ai_result.get("fallback") is True:
+            metric_timer.finish(
+                outcome=OperationOutcome.FALLBACK,
+                fallback=True,
+                error_code=FailureCode.PROVIDER_UNAVAILABLE,
             )
-        except Exception as push_err:
-            print(f"FCM Multicast triggering failed: {push_err}")
-    except Exception as e:
-        print(f"AI Process Error: {e}")
+        else:
+            metric_timer.finish(
+                outcome=OperationOutcome.SUCCESS,
+                fallback=False,
+            )
+    except Exception:
+        metric_timer.finish(
+            outcome=OperationOutcome.FAILURE,
+            fallback=False,
+            error_code=FailureCode.INTERNAL_ERROR,
+        )
+        print("AI analysis process failed")
         try:
-            db.collection("analysis_requests").document(doc_id).update({"status": "ERROR", "error": str(e)})
+            failed_request_ref = db.collection("analysis_requests").document(doc_id)
+            await asyncio.to_thread(
+                failed_request_ref.update,
+                {"status": "ERROR", "error": "analysis_failed"},
+            )
         except Exception:
             pass
 
@@ -719,13 +833,18 @@ def on_analysis_request_snapshot(col_snapshot, changes, read_time):
     for change in changes:
         if change.type.name == 'ADDED':
             req_data = change.document.to_dict()
-            if req_data.get('status') == 'PENDING':
+            if isinstance(req_data, dict) and req_data.get('status') == 'PENDING':
+                if validate_client_analysis_request(req_data):
+                    db.collection('analysis_requests').document(change.document.id).update({
+                        'status': 'ERROR', 'error': 'invalid_request',
+                    })
+                    continue
                 symbol = req_data.get('symbol', 'UNKNOWN')
                 timeframe = req_data.get('timeframe', 'UNKNOWN')
                 doc_id = change.document.id
                 user_id = req_data.get('userId', '')
                 
-                print(f"🔔 [NEW EVENT] Analysis Request: {symbol} ({timeframe}) | User: {user_id} | ID: {doc_id}")
+                print(f"🔔 [NEW EVENT] Analysis request: {symbol} ({timeframe})")
                 
                 if main_loop and not main_loop.is_closed():
                     asyncio.run_coroutine_threadsafe(
@@ -738,137 +857,27 @@ async def startup_event():
     main_loop = asyncio.get_running_loop()
     print("SERVER: Data Engine Starting Up...")
     await analysis_cache.connect()
-    await streamer.start()
-    db.collection('analysis_requests').on_snapshot(on_analysis_request_snapshot)
+    if not LOCAL_QA_MODE:
+        await streamer.start()
+    else:
+        print("SERVER: Local QA mode; external market stream disabled")
+    analysis_requests_ref = db.collection('analysis_requests')
+    await asyncio.to_thread(
+        analysis_requests_ref.on_snapshot,
+        on_analysis_request_snapshot,
+    )
     print("SERVER: Listening to Firebase analysis_requests...")
     # Start background loops
-    asyncio.create_task(news_crawler_loop())
-    print("SERVER: News crawler started.")
-    asyncio.create_task(radar_update_loop())
-    print("SERVER: Radar update loop started.")
+    if APPROVED_NEWS_FEEDS:
+        asyncio.create_task(news_crawler_loop())
+        print("SERVER: Approved news crawler started.")
+    else:
+        print("SERVER: News provider unavailable; crawler disabled.")
+    print("SERVER: Radar worker unavailable until approved provider/Redis adapters are configured.")
     asyncio.create_task(admin_stats_loop())
     print("SERVER: Admin stats loop started.")
     asyncio.create_task(service_status_loop())
     print("SERVER: Service status loop started.")
-
-
-# ─────────────────────────────────────────────────────────────
-# RADAR UPDATE LOOP
-# Cập nhật giá và tín hiệu realtime cho màn hình Radar mỗi 60s
-# Ghi vào Firestore collection: radar/{symbol}
-# ─────────────────────────────────────────────────────────────
-
-# Danh sách symbols cần theo dõi trên Radar
-RADAR_SYMBOLS = [
-    {"symbol": "XAUUSD",  "fullName": "Gold / USD",       "tv": "OANDA:XAUUSD"},
-    {"symbol": "BTCUSD",  "fullName": "Bitcoin / USD",    "tv": "BITSTAMP:BTCUSD"},
-    {"symbol": "EURUSD",  "fullName": "EUR / USD",        "tv": "OANDA:EURUSD"},
-    {"symbol": "GBPUSD",  "fullName": "GBP / USD",        "tv": "OANDA:GBPUSD"},
-    {"symbol": "USDJPY",  "fullName": "USD / JPY",        "tv": "OANDA:USDJPY"},
-    {"symbol": "ETHUSD",  "fullName": "Ethereum / USD",   "tv": "BITSTAMP:ETHUSD"},
-    {"symbol": "US100",   "fullName": "Nasdaq 100",       "tv": "FOREXCOM:NAS100"},
-    {"symbol": "USOIL",   "fullName": "WTI Crude Oil",    "tv": "NYMEX:CL1!"},
-]
-
-# Cache giá trước đó để tính changePercent
-_radar_prev_prices: dict = {}
-
-async def radar_update_loop():
-    """Cập nhật bảng Radar mỗi 60 giây từ dữ liệu streamer + Yahoo Finance API."""
-    await asyncio.sleep(15)  # chờ streamer init xong
-    while True:
-        try:
-            await _update_radar_prices()
-        except Exception as e:
-            print(f"[RADAR] Error: {e}")
-        await asyncio.sleep(60)
-
-async def _update_radar_prices():
-    """Fetch giá từ Yahoo Finance cho tất cả Radar symbols và ghi vào Firestore."""
-    # Map symbol sang Yahoo Finance ticker
-    yahoo_map = {
-        "XAUUSD": "GC=F",
-        "BTCUSD": "BTC-USD",
-        "EURUSD": "EURUSD=X",
-        "GBPUSD": "GBPUSD=X",
-        "USDJPY": "USDJPY=X",
-        "ETHUSD": "ETH-USD",
-        "US100":  "NQ=F",
-        "USOIL":  "CL=F",
-    }
-    batch = db.batch()
-    updated = 0
-    async with httpx.AsyncClient(timeout=15) as client:
-        for asset in RADAR_SYMBOLS:
-            sym = asset["symbol"]
-            yahoo_ticker = yahoo_map.get(sym)
-            if not yahoo_ticker:
-                continue
-            try:
-                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yahoo_ticker}?range=2d&interval=1d"
-                resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0 ProTradingAI/2.0"})
-                if resp.status_code != 200:
-                    continue
-                data = resp.json()
-                result = data.get("chart", {}).get("result", [])
-                if not result:
-                    continue
-                closes = result[0].get("indicators", {}).get("quote", [{}])[0].get("close", [])
-                closes = [c for c in closes if c is not None]
-                if len(closes) < 2:
-                    continue
-                prev_close = closes[-2]
-                current_price = closes[-1]
-                # Keep independent mark book warm for open-position PnL (P0#1)
-                streamer.set_last_price(sym, float(current_price))
-                change_pct = ((current_price - prev_close) / prev_close) * 100 if prev_close else 0
-
-                # Tính volatility
-                highs = result[0].get("indicators", {}).get("quote", [{}])[0].get("high", [])
-                lows = result[0].get("indicators", {}).get("quote", [{}])[0].get("low", [])
-                vol_status = "STABLE"
-                if highs and lows and len(highs) > 0:
-                    day_range = (highs[-1] or 0) - (lows[-1] or 0)
-                    vol_pct = (day_range / current_price * 100) if current_price else 0
-                    if vol_pct > 1.5:
-                        vol_status = "HIGH"
-                    elif vol_pct < 0.3:
-                        vol_status = "LOW"
-
-                # AI signal dựa trên momentum đơn giản
-                if change_pct > 0.5:
-                    ai_signal = "BUY"
-                    has_ai = True
-                elif change_pct < -0.5:
-                    ai_signal = "SELL"
-                    has_ai = True
-                else:
-                    ai_signal = "NEUTRAL"
-                    has_ai = False
-
-                # Sparkline: lấy 6 giá trị close gần nhất (normalize 0-10)
-                raw_spark = closes[-6:] if len(closes) >= 6 else closes
-                mn, mx = min(raw_spark), max(raw_spark)
-                rng = mx - mn if mx != mn else 1
-                sparkline = [round((v - mn) / rng * 10, 1) for v in raw_spark]
-
-                doc_ref = db.collection("radar").document(sym)
-                batch.set(doc_ref, {
-                    "symbol": sym,
-                    "fullName": asset["fullName"],
-                    "price": round(current_price, 2 if current_price > 10 else 5),
-                    "changePercent": round(change_pct, 2),
-                    "volatilityStatus": vol_status,
-                    "hasAiConfirmation": has_ai,
-                    "aiSignal": ai_signal,
-                    "sparklineData": sparkline,
-                    "updatedAt": firestore.SERVER_TIMESTAMP,
-                }, merge=True)
-                updated += 1
-            except Exception as e:
-                print(f"[RADAR] {sym} fetch error: {e}")
-    batch.commit()
-    print(f"[RADAR] Updated {updated}/{len(RADAR_SYMBOLS)} symbols in Firestore.")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -882,11 +891,11 @@ async def admin_stats_loop():
     while True:
         try:
             await _update_admin_stats()
-        except Exception as e:
-            print(f"[ADMIN STATS] Error: {e}")
+        except Exception:
+            print("[ADMIN STATS] Background cycle failed")
         await asyncio.sleep(300)  # 5 phút
 
-async def _update_admin_stats():
+def _update_admin_stats_sync():
     """Đếm users, trades từ Firestore và cập nhật admin/stats."""
     try:
         # Đếm tổng users
@@ -917,7 +926,6 @@ async def _update_admin_stats():
             "dau": max(dau, users_count if users_count < 100 else dau),
             "mau": users_count,
             "growth": round((users_count / max(users_count - trades_today, 1)) * 100 - 100, 1),
-            "latency": 18,  # ms - Cloud Run latency
             "pendingAlerts": pending + active_signals,
             "totalTrades": trades_today,
             "activeSignals": active_signals,
@@ -935,8 +943,12 @@ async def _update_admin_stats():
         }, merge=True)
 
         print(f"[ADMIN STATS] Updated: {users_count} users, {trades_today} trades today, {active_signals} signals.")
-    except Exception as e:
-        print(f"[ADMIN STATS] Update failed: {e}")
+    except Exception:
+        print("[ADMIN STATS] Update failed")
+
+
+async def _update_admin_stats():
+    await asyncio.to_thread(_update_admin_stats_sync)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -949,8 +961,8 @@ async def service_status_loop():
     while True:
         try:
             await _check_service_status()
-        except Exception as e:
-            print(f"[SERVICE STATUS] Error: {e}")
+        except Exception:
+            print("[SERVICE STATUS] Background cycle failed")
         await asyncio.sleep(60)
 
 async def _check_service_status():
@@ -972,7 +984,6 @@ async def _check_service_status():
 
         # Check Data Feeder (self — TradingView WebSocket is running)
         results["data_online"] = len(streamer.connections) >= 0 and streamer.last_price > 0
-        results["data_latency"] = 12  # internal latency estimate
 
         # MT4 Bridge: check if MetaApi endpoint is reachable
         try:
@@ -989,15 +1000,14 @@ async def _check_service_status():
     try:
         results["redis_online"] = analysis_cache.backend == "redis"
         results["redis_backend"] = analysis_cache.backend
-        results["redis_latency"] = 1 if analysis_cache.backend == "redis" else 0
         results["master_prompt_cache_ttl_sec"] = _MASTER_PROMPT_CACHE_TTL
     except Exception:
         results["redis_online"] = False
         results["redis_backend"] = "unknown"
-        results["redis_latency"] = 0
 
     results["updatedAt"] = firestore.SERVER_TIMESTAMP
-    db.collection("admin").document("service_status").set(results, merge=True)
+    service_status_ref = db.collection("admin").document("service_status")
+    await asyncio.to_thread(service_status_ref.set, results, merge=True)
     print(
         f"[SERVICE STATUS] AI: {'✅' if results.get('ai_online') else '❌'}, "
         f"MT4: {'✅' if results.get('mt4_online') else '❌'}, "
@@ -1013,13 +1023,9 @@ async def _check_service_status():
 # Chạy mỗi 15 phút, push vào Firestore news + analytics/sentiment
 # ─────────────────────────────────────────────────────────────
 
-RSS_FEEDS = [
-    {"url": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=XAUUSD=X&region=US&lang=en-US", "source": "Yahoo Finance", "category": "Market"},
-    {"url": "https://www.forexlive.com/feed/news", "source": "ForexLive", "category": "Forex"},
-    {"url": "https://www.dailyfx.com/feeds/market-news", "source": "DailyFX", "category": "Analysis"},
-    {"url": "https://rss.investing.com/rss/news_25.rss", "source": "Investing.com", "category": "Forex"},
-    {"url": "https://www.fxstreet.com/rss/news", "source": "FXStreet", "category": "Forex"},
-]
+# Populated only after G5 records an approved provider, license reference and
+# sandbox contract. Empty is the safe product state: unavailable, not fabricated.
+APPROVED_NEWS_FEEDS: tuple[dict, ...] = ()
 
 BULLISH_KEYWORDS = [
     'rally', 'surge', 'gain', 'rise', 'bullish', 'breakout', 'higher', 'upside',
@@ -1136,7 +1142,7 @@ async def _fetch_og_image(url: str, client: httpx.AsyncClient) -> str:
         og2 = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html_text, re.IGNORECASE)
         if og2:
             return og2.group(1).strip()
-    except Exception as e:
+    except Exception:
         pass
     return ""
 
@@ -1156,6 +1162,11 @@ async def enrich_articles_with_og_images(articles: list) -> list:
     return articles
 
 async def fetch_rss_feed(feed: dict) -> list:
+    if (
+        feed.get("license_status") != "approved"
+        or not str(feed.get("license_ref", "")).strip()
+    ):
+        return []
     try:
         async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
             headers = {"User-Agent": "Mozilla/5.0 ProTradingAI/2.0"}
@@ -1164,8 +1175,8 @@ async def fetch_rss_feed(feed: dict) -> list:
                 items = _parse_rss_xml(resp.text, feed["source"], feed["category"])
                 print(f"📰 [News] {feed['source']}: {len(items)} articles")
                 return items
-    except Exception as e:
-        print(f"⚠️ [News] {feed['source']} error: {e}")
+    except Exception:
+        print(f"⚠️ [News] {feed['source']} fetch failed")
     return []
 
 async def push_news_to_firestore(articles: list):
@@ -1180,18 +1191,21 @@ async def push_news_to_firestore(articles: list):
             continue
         try:
             doc_ref = news_col.document(doc_id)
-            existing = doc_ref.get()
+            existing = await asyncio.to_thread(doc_ref.get)
             if not existing.exists:
-                doc_ref.set(article)
+                await asyncio.to_thread(doc_ref.set, article)
                 pushed += 1
             else:
                 # If the existing doc has no imageUrl but we now have one, update it
                 existing_data = existing.to_dict() or {}
                 if not existing_data.get('imageUrl') and article.get('imageUrl'):
-                    doc_ref.update({'imageUrl': article['imageUrl']})
+                    await asyncio.to_thread(
+                        doc_ref.update,
+                        {'imageUrl': article['imageUrl']},
+                    )
                     updated += 1
-        except Exception as e:
-            print(f"⚠️ Firestore write error: {e}")
+        except Exception:
+            print("⚠️ [News] Firestore write failed")
     print(f"✅ [News] Pushed {pushed} new + updated {updated} images in Firestore")
 
 async def update_sentiment_pulse(articles: list):
@@ -1217,7 +1231,8 @@ async def update_sentiment_pulse(articles: list):
         mood = "NEUTRAL"
         mood_label = "Neutral"
 
-    db.collection('analytics').document('sentiment').set({
+    sentiment_ref = db.collection('analytics').document('sentiment')
+    await asyncio.to_thread(sentiment_ref.set, {
         "bullish": bull_pct,
         "bearish": bear_pct,
         "neutral": neutral_pct,
@@ -1238,7 +1253,7 @@ async def news_crawler_loop():
         try:
             print("🔄 [News Crawler] Fetching RSS feeds...")
             all_articles = []
-            tasks = [fetch_rss_feed(feed) for feed in RSS_FEEDS]
+            tasks = [fetch_rss_feed(feed) for feed in APPROVED_NEWS_FEEDS]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for r in results:
                 if isinstance(r, list):
@@ -1250,8 +1265,8 @@ async def news_crawler_loop():
                 await update_sentiment_pulse(all_articles)
             else:
                 print("⚠️ [News Crawler] No articles fetched.")
-        except Exception as e:
-            print(f"❌ [News Crawler] Error: {e}")
+        except Exception:
+            print("❌ [News Crawler] Update cycle failed")
 
         await asyncio.sleep(900)  # 15 phút
 
@@ -1284,39 +1299,111 @@ async def image_proxy(url: str):
     Proxy external images to bypass CORS restrictions on Flutter Web.
     Usage: /api/image-proxy?url=https://example.com/image.jpg
     """
-    if not url:
+    if LOCAL_QA_MODE or not url:
         return Response(status_code=400)
     try:
-        from fastapi.responses import Response as FastResponse
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
         }
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(url, headers=headers)
-        if resp.status_code != 200:
-            return FastResponse(status_code=404)
-        content_type = resp.headers.get("content-type", "image/jpeg")
-        return FastResponse(
-            content=resp.content,
+        current_url = url
+        content = b""
+        content_type = ""
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+            for _ in range(4):
+                current_url = await validate_public_https_url(current_url)
+                async with client.stream("GET", current_url, headers=headers) as resp:
+                    if 300 <= resp.status_code < 400:
+                        location = resp.headers.get("location", "")
+                        if not location:
+                            return Response(status_code=404)
+                        current_url = urljoin(current_url, location)
+                        continue
+                    if resp.status_code != 200:
+                        return Response(status_code=404)
+                    content_type = resp.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+                    if not content_type.startswith("image/"):
+                        return Response(status_code=415)
+                    declared_size = int(resp.headers.get("content-length", "0") or 0)
+                    if declared_size > 5 * 1024 * 1024:
+                        return Response(status_code=413)
+                    chunks = []
+                    total = 0
+                    async for chunk in resp.aiter_bytes():
+                        total += len(chunk)
+                        if total > 5 * 1024 * 1024:
+                            return Response(status_code=413)
+                        chunks.append(chunk)
+                    content = b"".join(chunks)
+                    break
+            else:
+                return Response(status_code=404)
+        return Response(
+            content=content,
             media_type=content_type,
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "public, max-age=86400",
             },
         )
-    except Exception as e:
-        print(f"[ImageProxy] Error fetching {url}: {e}")
+    except UnsafeExternalUrl:
+        return Response(status_code=400)
+    except Exception:
+        print("[ImageProxy] Fetch failed")
         return Response(status_code=502)
 
+@cloud_firestore.transactional
+def commit_community_like(transaction, post_ref, user_id: str) -> dict:
+    """Count one like per verified UID, including concurrent/retried requests."""
+    post = post_ref.get(transaction=transaction)
+    if not post.exists:
+        raise HTTPException(status_code=404, detail="Community post unavailable")
+    post_data = post.to_dict() or {}
+    count = post_data.get("likes", 0)
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        raise HTTPException(status_code=409, detail="Community post unavailable")
+    marker_ref = post_ref.collection("likes").document(user_id)
+    marker = marker_ref.get(transaction=transaction)
+    if marker.exists:
+        return {"liked": True, "alreadyLiked": True, "likes": count}
+    transaction.create(marker_ref, {
+        "userId": user_id,
+        "createdAt": firestore.SERVER_TIMESTAMP,
+    })
+    transaction.update(post_ref, {"likes": count + 1})
+    return {"liked": True, "alreadyLiked": False, "likes": count + 1}
+
+
+@app.post("/api/community/like")
+async def like_community_post(
+    req: CommunityLikeRequest,
+    authorization: str | None = Header(default=None),
+):
+    user_id = await verified_user_id(authorization, req.userId)
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", req.postId):
+        raise HTTPException(status_code=422, detail="Invalid community post ID")
+    post_ref = db.collection("community").document(req.postId)
+    return await asyncio.to_thread(
+        commit_community_like, db.transaction(), post_ref, user_id
+    )
+
+
 @app.post("/api/account/link")
-async def link_account(req: LinkAccountRequest):
-    print(f"SERVER: Linking account for user {req.userId}")
+async def link_account(
+    req: LinkAccountRequest,
+    authorization: str | None = Header(default=None),
+):
+    """Link a broker account for the verified Firebase user only."""
+    user_id = await verified_user_id(
+        authorization, req.userId, required_role="verified_partner",
+    )
+    if LOCAL_QA_MODE:
+        raise HTTPException(status_code=503, detail="Broker linking is unavailable in local QA")
+    print("SERVER: Linking broker account")
     try:
         api = MetaApi(META_API_TOKEN)
         # Create MetaApi account
         account = await api.metatrader_account_api.create_account({
-            'name': f"User_{req.userId[-6:]}",
+            'name': f"User_{user_id[-6:]}",
             'type': 'cloud',
             'login': req.login,
             'password': req.password,
@@ -1326,10 +1413,11 @@ async def link_account(req: LinkAccountRequest):
         })
         
         account_id = account['id']
-        print(f"SERVER: MetaApi Account Created: {account_id}")
+        print("SERVER: MetaApi account created")
 
         # Save to Firestore
-        db.collection('users').document(req.userId).collection('broker_accounts').document(account_id).set({
+        broker_account_ref = db.collection('users').document(user_id).collection('broker_accounts').document(account_id)
+        await asyncio.to_thread(broker_account_ref.set, {
             'platform': req.platform,
             'server': req.server,
             'login': req.login,
@@ -1338,59 +1426,308 @@ async def link_account(req: LinkAccountRequest):
         })
 
         return {"status": "success", "accountId": account_id}
-    except Exception as e:
-        print(f"SERVER: Link Account Error: {e}")
+    except Exception:
+        print("SERVER: Broker account link failed")
         return {"status": "error", "message": "Unable to link broker account. Please try again."}
 
-@app.post("/api/trade")
-async def execute_trade(req: TradeRequest):
-    """Execute a trade and save to Firestore"""
+@cloud_firestore.transactional
+def create_current_paper_trade(
+    transaction, trade_ref, signal_ref, cutoff_ref, user_id: str,
+    request_data: dict, request_hash: str, trade_id: str,
+):
+    """Atomically prove the signal is still current and create one paper order."""
+    previous = trade_ref.get(transaction=transaction)
+    if previous.exists:
+        old = previous.to_dict() or {}
+        if old.get('_requestHash') != request_hash:
+            raise HTTPException(status_code=409, detail="Idempotency key reused")
+        return False, old
+    cutoff_snapshot = cutoff_ref.get(transaction=transaction)
+    if cutoff_active(
+        cutoff_snapshot.to_dict() if cutoff_snapshot.exists else None,
+        datetime.now(timezone.utc),
+    ):
+        raise HTTPException(status_code=403, detail="Daily loss cutoff active")
+    current = signal_ref.get(transaction=transaction)
+    sym = validate_trade_intent(
+        user_id, request_data, current.to_dict() if current.exists else None,
+        now=time.time(),
+    )
+    targets = request_data['tpPrices']
+    entry_price = request_data['entryPrice']
+    trade_data = {
+        'id': trade_id,
+        'symbol': sym,
+        'type': request_data['action'],
+        'lotSize': request_data['volume'],
+        'openPrice': entry_price,
+        'currentPrice': entry_price,
+        'sl': request_data['slPrice'],
+        'tp': targets[0],
+        'tpLevels': targets,
+        'profit': 0.0,
+        'status': 'OPEN',
+        'tradingMode': request_data['tradingMode'],
+        'signalId': request_data['signalId'],
+        'signalChartId': request_data['signalChartId'],
+        '_requestHash': request_hash,
+        'openTime': firestore.SERVER_TIMESTAMP,
+    }
+    transaction.create(trade_ref, trade_data)
+    return True, trade_data
+
+
+def _cutoff_ref(user_id: str):
+    return db.collection('users').document(user_id).collection('risk_state').document('daily_cutoff')
+
+
+async def require_cutoff_unlocked(user_id: str) -> None:
+    if not user_id:
+        raise HTTPException(status_code=403, detail="User identity required")
+    snapshot = await asyncio.to_thread(_cutoff_ref(user_id).get)
+    if cutoff_active(
+        snapshot.to_dict() if snapshot.exists else None,
+        datetime.now(timezone.utc),
+    ):
+        raise HTTPException(status_code=403, detail="Daily loss cutoff active")
+
+
+def _cutoff_public_state(state: dict | None) -> dict:
+    if not state or state.get('active') is not True:
+        return {'active': False}
+    now = datetime.now(timezone.utc)
+    return {
+        'active': cutoff_active(state, now),
+        'sessionDate': state.get('sessionDate'),
+        'realizedPnl': state.get('realizedPnl'),
+        'floatingPnl': state.get('floatingPnl'),
+        'totalPnl': state.get('totalPnl'),
+        'lossLimit': state.get('lossLimit'),
+        'reviewed': bool(state.get('reviewedAt')),
+        'acknowledged': bool(state.get('acknowledgedAt')),
+    }
+
+
+@cloud_firestore.transactional
+def record_cutoff_review(transaction, cutoff_ref):
+    snapshot = cutoff_ref.get(transaction=transaction)
+    state = snapshot.to_dict() if snapshot.exists else None
+    if not state or state.get('active') is not True:
+        raise HTTPException(status_code=404, detail="Cutoff review unavailable")
+    if not state.get('reviewedAt'):
+        transaction.update(cutoff_ref, {'reviewedAt': firestore.SERVER_TIMESTAMP})
+        state = {**state, 'reviewedAt': True}
+    return _cutoff_public_state(state)
+
+
+@cloud_firestore.transactional
+def record_cutoff_acknowledgement(transaction, cutoff_ref):
+    snapshot = cutoff_ref.get(transaction=transaction)
+    state = snapshot.to_dict() if snapshot.exists else None
+    if not state or not state.get('reviewedAt'):
+        raise HTTPException(status_code=409, detail="Cutoff review required")
+    if not state.get('acknowledgedAt'):
+        transaction.update(cutoff_ref, {'acknowledgedAt': firestore.SERVER_TIMESTAMP})
+        state = {**state, 'acknowledgedAt': True}
+    return _cutoff_public_state(state)
+
+
+@app.get("/api/risk/cutoff/{user_id}")
+async def get_cutoff_state(
+    user_id: str, authorization: str | None = Header(default=None),
+):
+    owner = await verified_user_id(authorization, user_id)
     try:
-        trade_id = f"trade_{int(asyncio.get_event_loop().time() * 1000)}"
-        sym = normalize_symbol(req.symbol)
-        if req.entryPrice > 0:
-            entry_price = req.entryPrice
-        else:
-            entry_price = await streamer.get_price(sym)
-        
-        trade_data = {
-            'id': trade_id,
-            'symbol': sym,
-            'type': req.action,
-            'lotSize': req.volume,
-            'openPrice': entry_price,
-            'currentPrice': entry_price,
-            'sl': req.slPrice,
-            'tp': req.tpPrices[0] if req.tpPrices else 0.0,
-            'tpLevels': req.tpPrices,
-            'profit': 0.0,
-            'status': 'OPEN',
-            'tradingMode': req.tradingMode,
-            'openTime': firestore.SERVER_TIMESTAMP,
-        }
-        
-        # Save to Firestore
-        user_id = req.userId if req.userId else 'default'
-        db.collection('users').document(user_id).collection('trades').document(trade_id).set(trade_data)
-        
-        print(f"✅ Trade executed: {req.action} {sym} {req.volume} lots @ {entry_price}")
-        return {"status": "success", "tradeId": trade_id, "entryPrice": entry_price, "symbol": sym}
-    except Exception as e:
-        print(f"❌ Trade Error: {e}")
+        await require_daily_loss_capacity(owner)
+    except HTTPException as error:
+        if error.detail != "Daily loss cutoff active":
+            raise
+    snapshot = await asyncio.to_thread(_cutoff_ref(owner).get)
+    return _cutoff_public_state(snapshot.to_dict() if snapshot.exists else None)
+
+
+@app.post("/api/risk/cutoff/review")
+async def review_cutoff(
+    req: CutoffOwnerRequest, authorization: str | None = Header(default=None),
+):
+    owner = await verified_user_id(authorization, req.userId)
+    return await asyncio.to_thread(
+        record_cutoff_review, db.transaction(), _cutoff_ref(owner)
+    )
+
+
+@app.post("/api/risk/cutoff/ack")
+async def acknowledge_cutoff(
+    req: CutoffOwnerRequest, authorization: str | None = Header(default=None),
+):
+    owner = await verified_user_id(authorization, req.userId)
+    return await asyncio.to_thread(
+        record_cutoff_acknowledgement, db.transaction(), _cutoff_ref(owner)
+    )
+
+
+@cloud_firestore.transactional
+def persist_daily_loss_cutoff(transaction, cutoff_ref, decision, now: datetime):
+    existing = cutoff_ref.get(transaction=transaction)
+    state = existing.to_dict() if existing.exists else None
+    if cutoff_active(state, now):
+        return
+    transaction.set(cutoff_ref, {
+        'active': True,
+        'sessionDate': utc_session(now),
+        'realizedPnl': decision.realized_pnl,
+        'floatingPnl': decision.floating_pnl,
+        'totalPnl': decision.total_pnl,
+        'lossLimit': decision.loss_limit,
+        'reviewedAt': None,
+        'acknowledgedAt': None,
+        'trippedAt': firestore.SERVER_TIMESTAMP,
+    })
+
+
+async def require_daily_loss_capacity(user_id: str, *, now: float | None = None) -> None:
+    """Fail closed when authoritative paper-trade loss reaches the user's limit."""
+    await require_cutoff_unlocked(user_id)
+    risk_ref = (
+        db.collection('users').document(user_id)
+        .collection('settings').document('risk_config')
+    )
+    risk_snapshot = await asyncio.to_thread(risk_ref.get)
+    if not risk_snapshot.exists:
+        raise HTTPException(status_code=403, detail="Risk configuration required")
+    risk = risk_snapshot.to_dict() or {}
+
+    trades_ref = db.collection('users').document(user_id).collection('trades')
+    trades = await asyncio.to_thread(trades_ref.get)
+    utc_today = datetime.fromtimestamp(now or time.time(), timezone.utc).date()
+    realized = 0.0
+    floating = 0.0
+    for trade in trades:
+        data = trade.to_dict() or {}
+        status = str(data.get('status', '')).upper()
+        if status == 'CLOSED':
+            closed_at = data.get('closeTime')
+            if not isinstance(closed_at, datetime) or closed_at.astimezone(timezone.utc).date() != utc_today:
+                continue
+            realized += float(data.get('netProfit', data.get('profit', 0)) or 0)
+            continue
+        if status != 'OPEN':
+            continue
+        symbol = normalize_symbol(data.get('symbol', ''))
+        mark = await streamer.get_price(symbol)
+        if mark <= 0:
+            raise HTTPException(status_code=503, detail="Risk state unavailable")
+        floating += calc_pnl(
+            symbol,
+            data.get('type', 'BUY'),
+            float(data.get('openPrice', 0) or 0),
+            mark,
+            float(data.get('lotSize', 0) or 0),
+        )
+
+    try:
+        decision = evaluate_daily_loss(
+            balance=float(risk.get('balance', 0) or 0),
+            max_daily_loss_percent=float(risk.get('maxDailyLoss', 0) or 0),
+            realized_pnl=realized,
+            floating_pnl=floating,
+        )
+    except (DailyLossPolicyError, TypeError, ValueError):
+        raise HTTPException(status_code=403, detail="Valid risk configuration required") from None
+    if decision.blocked:
+        await asyncio.to_thread(
+            persist_daily_loss_cutoff,
+            db.transaction(), _cutoff_ref(user_id), decision,
+            datetime.fromtimestamp(now if now is not None else time.time(), timezone.utc),
+        )
+        raise HTTPException(status_code=403, detail="Daily loss cutoff active")
+
+
+@app.post("/api/trade")
+async def execute_trade(
+    req: TradeRequest,
+    authorization: str | None = Header(default=None),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    """Create one authenticated, signal-authorized paper trade per intent."""
+    metric_timer = operation_recorder.start(Operation.PAPER_EXECUTION)
+    try:
+        user_id = await verified_user_id(authorization, req.userId)
+        try:
+            trade_id = trade_document_id(user_id, idempotency_key)
+        except TradeDenied:
+            raise HTTPException(status_code=422, detail="Invalid idempotency key") from None
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", req.signalId):
+            raise HTTPException(status_code=422, detail="Invalid signal ID")
+        request_hash = hashlib.sha256(
+            json.dumps(req.model_dump(exclude={"userId"}), sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        trade_ref = db.collection('users').document(user_id).collection('trades').document(trade_id)
+        existing = await asyncio.to_thread(trade_ref.get)
+        if existing.exists:
+            old = existing.to_dict() or {}
+            if old.get('_requestHash') != request_hash:
+                raise HTTPException(status_code=409, detail="Idempotency key reused")
+            return {"status": "success", "tradeId": trade_id, "entryPrice": old['openPrice'], "symbol": old['symbol']}
+        await require_backend_operation(BackendOperation.EXECUTION)
+        await require_daily_loss_capacity(user_id)
+        signal_ref = db.collection('signals').document(req.signalId)
+        try:
+            created, saved = await asyncio.to_thread(
+                create_current_paper_trade, db.transaction(), trade_ref, signal_ref,
+                _cutoff_ref(user_id),
+                user_id, req.model_dump(), request_hash, trade_id,
+            )
+        except TradeDenied:
+            raise HTTPException(status_code=403, detail="No current Hard Setup for this order") from None
+        except Conflict:
+            existing = await asyncio.to_thread(trade_ref.get)
+            old = existing.to_dict() if existing.exists else {}
+            if old.get('_requestHash') != request_hash:
+                raise HTTPException(status_code=409, detail="Idempotency key reused") from None
+            return {"status": "success", "tradeId": trade_id, "entryPrice": old['openPrice'], "symbol": old['symbol']}
+        if created:
+            print(f"✅ Paper trade executed for {saved['symbol']}")
+        metric_timer.finish(
+            outcome=OperationOutcome.SUCCESS,
+            fallback=False,
+        )
+        return {"status": "success", "tradeId": trade_id, "entryPrice": saved['openPrice'], "symbol": saved['symbol']}
+    except HTTPException:
+        metric_timer.finish(
+            outcome=OperationOutcome.FAILURE,
+            fallback=False,
+            error_code=FailureCode.INTERNAL_ERROR,
+        )
+        raise
+    except Exception:
+        metric_timer.finish(
+            outcome=OperationOutcome.FAILURE,
+            fallback=False,
+            error_code=FailureCode.INTERNAL_ERROR,
+        )
+        print("❌ Paper trade execution failed")
         return {"status": "error", "message": "Trade execution failed. Please retry."}
 
 @app.post("/api/trade/close")
-async def close_trade(req: CloseTradeRequest):
+async def close_trade(
+    req: CloseTradeRequest,
+    authorization: str | None = Header(default=None),
+):
     """Close an open trade using that trade's own symbol mark price."""
+    user_id = await verified_user_id(authorization, req.userId)
+    if not re.fullmatch(r"trade_[A-Za-z0-9_-]{1,128}", req.tradeId):
+        raise HTTPException(status_code=422, detail="Invalid trade ID")
     try:
-        user_id = req.userId if req.userId else 'default'
         trade_ref = db.collection('users').document(user_id).collection('trades').document(req.tradeId)
-        trade_doc = trade_ref.get()
+        trade_doc = await asyncio.to_thread(trade_ref.get)
         
         if not trade_doc.exists:
             return {"status": "error", "message": "Trade not found"}
         
         trade_data = trade_doc.to_dict()
+        if trade_data.get('status') != 'OPEN':
+            return {"status": "error", "message": "Trade is not open"}
         trade_symbol = normalize_symbol(trade_data.get('symbol', 'XAUUSD'))
         close_price = await streamer.get_price(trade_symbol)
         if close_price <= 0:
@@ -1409,7 +1746,7 @@ async def close_trade(req: CloseTradeRequest):
         entry_price = float(trade_data.get('openPrice', trade_data.get('entryPrice', 0)) or 0)
 
         # Day 6 — dual-write journal schema alongside execution fields
-        trade_ref.update({
+        await asyncio.to_thread(trade_ref.update, {
             'status': 'CLOSED',
             'closePrice': close_price,
             'currentPrice': close_price,
@@ -1423,21 +1760,40 @@ async def close_trade(req: CloseTradeRequest):
             'slippage': float(trade_data.get('slippage', 0) or 0),
         })
         
-        print(f"✅ Trade closed: {req.tradeId} {trade_symbol} @ {close_price}, Profit: {profit:.2f}")
+        print(f"✅ Paper trade closed for {trade_symbol}")
         return {"status": "success", "closePrice": close_price, "profit": profit, "symbol": trade_symbol}
-    except Exception as e:
-        print(f"❌ Close Trade Error: {e}")
+    except Exception:
+        print("❌ Paper trade close failed")
         return {"status": "error", "message": "Unable to close trade. Please retry."}
 
 @app.post("/api/ai/chat")
-async def ai_chat(req: AIChatRequest):
+async def ai_chat(
+    req: AIChatRequest,
+    authorization: str | None = Header(default=None),
+):
     """Real AI chat using DeepSeek - inject Master Prompt từ Admin config"""
+    await verified_user_id(authorization, req.userId)
+    if (
+        not isinstance(req.message, str)
+        or not 1 <= len(req.message.strip()) <= 2000
+        or not isinstance(req.symbol, str)
+        or re.fullmatch(r"[A-Z0-9._-]{2,20}", req.symbol) is None
+        or req.timeframe not in {"5", "15", "60", "240", "1440"}
+    ):
+        raise HTTPException(status_code=422, detail="Invalid chat request")
     friendly = (
         "Hệ thống AI đang thực hiện phân tích kỹ thuật tạm thời. "
         "Vui lòng thử lại sau vài giây — tín hiệu rule-based vẫn khả dụng trên Trading Room."
     )
+    metric_timer = operation_recorder.start(Operation.AI_CHAT)
     try:
+        await require_backend_operation(BackendOperation.ANALYSIS)
         if not DEEPSEEK_API_KEY:
+            metric_timer.finish(
+                outcome=OperationOutcome.FALLBACK,
+                fallback=True,
+                error_code=FailureCode.PROVIDER_UNAVAILABLE,
+            )
             return {
                 "status": "error",
                 "response": friendly,
@@ -1445,12 +1801,13 @@ async def ai_chat(req: AIChatRequest):
                 "message": friendly,
             }
 
-        current_price = streamer.last_price
-        candles_summary = ""
-        sorted_times = sorted(streamer.candle_map.keys())
-        if len(sorted_times) >= 20:
-            recent = [streamer.candle_map[t] for t in sorted_times[-20:]]
-            candles_summary = f"Dữ liệu 5 nến gần nhất (OHLC): {json.dumps(recent[-5:])}"
+        market_context = symbol_bound_chat_context(
+            requested_symbol=req.symbol,
+            requested_timeframe=req.timeframe,
+            chart_symbol=streamer.chart_symbol_clean(),
+            chart_timeframe=streamer.interval,
+            chart_price=streamer.last_price,
+        )
 
         # ── Lấy Master Prompt từ Admin config (có cache) ──
         master_prompt = await get_chat_master_prompt()
@@ -1460,11 +1817,13 @@ async def ai_chat(req: AIChatRequest):
             f"{master_prompt}\n\n"
             f"--- DỮ LIỆU THỜI GIAN THỰC ---\n"
             f"Cặp tiền: {req.symbol} | Khung giờ: {req.timeframe}min\n"
-            f"Giá hiện tại: {current_price}\n"
-            f"{candles_summary}"
+            f"{market_context}\n"
+            "If live market context is unavailable, do not assert a current price, "
+            "candle pattern, or actionable trading level."
         )
 
-        response = ai_client.chat.completions.create(
+        response = await asyncio.to_thread(
+            ai_client.chat.completions.create,
             model="deepseek-chat",
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -1475,10 +1834,19 @@ async def ai_chat(req: AIChatRequest):
         )
 
         ai_response = response.choices[0].message.content
-        print(f"✅ AI Chat [{req.symbol}]: {req.message[:50]}...")
+        metric_timer.finish(
+            outcome=OperationOutcome.SUCCESS,
+            fallback=False,
+        )
+        print(f"✅ AI chat completed for {normalize_symbol(req.symbol)}")
         return {"status": "success", "response": ai_response, "fallback": False}
-    except Exception as e:
-        print(f"❌ AI Chat Error: {e}")
+    except Exception:
+        metric_timer.finish(
+            outcome=OperationOutcome.FAILURE,
+            fallback=False,
+            error_code=FailureCode.INTERNAL_ERROR,
+        )
+        print("❌ AI chat request failed")
         # Day 5/7 — never leak stack/exception to clients
         return {
             "status": "error",
@@ -1488,8 +1856,12 @@ async def ai_chat(req: AIChatRequest):
         }
 
 @app.post("/api/risk-config")
-async def save_risk_config(req: RiskConfigRequest):
+async def save_risk_config(
+    req: RiskConfigRequest,
+    authorization: str | None = Header(default=None),
+):
     """Save user's risk configuration"""
+    user_id = await verified_user_id(authorization, req.userId)
     try:
         config_data = {
             'balance': req.balance,
@@ -1497,32 +1869,39 @@ async def save_risk_config(req: RiskConfigRequest):
             'maxDailyLoss': req.maxDailyLoss,
             'updatedAt': firestore.SERVER_TIMESTAMP,
         }
-        db.collection('users').document(req.userId).collection('settings').document('risk_config').set(config_data)
-        
-        # Update streamer account info
-        streamer.account_info['balance'] = req.balance
-        streamer.account_info['equity'] = req.balance
+        risk_config_ref = db.collection('users').document(user_id).collection('settings').document('risk_config')
+        await asyncio.to_thread(risk_config_ref.set, config_data)
         
         return {"status": "success"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        return {"status": "error", "message": "Unable to save risk configuration."}
 
 @app.get("/api/risk-config/{user_id}")
-async def get_risk_config(user_id: str):
+async def get_risk_config(
+    user_id: str,
+    authorization: str | None = Header(default=None),
+):
     """Get user's risk configuration"""
+    user_id = await verified_user_id(authorization, user_id)
     try:
-        doc = db.collection('users').document(user_id).collection('settings').document('risk_config').get()
+        risk_config_ref = db.collection('users').document(user_id).collection('settings').document('risk_config')
+        doc = await asyncio.to_thread(risk_config_ref.get)
         if doc.exists:
             return {"status": "success", "config": doc.to_dict()}
         return {"status": "success", "config": None}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        return {"status": "error", "message": "Unable to load risk configuration."}
 
 @app.get("/api/trades/{user_id}")
-async def get_open_trades(user_id: str):
+async def get_open_trades(
+    user_id: str,
+    authorization: str | None = Header(default=None),
+):
     """Get user's open trades — each position marked with its OWN symbol price."""
+    user_id = await verified_user_id(authorization, user_id)
     try:
-        trades = db.collection('users').document(user_id).collection('trades').where('status', '==', 'OPEN').get()
+        trades_query = db.collection('users').document(user_id).collection('trades').where('status', '==', 'OPEN')
+        trades = await asyncio.to_thread(trades_query.get)
         trade_list = []
         for trade in trades:
             td = trade.to_dict()
@@ -1544,40 +1923,65 @@ async def get_open_trades(user_id: str):
                 td['profit'] = td.get('profit', 0.0)
             trade_list.append(td)
         return {"status": "success", "trades": trade_list}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        return {"status": "error", "message": "Unable to load open trades."}
 
 @app.websocket("/ws/trading")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("Client Connected")
-    streamer.connections.add(websocket)
+    # Each browser owns its chart state. Only symbol-bound mark prices are
+    # shared, so one connection cannot change another connection's candles.
+    session = TradingViewStreamer(shared_last_prices=streamer.last_prices)
+    session.connections.add(websocket)
     # Gửi ngay dữ liệu hiện có
-    candles_list = [streamer.candle_map[t] for t in sorted(streamer.candle_map.keys())]
+    candles_list = [session.candle_map[t] for t in sorted(session.candle_map.keys())]
     await websocket.send_text(json.dumps({
         "type": "init",
-        "symbol": streamer.chart_symbol_clean(),
-        "price": streamer.last_price,
-        "prices": streamer.last_prices,
+        "symbol": session.chart_symbol_clean(),
+        "price": session.last_price,
+        "prices": session.last_prices,
         "candles": candles_list,
-        "account": streamer.account_info,
+        "account": session.account_info,
     }))
+    if not LOCAL_QA_MODE:
+        await session.start()
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
             if msg.get("action") == "set_interval":
-                streamer.interval = msg["interval"]
-                streamer.candle_map = {}
-                await streamer.start()
+                interval = str(msg.get("interval", ""))
+                if interval not in ALLOWED_TV_INTERVALS:
+                    await websocket.send_text(json.dumps({
+                        "type": "error", "message": "Unsupported interval",
+                    }))
+                    continue
+                session.interval = interval
+                session.candle_map = {}
+                session._pending_delta = {}
+                if not LOCAL_QA_MODE:
+                    await session.start()
             elif msg.get("action") == "set_symbol":
-                sym = normalize_symbol(msg["symbol"])
-                streamer.symbol = TV_SYMBOL_MAP.get(sym, f"OANDA:{sym}")
-                streamer.candle_map = {}
-                # Keep last_prices for other symbols; do not wipe the book
-                await streamer.start()
-    except:
-        streamer.connections.discard(websocket)
+                sym = normalize_symbol(str(msg.get("symbol", "")))
+                tv_symbol = TV_SYMBOL_MAP.get(sym)
+                if tv_symbol is None:
+                    await websocket.send_text(json.dumps({
+                        "type": "error", "message": "Unsupported symbol",
+                    }))
+                    continue
+                session.symbol = tv_symbol
+                session.candle_map = {}
+                session._pending_delta = {}
+                if not LOCAL_QA_MODE:
+                    await session.start()
+    except WebSocketDisconnect:
+        pass
+    except (json.JSONDecodeError, TypeError, ValueError):
+        print("[WebSocket] Invalid client message")
+    finally:
+        session.connections.discard(websocket)
+        await session.stop()
 
 # ─── Symbol → TradingView mapping (expanded) ───
 TV_SYMBOL_MAP = {
@@ -1616,6 +2020,8 @@ TV_SYMBOL_MAP = {
     "NGAS":    "NYMEX:NG1!",
     "XPTUSD":  "OANDA:XPTUSD",
 }
+
+ALLOWED_TV_INTERVALS = frozenset({"5", "15", "60", "240", "1440"})
 
 if __name__ == "__main__":
     import uvicorn

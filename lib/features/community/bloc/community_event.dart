@@ -33,3 +33,15 @@ class CreatePost extends CommunityEvent {
   @override
   List<Object?> get props => [content];
 }
+
+class LikeCommunityPost extends CommunityEvent {
+  final String postId;
+  const LikeCommunityPost(this.postId);
+
+  @override
+  List<Object?> get props => [postId];
+}
+
+class CommunityStreamFailed extends CommunityEvent {
+  const CommunityStreamFailed();
+}

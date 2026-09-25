@@ -9,16 +9,52 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuth() && request.auth.uid == userId;
     }
+    function isAdmin() {
+      return isAuth() && request.auth.token.admin == true
+        && request.auth.token.role in [
+          'standard', 'verified_partner', 'professional', 'enterprise'
+        ];
+    }
+    function isBacktestOwner(sessionId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/backtest_sessions/$(sessionId))
+        && get(/databases/$(database)/documents/backtest_sessions/$(sessionId)).data.userId == request.auth.uid;
+    }
 
     // ─── 1. Public Data (đọc tự do) ───
     match /news/{document=**} {
       allow read: if true;
     }
-    match /signals/{document=**} {
-      allow read: if true;
+    match /signals/{signalId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
     }
-    match /analysis_requests/{document=**} {
-      allow read, write: if true;
+    match /analysis_requests/{requestId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.keys().hasOnly([
+          'userId', 'status', 'symbol', 'timeframe', 'execution_tf',
+          'trading_mode', 'requestedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId', 'status', 'symbol', 'timeframe', 'execution_tf',
+          'trading_mode'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.symbol is string
+        && request.resource.data.symbol.matches('^[A-Z0-9._-]{2,20}$')
+        && request.resource.data.timeframe is string
+        && request.resource.data.execution_tf == request.resource.data.timeframe
+        && (
+          (request.resource.data.trading_mode == 'scalping'
+            && request.resource.data.timeframe in ['5', '15', '60'])
+          || (request.resource.data.trading_mode == 'day_trading'
+            && request.resource.data.timeframe in ['15', '60', '240'])
+          || (request.resource.data.trading_mode == 'swing'
+            && request.resource.data.timeframe in ['60', '240', '1440'])
+        )
+        && (!('requestedAt' in request.resource.data)
+          || request.resource.data.requestedAt is timestamp);
     }
     match /analytics/{document=**} {
       allow read: if true;
@@ -35,62 +71,106 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'username', 'email', 'displayName', 'tier', 'totalTrades',
+          'winRate', 'rank', 'avatarUrl', 'brokerLinked',
+          'syncGateDismissed', 'manualRiskMode', 'createdAt', 'lastSeen'
+        ])
+        && request.resource.data.tier == 'FREE'
+        && request.resource.data.brokerLinked == false
+        && request.resource.data.totalTrades == 0
+        && request.resource.data.winRate == 0
+        && request.resource.data.rank == 0;
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'lastSeen', 'syncGateDismissed', 'manualRiskMode', 'username',
+          '2fa', 'pushNotificationsEnabled', 'dataSharingEnabled'
+        ]);
     }
-    match /users/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+    match /users/{userId}/{subcollection}/{document=**} {
+      allow read: if isOwner(userId);
+      // Paper execution/close uses the authenticated backend only.
+      allow write: if isOwner(userId)
+        && subcollection != 'trades'
+        && subcollection != 'meta'
+        && subcollection != 'broker_accounts'
+        && subcollection != 'risk_state';
     }
 
     // ─── 4. Referrals ───
     match /referrals/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
     }
     match /referrals/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
     }
 
     // ─── 5. Trades ───
     match /trades/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
     }
 
     // ─── 6. Backtest Sessions ───
     match /backtest_sessions/{sessionId} {
-      // Cho phép user đọc/ghi session của chính họ
-      allow read, write: if isAuth() && (
-        resource == null ||
-        resource.data.userId == request.auth.uid
-      );
-      // Khi tạo mới: userId phải khớp với auth.uid
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow read, delete: if isAuth()
+        && resource.data.userId == request.auth.uid;
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
     }
     match /backtest_sessions/{sessionId}/trades/{tradeId} {
-      allow read, write: if isAuth();
+      allow read, write: if isBacktestOwner(sessionId);
     }
 
     // ─── 7. Admin ───
     match /admin/{document} {
-      allow read: if isAuth();
+      allow read, write: if isAdmin();
     }
     match /admin/{document}/{subCol}/{subDoc} {
-      allow read: if isAuth();
+      allow read, write: if isAdmin()
+        && !(document == 'requests' && subCol == 'pending');
     }
     match /admin/requests/pending/{reqId} {
-      // User có thể tạo withdrawal request
-      allow create: if isAuth();
-      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'PENDING';
+      allow read: if isAdmin() || (isAuth()
+        && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        && request.resource.data.userId == resource.data.userId;
     }
 
     // ─── 8. Community & Social ───
     match /community/{postId} {
       allow read: if true;
-      allow create: if isAuth();
-      // Chỉ chủ bài viết mới được sửa/xóa
-      allow update: if isAuth() && (
-        // Cho phép like (chỉ update field likes)
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) ||
-        resource.data.userId == request.auth.uid
-      );
+      allow create: if isAuth()
+        && request.resource.data.keys().hasOnly([
+          'userId', 'userName', 'avatarUrl', 'content', 'likes',
+          'comments', 'isVerified', 'tradeVerified', 'timestamp'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId', 'userName', 'avatarUrl', 'content', 'likes',
+          'comments', 'isVerified', 'tradeVerified', 'timestamp'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.userName is string
+        && request.resource.data.userName.size() <= 100
+        && request.resource.data.avatarUrl is string
+        && request.resource.data.avatarUrl.size() <= 2048
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.likes == 0
+        && request.resource.data.comments == 0
+        && request.resource.data.isVerified == false
+        && request.resource.data.tradeVerified == false
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.timestamp <= request.time;
+      // Verification and engagement counters are backend-owned.
       allow delete: if isAuth() && resource.data.userId == request.auth.uid;
     }
     match /leaderboard/{document=**} {
@@ -99,13 +179,27 @@ service cloud.firestore {
 
     // ─── 9. Admin Settings (AI Config) ───
     match /AdminSettings/{document=**} {
-      allow read: if isAuth();
-      // Backend ghi bằng Admin SDK, hoặc admin user
+      allow read, write: if isAdmin();
     }
 
     // ─── 10. Broadcasts ───
     match /broadcasts/{document=**} {
       allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ─── 11. Owner-scoped chat and notification tokens ───
+    match /chat_history/{userId}/{chatType}/{messageId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /fcm_tokens/{tokenId} {
+      allow create: if isAuth()
+        && request.resource.data.userId == request.auth.uid;
+      allow read, delete: if isAuth()
+        && resource.data.userId == request.auth.uid;
+      allow update: if isAuth()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
     }
   }
 }

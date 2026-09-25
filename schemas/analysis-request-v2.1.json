@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://protrading.ai/schemas/analysis-request-v2.1.json",
+  "title": "ProTrading AI V2.1 Analysis Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["symbol", "trading_mode", "execution_tf"],
+  "properties": {
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z0-9._-]{2,20}$"
+    },
+    "trading_mode": {
+      "type": "string",
+      "enum": ["scalping", "day_trading", "swing"]
+    },
+    "execution_tf": {"type": "string", "enum": ["5", "15", "60"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"trading_mode": {"const": "scalping"}}},
+      "then": {"properties": {"execution_tf": {"const": "5"}}}
+    },
+    {
+      "if": {"properties": {"trading_mode": {"const": "day_trading"}}},
+      "then": {"properties": {"execution_tf": {"const": "15"}}}
+    },
+    {
+      "if": {"properties": {"trading_mode": {"const": "swing"}}},
+      "then": {"properties": {"execution_tf": {"const": "60"}}}
+    }
+  ]
+}

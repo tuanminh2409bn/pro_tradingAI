@@ -1,0 +1,23 @@
+{
+  "chart_id": "XAUUSD_M5_1700000000",
+  "setup_ready": false,
+  "veto": true,
+  "veto_data": {
+    "veto_reason": "htf_opposing_order_block",
+    "conflict_htf": "H4",
+    "danger_zone": {
+      "top": 101.2,
+      "bottom": 99.8,
+      "bias": "bearish"
+    }
+  },
+  "fallback": false,
+  "forecast_text": "VETO: H4 opposing supply zone; execution frozen.",
+  "layers": {
+    "layer1_structural": [],
+    "layer2_trap": [],
+    "layer3_candle": [],
+    "layer4_execution": null,
+    "layer5_overlay": []
+  }
+}

@@ -1,6 +1,71 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+class BrokerTradeMetrics extends Equatable {
+  final double? swap;
+  final double? commission;
+  final double? slippage;
+  final String source;
+  final String currency;
+
+  const BrokerTradeMetrics({
+    required this.swap,
+    required this.commission,
+    required this.slippage,
+    required this.source,
+    required this.currency,
+  });
+
+  static BrokerTradeMetrics? fromFirestoreMap(Map<String, dynamic> data) {
+    final rawEnvelope = data['brokerMetrics'];
+    final envelope = rawEnvelope is Map
+        ? Map<String, dynamic>.fromEntries(
+            rawEnvelope.entries
+                .where((entry) => entry.key is String)
+                .map((entry) => MapEntry(entry.key as String, entry.value)),
+          )
+        : const <String, dynamic>{};
+
+    String? nonEmptyString(Object? value) {
+      if (value is! String) return null;
+      final normalized = value.trim();
+      return normalized.isEmpty ? null : normalized;
+    }
+
+    double? finiteNumber(Object? value) {
+      if (value is! num) return null;
+      final normalized = value.toDouble();
+      return normalized.isFinite ? normalized : null;
+    }
+
+    final source = nonEmptyString(
+      envelope['source'] ?? data['metricsSource'] ?? data['metricSource'],
+    );
+    final currency = nonEmptyString(
+      envelope['currency'] ?? data['metricsCurrency'] ?? data['metricCurrency'],
+    )?.toUpperCase();
+    if (source == null || currency == null) return null;
+
+    final swap = finiteNumber(envelope['swap'] ?? data['swap']);
+    final commission = finiteNumber(
+      envelope['commission'] ?? data['commission'],
+    );
+    final slippage = finiteNumber(envelope['slippage'] ?? data['slippage']);
+    if (swap == null && commission == null && slippage == null) return null;
+
+    return BrokerTradeMetrics(
+      swap: swap,
+      commission: commission,
+      slippage: slippage,
+      source: source,
+      currency: currency,
+    );
+  }
+
+  @override
+  List<Object?> get props => [swap, commission, slippage, source, currency];
+}
+
 class TradeRecord extends Equatable {
   final String symbol;
   final String action; // 'LONG', 'SHORT'
@@ -9,8 +74,15 @@ class TradeRecord extends Equatable {
   final double exitPrice;
   final double netProfit;
   final DateTime closeTime;
-  final double swap;
-  final double slippage;
+  final BrokerTradeMetrics? brokerMetrics;
+  final String? executionMode;
+
+  double? get swap => brokerMetrics?.swap;
+  double? get commission => brokerMetrics?.commission;
+  double? get slippage => brokerMetrics?.slippage;
+  String? get metricSource => brokerMetrics?.source;
+  String? get metricCurrency => brokerMetrics?.currency;
+  bool get isPaperTrade => executionMode == 'paper';
 
   const TradeRecord({
     required this.symbol,
@@ -20,8 +92,8 @@ class TradeRecord extends Equatable {
     required this.exitPrice,
     required this.netProfit,
     required this.closeTime,
-    required this.swap,
-    required this.slippage,
+    this.brokerMetrics,
+    this.executionMode,
   });
 
   /// Day 6 — normalize trade docs written by `/api/trade` + `/api/trade/close`.
@@ -57,6 +129,13 @@ class TradeRecord extends Equatable {
       if (ot is Timestamp) closeTime = ot.toDate();
     }
 
+    final rawExecutionMode = data['executionMode'] ?? data['tradeMode'];
+    final executionMode = rawExecutionMode is String
+        ? rawExecutionMode.trim().toLowerCase()
+        : data['isPaperTrade'] == true
+        ? 'paper'
+        : null;
+
     return TradeRecord(
       symbol: (data['symbol'] ?? '').toString(),
       action: action,
@@ -65,8 +144,8 @@ class TradeRecord extends Equatable {
       exitPrice: (data['exitPrice'] ?? data['closePrice'] ?? 0).toDouble(),
       netProfit: (data['netProfit'] ?? data['profit'] ?? 0).toDouble(),
       closeTime: closeTime,
-      swap: (data['swap'] ?? 0).toDouble(),
-      slippage: (data['slippage'] ?? 0).toDouble(),
+      brokerMetrics: BrokerTradeMetrics.fromFirestoreMap(data),
+      executionMode: executionMode?.isEmpty == true ? null : executionMode,
     );
   }
 
@@ -79,6 +158,8 @@ class TradeRecord extends Equatable {
     exitPrice,
     netProfit,
     closeTime,
+    brokerMetrics,
+    executionMode,
   ];
 }
 

@@ -1,0 +1,341 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://protrading.ai/schemas/analysis-response-v2.1.json",
+  "title": "ProTrading AI Appendix-8 V2.1 Analysis Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "chart_id",
+    "setup_ready",
+    "veto",
+    "veto_data",
+    "fallback",
+    "forecast_text",
+    "layers"
+  ],
+  "properties": {
+    "chart_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9._-]{2,20}_(M5|M15|H1|H4|D1|5|15|60|240|1440|UNKNOWN)_[1-9][0-9]*$"
+    },
+    "setup_ready": {"type": "boolean"},
+    "veto": {"type": "boolean"},
+    "veto_data": {"type": ["object", "null"]},
+    "fallback": {"type": "boolean"},
+    "forecast_text": {"type": "string", "maxLength": 500},
+    "layers": {"$ref": "#/$defs/layers"}
+  },
+  "$defs": {
+    "hexColor": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "source_id", "timestamp"],
+      "properties": {
+        "source": {"type": "string", "minLength": 1, "maxLength": 80},
+        "source_id": {"type": "string", "minLength": 1, "maxLength": 160},
+        "timestamp": {"type": "integer", "minimum": 1}
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": {"type": "integer", "minimum": 1},
+        "y": {"type": "number"}
+      }
+    },
+    "layer1Line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "color", "x1", "y1", "x2", "y2", "evidence"],
+      "properties": {
+        "type": {"const": "dashed_line"},
+        "color": {"enum": ["#FFD700", "#FF8C00"]},
+        "x1": {"type": "integer", "minimum": 1},
+        "y1": {"type": "number"},
+        "x2": {"type": "integer", "minimum": 1},
+        "y2": {"type": "number"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 4},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "layer1Box": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "color", "x", "x_end", "y_top", "y_bottom", "evidence"],
+      "properties": {
+        "type": {"enum": ["solid_box", "bordered_box"]},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "x": {"type": "integer", "minimum": 1},
+        "x_end": {"type": "integer", "minimum": 1},
+        "y_top": {"type": "number"},
+        "y_bottom": {"type": "number"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 4},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "bordered_box"}}},
+          "then": {"properties": {"color": {"const": "#F0E68C"}}},
+          "else": {
+            "properties": {
+              "color": {"enum": ["#00FF7F", "#FF4500", "#BA55D3"]}
+            }
+          }
+        }
+      ]
+    },
+    "layer2Text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text", "color", "x", "y", "evidence"],
+      "properties": {
+        "type": {"enum": ["text_tag", "volume_tag"]},
+        "text": {"type": "string", "minLength": 1, "maxLength": 8},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "background_color": {"$ref": "#/$defs/hexColor"},
+        "x": {"type": "integer", "minimum": 1},
+        "y": {"type": "number"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "layer2Arrow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "direction", "label", "color", "x", "y", "evidence"],
+      "properties": {
+        "type": {"const": "arrow"},
+        "direction": {"enum": ["up", "down"]},
+        "label": {"type": "string", "minLength": 1, "maxLength": 8},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "x": {"type": "integer", "minimum": 1},
+        "y": {"type": "number"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "layer3Candle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp", "evidence"],
+      "properties": {
+        "timestamp": {"type": "integer", "minimum": 1},
+        "fill_color": {"enum": ["#8A2BE2", "#A9A9A9"]},
+        "text": {"type": "string", "minLength": 1, "maxLength": 2},
+        "border": {"const": "#FFD700"},
+        "divergence": {"enum": ["up", "down"]},
+        "divergence_color": {"$ref": "#/$defs/hexColor"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      },
+      "dependentRequired": {"divergence": ["divergence_color"]},
+      "anyOf": [
+        {"required": ["fill_color"]},
+        {"required": ["text"]},
+        {"required": ["border"]},
+        {"required": ["divergence", "divergence_color"]}
+      ]
+    },
+    "sig1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "style", "color", "points"],
+      "properties": {
+        "id": {"const": "SIG_1"},
+        "type": {"const": "bezier_quadratic"},
+        "style": {"const": "dashed"},
+        "color": {"const": "#00F0FF"},
+        "points": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/point"}
+        }
+      }
+    },
+    "sig2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "style", "color", "points"],
+      "properties": {
+        "id": {"const": "SIG_2"},
+        "type": {"const": "bezier_cubic"},
+        "style": {"const": "dashed"},
+        "color": {"const": "#1E90FF"},
+        "points": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"$ref": "#/$defs/point"}
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active",
+        "entry",
+        "entry_color",
+        "sl",
+        "sl_color",
+        "tp",
+        "tp_color",
+        "prob",
+        "momentum",
+        "curves"
+      ],
+      "properties": {
+        "active": {"const": true},
+        "entry": {"type": "number", "exclusiveMinimum": 0},
+        "entry_color": {"const": "#0000FF"},
+        "sl": {"type": "number", "exclusiveMinimum": 0},
+        "sl_color": {"const": "#FF0000"},
+        "tp": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "number", "exclusiveMinimum": 0}
+        },
+        "tp_color": {"const": "#00FF00"},
+        "prob": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "momentum": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["arrow", "label", "color"],
+          "properties": {
+            "arrow": {"enum": ["up", "down"]},
+            "label": {"type": "string", "minLength": 3, "maxLength": 3},
+            "color": {"$ref": "#/$defs/hexColor"}
+          }
+        },
+        "curves": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {"$ref": "#/$defs/sig1"},
+            {"$ref": "#/$defs/sig2"}
+          ],
+          "items": false
+        }
+      }
+    },
+    "ghostBox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "opacity", "color", "x", "x_end", "y_top", "y_bottom", "tooltip", "evidence"
+      ],
+      "properties": {
+        "type": {"const": "ghost_box"},
+        "opacity": {"const": 0.15},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "x": {"type": "integer", "minimum": 1},
+        "x_end": {"type": "integer", "minimum": 1},
+        "y_top": {"type": "number"},
+        "y_bottom": {"type": "number"},
+        "tooltip": {"type": "string", "minLength": 1, "maxLength": 50},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "redZone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "start_time", "duration_min", "label", "color", "evidence"],
+      "properties": {
+        "type": {"const": "red_zone"},
+        "start_time": {"type": "integer", "minimum": 1},
+        "duration_min": {"type": "number", "exclusiveMinimum": 0},
+        "label": {"type": "string", "minLength": 1, "maxLength": 20},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "phaseTracker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "label", "color", "evidence"],
+      "properties": {
+        "type": {"const": "phase_tracker_text"},
+        "label": {"type": "string", "minLength": 1, "maxLength": 50},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "htfTrend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "htf1_label", "htf1_trend", "color", "evidence"],
+      "properties": {
+        "type": {"const": "htf_trend"},
+        "htf1_label": {"type": "string", "minLength": 1},
+        "htf1_trend": {"type": "string", "minLength": 1},
+        "htf2_label": {"type": ["string", "null"]},
+        "htf2_trend": {"type": ["string", "null"]},
+        "color": {"$ref": "#/$defs/hexColor"},
+        "evidence": {"$ref": "#/$defs/evidence"}
+      }
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layer1_structural",
+        "layer2_trap",
+        "layer3_candle",
+        "layer4_execution",
+        "layer5_overlay"
+      ],
+      "properties": {
+        "layer1_structural": {
+          "type": "array",
+          "items": {"oneOf": [{"$ref": "#/$defs/layer1Line"}, {"$ref": "#/$defs/layer1Box"}]}
+        },
+        "layer2_trap": {
+          "type": "array",
+          "items": {"oneOf": [{"$ref": "#/$defs/layer2Text"}, {"$ref": "#/$defs/layer2Arrow"}]}
+        },
+        "layer3_candle": {"type": "array", "items": {"$ref": "#/$defs/layer3Candle"}},
+        "layer4_execution": {"oneOf": [{"$ref": "#/$defs/execution"}, {"type": "null"}]},
+        "layer5_overlay": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"$ref": "#/$defs/ghostBox"},
+              {"$ref": "#/$defs/redZone"},
+              {"$ref": "#/$defs/phaseTracker"},
+              {"$ref": "#/$defs/htfTrend"}
+            ]
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"setup_ready": {"const": true}, "veto": {"const": false}},
+        "required": ["setup_ready", "veto"]
+      },
+      "then": {
+        "properties": {
+          "layers": {
+            "properties": {"layer4_execution": {"$ref": "#/$defs/execution"}}
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "layers": {"properties": {"layer4_execution": {"type": "null"}}}
+        }
+      }
+    },
+    {
+      "not": {
+        "properties": {"setup_ready": {"const": true}, "veto": {"const": true}},
+        "required": ["setup_ready", "veto"]
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/constants/local_qa_mode.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../bloc/auth_bloc.dart';
@@ -73,7 +74,7 @@ class _LoginWebPageState extends State<LoginWebPage>
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
+                content: Text(context.tr(state.errorMessage!)),
                 backgroundColor: AppColors.bear,
               ),
             );
@@ -94,11 +95,7 @@ class _LoginWebPageState extends State<LoginWebPage>
                 },
               ),
             ),
-            const Positioned(
-              top: 24,
-              right: 24,
-              child: LanguageToggle(),
-            ),
+            const Positioned(top: 24, right: 24, child: LanguageToggle()),
           ],
         ),
       ),
@@ -248,7 +245,9 @@ class _LoginWebPageState extends State<LoginWebPage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _isRegistering ? context.tr('create_account') : context.tr('system_access'),
+          _isRegistering
+              ? context.tr('create_account')
+              : context.tr('system_access'),
           style: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -293,7 +292,7 @@ class _LoginWebPageState extends State<LoginWebPage>
           ],
         ),
         const SizedBox(height: 24),
-        _buildGoogleBtn(context),
+        if (!LocalQaMode.enabled) _buildGoogleBtn(context),
         const SizedBox(height: 40),
         Center(
           child: TextButton(
@@ -390,7 +389,9 @@ class _LoginWebPageState extends State<LoginWebPage>
                   ),
                 )
               : Text(
-                  _isRegistering ? context.tr('create_account') : context.tr('secure_login'),
+                  _isRegistering
+                      ? context.tr('create_account')
+                      : context.tr('secure_login'),
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 2,
@@ -479,7 +480,9 @@ class NeuralPlexusPainter extends CustomPainter {
       for (int j = i + 1; j < nodeCount; j++) {
         double dist = (scaledNodes[i] - scaledNodes[j]).distance;
         if (dist < 150) {
-          paint.color = AppColors.primary.withValues(alpha: (1 - dist / 150) * 0.15);
+          paint.color = AppColors.primary.withValues(
+            alpha: (1 - dist / 150) * 0.15,
+          );
           canvas.drawLine(scaledNodes[i], scaledNodes[j], paint);
         }
       }

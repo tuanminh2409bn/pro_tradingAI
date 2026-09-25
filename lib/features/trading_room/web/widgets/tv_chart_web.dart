@@ -1,7 +1,6 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
+import '../../../../core/utils/web_dom.dart';
 
 // ─── TradingView symbol mapping (matches server.py TV_SYMBOL_MAP) ───────────
 const _tvSymbolMap = {
@@ -137,13 +136,7 @@ class _TradingViewChartState extends State<TradingViewChart> {
 
   void _registerView(String viewId, String symbol, String interval) {
     ui_web.platformViewRegistry.registerViewFactory(viewId, (int id) {
-      final iframe = html.IFrameElement()
-        ..tabIndex = -1             // Prevent focus-stealing from Flutter UI
-        ..style.width  = '100%'
-        ..style.height = '100%'
-        ..style.border = 'none'
-        ..srcdoc = _buildTvHtml(symbol, interval);
-      return iframe;
+      return createChartIframe(_buildTvHtml(symbol, interval));
     });
     _registered = true;
   }

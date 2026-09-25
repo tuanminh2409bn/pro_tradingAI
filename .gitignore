@@ -40,6 +40,7 @@ serviceAccount*.json
 .pub-cache/
 .pub/
 /build/
+.firebase/
 
 # Local deploy tooling
 .venv_deploy/
@@ -54,5 +55,4 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
-
 

@@ -6,6 +6,131 @@ import '../../../data/models/trading_models.dart';
 import '../../../data/repositories/trading_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+List<Position> markPositionsBySymbol(
+  List<Position> positions,
+  Map<String, double> prices, {
+  String? preferSymbol,
+  double? preferPrice,
+}) {
+  return positions
+      .map((position) {
+        final symbol = position.symbol.toUpperCase();
+        final mark =
+            preferSymbol != null &&
+                preferPrice != null &&
+                preferPrice > 0 &&
+                symbol == preferSymbol.toUpperCase()
+            ? preferPrice
+            : prices[symbol];
+        if (mark == null || mark <= 0) return position;
+        return position.markToMarket(mark);
+      })
+      .toList(growable: false);
+}
+
+TradingRoomLoaded stateAfterSymbolChange(
+  TradingRoomLoaded current,
+  String symbol,
+) {
+  final signalMatches =
+      current.currentSignal?.symbol.toUpperCase() == symbol.toUpperCase();
+  return current.copyWith(
+    currentSymbol: symbol,
+    candles: const [],
+    clearSignal: !signalMatches,
+    positions: markPositionsBySymbol(current.positions, current.symbolPrices),
+    panelResetNonce: current.panelResetNonce + 1,
+    selectedTakeProfitIndex: 2,
+  );
+}
+
+TradingRoomLoaded stateAfterTimeframeChange(
+  TradingRoomLoaded current,
+  String timeframe,
+) {
+  if (current.tradingMode.normalizeTimeframe(current.currentTimeframe) ==
+      current.tradingMode.normalizeTimeframe(timeframe)) {
+    return current;
+  }
+  return current.copyWith(currentTimeframe: timeframe, clearSignal: true);
+}
+
+double dailyPnLIncludingFloating(
+  double realizedPnL,
+  List<Position> openPositions,
+) => openPositions.fold<double>(realizedPnL, (sum, item) => sum + item.profit);
+
+bool shouldActivateDailyLossCutoff({
+  required bool alreadyActive,
+  required double realizedPnL,
+  required List<Position> openPositions,
+  required RiskConfig? riskConfig,
+}) {
+  if (alreadyActive) return true;
+  if (riskConfig == null || riskConfig.maxDailyLossAmount <= 0) return false;
+  final total = dailyPnLIncludingFloating(realizedPnL, openPositions);
+  return total < 0 && total.abs() >= riskConfig.maxDailyLossAmount;
+}
+
+bool isSignalForCurrentChart(TradingRoomLoaded state, TradingSignal? signal) {
+  if (signal == null ||
+      signal.symbol.toUpperCase() != state.currentSymbol.toUpperCase()) {
+    return false;
+  }
+  final chartId = signal.chartId;
+  final timestampSeparator = chartId?.lastIndexOf('_') ?? -1;
+  final timeframeSeparator = timestampSeparator > 0
+      ? chartId!.lastIndexOf('_', timestampSeparator - 1)
+      : -1;
+  final chartSymbol = timeframeSeparator > 0
+      ? chartId!.substring(0, timeframeSeparator)
+      : null;
+  final chartTimeframe = timeframeSeparator > 0
+      ? chartId!.substring(timeframeSeparator + 1, timestampSeparator)
+      : null;
+  return chartSymbol?.toUpperCase() == state.currentSymbol.toUpperCase() &&
+      chartTimeframe != null &&
+      state.tradingMode.normalizeTimeframe(chartTimeframe) ==
+          state.tradingMode.normalizeTimeframe(state.currentTimeframe);
+}
+
+/// Local consistency guard; server authorization must still validate each order.
+bool isClientTradeRequestAllowed(TradingRoomLoaded state, ExecuteTrade event) {
+  final signal = state.currentSignal;
+  if (state.isCutoffActive ||
+      state.isTradeExecuting ||
+      signal == null ||
+      !signal.canExecute ||
+      signal.contractError != null ||
+      !isSignalForCurrentChart(state, signal) ||
+      event.signalChartId != signal.chartId ||
+      event.type != signal.type ||
+      !event.lotSize.isFinite ||
+      event.lotSize <= 0 ||
+      !event.entryPrice.isFinite ||
+      !event.slPrice.isFinite ||
+      event.entryPrice != signal.entryPrice ||
+      event.slPrice != signal.slPrice) {
+    return false;
+  }
+  final plan = event.takeProfitPlan;
+  final targets = plan == null
+      ? signal.tpPrices
+      : plan.legs.map((leg) => signal.tpPrices[leg.targetIndex]).toList();
+  if (plan != null && (plan.totalVolume - event.lotSize).abs() > 1e-8) {
+    return false;
+  }
+  if (event.tpPrices.length != targets.length) return false;
+  for (var i = 0; i < targets.length; i++) {
+    if (!event.tpPrices[i].isFinite ||
+        event.tpPrices[i] != targets[i] ||
+        (plan != null && plan.legs[i].targetPrice != targets[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   final TradingRepository _tradingRepository;
   StreamSubscription? _candleSubscription;
@@ -13,6 +138,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   StreamSubscription? _signalSubscription;
   StreamSubscription? _pricesSubscription;
   String? _userId;
+  bool _serverCutoffLoaded = false;
   Timer? _positionRefreshTimer;
 
   TradingRoomBloc({required TradingRepository tradingRepository})
@@ -25,6 +151,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     on<UpdateAccount>(_onUpdateAccount);
     on<UpdateSignals>(_onUpdateSignals);
     on<ExecuteTrade>(_onExecuteTrade);
+    on<SelectTakeProfit>(_onSelectTakeProfit);
     on<ChangeTimeframe>(_onChangeTimeframe);
     on<RequestAnalysis>(_onRequestAnalysis);
     on<CancelAnalysisSpinner>(_onCancelAnalysisSpinner);
@@ -35,9 +162,11 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     on<SendAIMessage>(_onSendAIMessage);
     on<ReceiveAIResponse>(_onReceiveAIResponse);
     on<UpdatePositions>(_onUpdatePositions);
+    on<PositionRefreshFailed>(_onPositionRefreshFailed);
     on<TradeExecuted>(_onTradeExecuted);
     on<TradeClosed>(_onTradeClosed);
     on<UpdateRiskConfigLoaded>(_onUpdateRiskConfigLoaded);
+    on<UpdateServerCutoff>(_onUpdateServerCutoff);
     on<LoadChatHistory>(_onLoadChatHistory);
     on<ChatHistoryLoaded>(_onChatHistoryLoaded);
     on<ClearChatHistory>(_onClearChatHistory);
@@ -51,20 +180,12 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     String? preferSymbol,
     double? preferPrice,
   }) {
-    return positions.map((p) {
-      final sym = p.symbol.toUpperCase();
-      double? mark;
-      if (preferSymbol != null &&
-          preferPrice != null &&
-          preferPrice > 0 &&
-          sym == preferSymbol.toUpperCase()) {
-        mark = preferPrice;
-      } else {
-        mark = prices[sym];
-      }
-      if (mark == null || mark <= 0) return p;
-      return p.markToMarket(mark);
-    }).toList();
+    return markPositionsBySymbol(
+      positions,
+      prices,
+      preferSymbol: preferSymbol,
+      preferPrice: preferPrice,
+    );
   }
 
   void _onLoadTradingData(
@@ -85,6 +206,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
 
     emit(TradingRoomLoading());
     _userId = newUserId;
+    _serverCutoffLoaded = false;
     try {
       _candleSubscription?.cancel();
       _accountSubscription?.cancel();
@@ -118,14 +240,16 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
             balance: 0.0,
             equity: 0.0,
             margin: 0.0,
-            leverage: 500,
-            status: 'LIVE',
+            leverage: 0,
+            status: 'UNAVAILABLE',
+            source: 'unavailable',
           ),
           currentSymbol: defaultSymbol,
           currentTimeframe: TradingMode.scalping.executionTf,
           candles: const [],
           positions: const [],
           isRiskConfigured: false,
+          isCutoffActive: newUserId.isNotEmpty,
           currentSignal: null,
           symbolPrices: Map<String, double>.from(
             _tradingRepository.symbolPrices,
@@ -145,8 +269,8 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
         // Load chat history
         add(const LoadChatHistory());
       }
-    } catch (e) {
-      emit(TradingRoomError(e.toString()));
+    } catch (_) {
+      emit(const TradingRoomError('common_data_unavailable'));
     }
   }
 
@@ -157,25 +281,51 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       if (savedSymbol != null && savedSymbol != 'XAUUSD') {
         add(UpdateSymbol(savedSymbol));
       }
-    } catch (e) {
-      print('TradingRoomBloc: Error restoring symbol: $e');
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadRiskAndPositionsInBackground(String userId) async {
     try {
+      final cutoff = await _tradingRepository.getDailyCutoffStatus(userId);
+      add(UpdateServerCutoff(cutoff.active));
+    } catch (_) {
+      add(const UpdateServerCutoff(true, available: false));
+    }
+
+    try {
       final riskConfig = await _tradingRepository.getRiskConfig(userId);
       add(UpdateRiskConfigLoaded(riskConfig));
-    } catch (e) {
-      print('TradingRoomBloc: Error loading risk config in background: $e');
-    }
+    } catch (_) {}
 
     try {
       final positions = await _tradingRepository.getOpenPositions(userId);
       add(UpdatePositions(positions));
-    } catch (e) {
-      print('TradingRoomBloc: Error loading open positions in background: $e');
+    } catch (_) {
+      add(const PositionRefreshFailed());
     }
+  }
+
+  void _onUpdateServerCutoff(
+    UpdateServerCutoff event,
+    Emitter<TradingRoomState> emit,
+  ) {
+    final current = state;
+    if (current is! TradingRoomLoaded) return;
+    final active =
+        event.active ||
+        shouldActivateDailyLossCutoff(
+          alreadyActive: _serverCutoffLoaded && current.isCutoffActive,
+          realizedPnL: current.dailyPnL,
+          openPositions: current.positions,
+          riskConfig: current.riskConfig,
+        );
+    _serverCutoffLoaded = event.available;
+    emit(
+      current.copyWith(
+        isCutoffActive: active,
+        isCutoffStatusAvailable: event.available,
+      ),
+    );
   }
 
   void _onUpdateRiskConfigLoaded(
@@ -202,8 +352,12 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       if (_userId != null &&
           _userId!.isNotEmpty &&
           state is TradingRoomLoaded) {
-        final positions = await _tradingRepository.getOpenPositions(_userId!);
-        add(UpdatePositions(positions));
+        try {
+          final positions = await _tradingRepository.getOpenPositions(_userId!);
+          add(UpdatePositions(positions));
+        } catch (_) {
+          add(const PositionRefreshFailed());
+        }
       }
     });
   }
@@ -215,9 +369,6 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   }
 
   void _onUpdateSignals(UpdateSignals event, Emitter<TradingRoomState> emit) {
-    print(
-      'TradingRoomBloc: Received ${event.signals.length} active signals from Repository',
-    );
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
       // Prefer signal matching the chart symbol; ignore foreign-symbol bleed
@@ -229,11 +380,9 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
           break;
         }
       }
-      if (currentSignal != null &&
-          currentState.newsRedZoneLabel != null &&
-          currentState.newsRedZoneLabel!.isNotEmpty) {
+      if (currentSignal != null && currentState.newsRedZone != null) {
         currentSignal = currentSignal.withNewsRedZone(
-          currentState.newsRedZoneLabel!,
+          currentState.newsRedZone!,
         );
       }
       emit(
@@ -255,9 +404,9 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     final signal = current.currentSignal;
     emit(
       current.copyWith(
-        newsRedZoneLabel: event.label,
+        newsRedZone: event.overlay,
         currentSignal: signal != null
-            ? signal.withNewsRedZone(event.label)
+            ? signal.withNewsRedZone(event.overlay)
             : signal,
       ),
     );
@@ -273,17 +422,17 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     emit(
       current.copyWith(
         clearNewsRedZone: true,
-        currentSignal: signal == null
-            ? null
-            : signal.copyWith(
-                layers: TradingSignal.layersWithoutNewsColumn(signal.layers),
-              ),
+        currentSignal: signal?.copyWith(
+          layers: TradingSignal.layersWithoutNewsColumn(
+            signal.layers,
+            sourceId: current.newsRedZone?.evidence['source_id'] as String?,
+          ),
+        ),
       ),
     );
   }
 
   void _onUpdateCandles(UpdateCandles event, Emitter<TradingRoomState> emit) {
-    print('TradingRoomBloc: Received ${event.candles.length} candles');
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
       final prices = Map<String, double>.from(currentState.symbolPrices);
@@ -303,8 +452,26 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
           candles: event.candles,
           symbolPrices: prices,
           positions: marked,
+          positionsAvailable: true,
+          positionsStale: false,
+          isCutoffActive: shouldActivateDailyLossCutoff(
+            alreadyActive: currentState.isCutoffActive,
+            realizedPnL: currentState.dailyPnL,
+            openPositions: marked,
+            riskConfig: currentState.riskConfig,
+          ),
         ),
       );
+    }
+  }
+
+  void _onPositionRefreshFailed(
+    PositionRefreshFailed event,
+    Emitter<TradingRoomState> emit,
+  ) {
+    final current = state;
+    if (current is TradingRoomLoaded) {
+      emit(current.copyWith(positionsStale: true));
     }
   }
 
@@ -317,7 +484,18 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     final prices = Map<String, double>.from(currentState.symbolPrices)
       ..addAll(event.prices);
     final marked = _markPositions(currentState.positions, prices);
-    emit(currentState.copyWith(symbolPrices: prices, positions: marked));
+    emit(
+      currentState.copyWith(
+        symbolPrices: prices,
+        positions: marked,
+        isCutoffActive: shouldActivateDailyLossCutoff(
+          alreadyActive: currentState.isCutoffActive,
+          realizedPnL: currentState.dailyPnL,
+          openPositions: marked,
+          riskConfig: currentState.riskConfig,
+        ),
+      ),
+    );
   }
 
   void _onChangeTimeframe(
@@ -327,13 +505,15 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
       if (!currentState.tradingMode.allowsTimeframe(event.timeframe)) {
-        print(
-          'TradingRoomBloc: TF ${event.timeframe} blocked for ${currentState.tradingMode.name}',
-        );
         return;
       }
-      _tradingRepository.changeTimeframe(event.timeframe);
-      emit(currentState.copyWith(currentTimeframe: event.timeframe));
+      final normalized = currentState.tradingMode.normalizeTimeframe(
+        event.timeframe,
+      );
+      final nextState = stateAfterTimeframeChange(currentState, normalized);
+      if (identical(nextState, currentState)) return;
+      _tradingRepository.changeTimeframe(normalized);
+      emit(nextState);
     }
   }
 
@@ -347,39 +527,16 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('selected_symbol', event.symbol);
-    } catch (e) {
-      print('TradingRoomBloc: Error saving symbol: $e');
-    }
+    } catch (_) {}
 
     _candleSubscription?.cancel();
     _candleSubscription = _tradingRepository
         .getCandleStream(event.symbol)
-        .listen(
-          (candles) => add(UpdateCandles(candles)),
-          onError: (e) => print(
-            'TradingRoomBloc: Candles stream error for ${event.symbol}: $e',
-          ),
-        );
+        .listen((candles) => add(UpdateCandles(candles)), onError: (_) {});
 
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
-      final signalMatches =
-          currentState.currentSignal?.symbol.toUpperCase() ==
-          event.symbol.toUpperCase();
-      // Keep existing positions; remake MTM from price book (no chart bleed)
-      final marked = _markPositions(
-        currentState.positions,
-        currentState.symbolPrices,
-      );
-      emit(
-        currentState.copyWith(
-          currentSymbol: event.symbol,
-          candles: [],
-          clearSignal: !signalMatches,
-          positions: marked,
-          panelResetNonce: currentState.panelResetNonce + 1,
-        ),
-      );
+      emit(stateAfterSymbolChange(currentState, event.symbol));
     }
   }
 
@@ -390,35 +547,93 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
 
-      // Check circuit breaker
-      if (currentState.isCutoffActive) {
-        print('TradingRoomBloc: Trade blocked by circuit breaker');
+      if (!isClientTradeRequestAllowed(currentState, event)) {
         return;
       }
 
       emit(currentState.copyWith(isTradeExecuting: true));
+      try {
+        if (event.takeProfitPlan != null) {
+          final positions = await _tradingRepository
+              .executePartialTakeProfitTrade(
+                signalId: currentState.currentSignal?.signalId ?? '',
+                signalChartId: event.signalChartId,
+                symbol: currentState.currentSymbol,
+                type: event.type,
+                entryPrice: event.entryPrice,
+                slPrice: event.slPrice,
+                plan: event.takeProfitPlan!,
+                userId: _userId ?? '',
+                tradingMode: currentState.tradingMode.wireName,
+              );
+          final current = state;
+          if (current is! TradingRoomLoaded) return;
+          final isComplete =
+              positions.length == event.takeProfitPlan!.legs.length;
+          emit(
+            current.copyWith(
+              positions: [...current.positions, ...positions],
+              isTradeExecuting: false,
+              actionResultNonce: current.actionResultNonce + 1,
+              actionMessageKey: positions.isEmpty
+                  ? 'tr_trade_failed'
+                  : isComplete
+                  ? 'tr_trade_executed'
+                  : 'tr_trade_partial',
+              actionSucceeded: isComplete,
+            ),
+          );
+          return;
+        }
 
-      final position = await _tradingRepository.executeTrade(
-        symbol: currentState.currentSymbol,
-        type: event.type,
-        lotSize: event.lotSize,
-        entryPrice: event.entryPrice,
-        slPrice: event.slPrice,
-        tpPrices: event.tpPrices,
-        userId: _userId ?? '',
-        tradingMode: currentState.tradingMode.name,
-      );
-
-      if (position != null) {
-        print(
-          'Trade executed successfully: ${event.type} ${currentState.currentSymbol} ${event.lotSize}',
+        final position = await _tradingRepository.executeTrade(
+          signalId: currentState.currentSignal?.signalId ?? '',
+          signalChartId: event.signalChartId,
+          symbol: currentState.currentSymbol,
+          type: event.type,
+          lotSize: event.lotSize,
+          entryPrice: event.entryPrice,
+          slPrice: event.slPrice,
+          tpPrices: event.tpPrices,
+          userId: _userId ?? '',
+          tradingMode: currentState.tradingMode.wireName,
         );
-        add(TradeExecuted(position));
-      } else {
-        print('Trade execution failed.');
-        emit(currentState.copyWith(isTradeExecuting: false));
+
+        if (position != null) {
+          add(TradeExecuted(position));
+        } else {
+          _emitActionResult(
+            emit,
+            succeeded: false,
+            messageKey: 'tr_trade_failed',
+            isTradeExecuting: false,
+          );
+        }
+      } catch (_) {
+        _emitActionResult(
+          emit,
+          succeeded: false,
+          messageKey: 'tr_trade_failed',
+          isTradeExecuting: false,
+        );
       }
     }
+  }
+
+  void _onSelectTakeProfit(
+    SelectTakeProfit event,
+    Emitter<TradingRoomState> emit,
+  ) {
+    if (state is! TradingRoomLoaded ||
+        event.targetIndex < 0 ||
+        event.targetIndex > 2) {
+      return;
+    }
+    emit(
+      (state as TradingRoomLoaded).copyWith(
+        selectedTakeProfitIndex: event.targetIndex,
+      ),
+    );
   }
 
   void _onTradeExecuted(TradeExecuted event, Emitter<TradingRoomState> emit) {
@@ -429,6 +644,9 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
         currentState.copyWith(
           positions: updatedPositions,
           isTradeExecuting: false,
+          actionResultNonce: currentState.actionResultNonce + 1,
+          actionMessageKey: 'tr_trade_executed',
+          actionSucceeded: true,
         ),
       );
     }
@@ -442,18 +660,19 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
           .toList();
       final newDailyPnL = currentState.dailyPnL + event.profit;
 
-      // Check circuit breaker: if daily PnL exceeds max daily loss
-      bool shouldCutoff = false;
-      if (currentState.riskConfig != null && newDailyPnL < 0) {
-        shouldCutoff =
-            newDailyPnL.abs() >= currentState.riskConfig!.maxDailyLossAmount;
-      }
-
       emit(
         currentState.copyWith(
           positions: updatedPositions,
           dailyPnL: newDailyPnL,
-          isCutoffActive: shouldCutoff,
+          isCutoffActive: shouldActivateDailyLossCutoff(
+            alreadyActive: currentState.isCutoffActive,
+            realizedPnL: newDailyPnL,
+            openPositions: updatedPositions,
+            riskConfig: currentState.riskConfig,
+          ),
+          actionResultNonce: currentState.actionResultNonce + 1,
+          actionMessageKey: 'tr_trade_closed',
+          actionSucceeded: true,
         ),
       );
     }
@@ -471,8 +690,32 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
 
       if (profit != null) {
         add(TradeClosed(event.positionId, profit));
+      } else {
+        _emitActionResult(
+          emit,
+          succeeded: false,
+          messageKey: 'tr_trade_close_failed',
+        );
       }
     }
+  }
+
+  void _emitActionResult(
+    Emitter<TradingRoomState> emit, {
+    required bool succeeded,
+    required String messageKey,
+    bool? isTradeExecuting,
+  }) {
+    final current = state;
+    if (current is! TradingRoomLoaded) return;
+    emit(
+      current.copyWith(
+        isTradeExecuting: isTradeExecuting,
+        actionResultNonce: current.actionResultNonce + 1,
+        actionMessageKey: messageKey,
+        actionSucceeded: succeeded,
+      ),
+    );
   }
 
   void _onChangeTradingMode(
@@ -498,18 +741,39 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     Emitter<TradingRoomState> emit,
   ) async {
     if (state is TradingRoomLoaded) {
-      final currentState = state as TradingRoomLoaded;
-
-      // Save to server
-      await _tradingRepository.saveRiskConfig(_userId ?? '', event.config);
-
-      emit(
-        currentState.copyWith(
-          riskConfig: event.config,
-          isRiskConfigured: true,
-          isRiskConfigLoaded: true,
-        ),
-      );
+      try {
+        await _tradingRepository.saveRiskConfig(_userId ?? '', event.config);
+        final current = state;
+        if (current is! TradingRoomLoaded) return;
+        emit(
+          current.copyWith(
+            riskConfig: event.config,
+            isRiskConfigured: true,
+            isRiskConfigLoaded: true,
+            actionResultNonce: current.actionResultNonce + 1,
+            actionMessageKey: 'tr_risk_saved',
+            actionSucceeded: true,
+          ),
+        );
+        try {
+          final cutoff = await _tradingRepository.getDailyCutoffStatus(
+            _userId ?? '',
+          );
+          add(UpdateServerCutoff(cutoff.active));
+        } catch (_) {
+          add(const UpdateServerCutoff(true, available: false));
+        }
+      } catch (_) {
+        final current = state;
+        if (current is! TradingRoomLoaded) return;
+        emit(
+          current.copyWith(
+            actionResultNonce: current.actionResultNonce + 1,
+            actionMessageKey: 'tr_risk_save_failed',
+            actionSucceeded: false,
+          ),
+        );
+      }
     }
   }
 
@@ -537,10 +801,8 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
 
       // Persist to Firestore
       if (_userId != null && _userId!.isNotEmpty) {
-        _tradingRepository.saveChatMessage(
-          userId: _userId!,
-          chatType: 'trading_room',
-          message: userMsg,
+        unawaited(
+          _saveChatMessageBestEffort(userId: _userId!, message: userMsg),
         );
       }
 
@@ -580,12 +842,23 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
 
       // Persist to Firestore
       if (_userId != null && _userId!.isNotEmpty) {
-        _tradingRepository.saveChatMessage(
-          userId: _userId!,
-          chatType: 'trading_room',
-          message: aiMsg,
-        );
+        unawaited(_saveChatMessageBestEffort(userId: _userId!, message: aiMsg));
       }
+    }
+  }
+
+  Future<void> _saveChatMessageBestEffort({
+    required String userId,
+    required ChatMessage message,
+  }) async {
+    try {
+      await _tradingRepository.saveChatMessage(
+        userId: userId,
+        chatType: 'trading_room',
+        message: message,
+      );
+    } catch (_) {
+      // The current response remains useful if history persistence fails.
     }
   }
 
@@ -597,7 +870,17 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       final currentState = state as TradingRoomLoaded;
       // Server already returns symbol-bound PnL; still re-apply local price book
       final marked = _markPositions(event.positions, currentState.symbolPrices);
-      emit(currentState.copyWith(positions: marked));
+      emit(
+        currentState.copyWith(
+          positions: marked,
+          isCutoffActive: shouldActivateDailyLossCutoff(
+            alreadyActive: currentState.isCutoffActive,
+            realizedPnL: currentState.dailyPnL,
+            openPositions: marked,
+            riskConfig: currentState.riskConfig,
+          ),
+        ),
+      );
     }
   }
 
@@ -607,43 +890,39 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   ) async {
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
+      if (currentState.isCutoffActive) return;
       emit(currentState.copyWith(isAnalyzing: true));
       try {
-        // Cap payload size for Firestore (keep newest bars)
-        final candles = currentState.candles;
-        final slice = candles.length > 180
-            ? candles.sublist(candles.length - 180)
-            : candles;
-        final candlesExecution = slice
-            .map(
-              (c) => {
-                't': c.timestamp.millisecondsSinceEpoch ~/ 1000,
-                'o': c.open,
-                'h': c.high,
-                'l': c.low,
-                'c': c.close,
-              },
-            )
-            .toList();
-        final risk = currentState.riskConfig;
-        final account = currentState.account;
         await _tradingRepository.requestAnalysis(
           currentState.currentSymbol,
           currentState.currentTimeframe,
           userId: _userId ?? '',
-          tradingMode: currentState.tradingMode.name,
-          candlesExecution: candlesExecution,
-          accountContext: {
-            'balance': risk?.balance ?? account.balance,
-            'equity': account.equity,
-            'leverage': account.leverage,
-            'risk_per_trade': risk?.riskPerTrade,
-            'max_daily_loss': risk?.maxDailyLoss,
-            'symbol': currentState.currentSymbol,
-            'timeframe': currentState.currentTimeframe,
-          },
+          tradingMode: currentState.tradingMode.wireName,
         );
-      } catch (_) {}
+        final current = state;
+        if (current is TradingRoomLoaded) {
+          emit(
+            current.copyWith(
+              actionResultNonce: current.actionResultNonce + 1,
+              actionMessageKey: 'tr_analysis_requested',
+              actionSucceeded: true,
+            ),
+          );
+        }
+      } catch (_) {
+        final current = state;
+        if (current is TradingRoomLoaded) {
+          emit(
+            current.copyWith(
+              isAnalyzing: false,
+              actionResultNonce: current.actionResultNonce + 1,
+              actionMessageKey: 'tr_analysis_request_failed',
+              actionSucceeded: false,
+            ),
+          );
+        }
+        return;
+      }
 
       Future.delayed(const Duration(seconds: 12), () {
         if (state is TradingRoomLoaded &&
@@ -675,10 +954,19 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     if (state is TradingRoomLoaded && _userId != null && _userId!.isNotEmpty) {
       final currentState = state as TradingRoomLoaded;
       emit(currentState.copyWith(isLoadingHistory: true));
-      final messages = await _tradingRepository.loadChatHistory(
-        userId: _userId!,
-        chatType: 'trading_room',
-      );
+      List<ChatMessage> messages;
+      try {
+        messages = await _tradingRepository.loadChatHistory(
+          userId: _userId!,
+          chatType: 'trading_room',
+        );
+      } catch (_) {
+        final current = state;
+        if (current is TradingRoomLoaded) {
+          emit(current.copyWith(isLoadingHistory: false));
+        }
+        return;
+      }
       if (state is TradingRoomLoaded) {
         emit(
           (state as TradingRoomLoaded).copyWith(
@@ -704,13 +992,19 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     Emitter<TradingRoomState> emit,
   ) async {
     if (state is TradingRoomLoaded) {
-      final currentState = state as TradingRoomLoaded;
-      emit(currentState.copyWith(chatMessages: []));
       if (_userId != null && _userId!.isNotEmpty) {
-        await _tradingRepository.clearChatHistory(
-          userId: _userId!,
-          chatType: 'trading_room',
-        );
+        try {
+          await _tradingRepository.clearChatHistory(
+            userId: _userId!,
+            chatType: 'trading_room',
+          );
+        } catch (_) {
+          return;
+        }
+      }
+      final current = state;
+      if (current is TradingRoomLoaded) {
+        emit(current.copyWith(chatMessages: []));
       }
     }
   }

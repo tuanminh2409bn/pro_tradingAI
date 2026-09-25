@@ -49,6 +49,8 @@ class AccessQuota extends Equatable {
   final int backtestLimit;
   final double storageUsed;
   final double storageLimit;
+  final String? source;
+  final DateTime? resetAt;
 
   const AccessQuota({
     required this.apiUsed,
@@ -57,8 +59,45 @@ class AccessQuota extends Equatable {
     required this.backtestLimit,
     required this.storageUsed,
     required this.storageLimit,
+    this.source,
+    this.resetAt,
   });
 
+  const AccessQuota.unavailable()
+    : apiUsed = 0,
+      apiLimit = 0,
+      backtestUsed = 0,
+      backtestLimit = 0,
+      storageUsed = 0,
+      storageLimit = 0,
+      source = null,
+      resetAt = null;
+
+  bool get isAuthoritative =>
+      source == 'server_enforced' &&
+      resetAt != null &&
+      apiUsed >= 0 &&
+      apiLimit >= 0 &&
+      backtestUsed >= 0 &&
+      backtestLimit >= 0 &&
+      storageUsed >= 0 &&
+      storageLimit >= 0;
+
+  bool get hasApiQuota => isAuthoritative && apiLimit > 0;
+  bool get hasBacktestQuota => isAuthoritative && backtestLimit > 0;
+  bool get hasStorageQuota => isAuthoritative && storageLimit > 0;
+  int? get apiRemaining =>
+      hasApiQuota ? (apiLimit - apiUsed < 0 ? 0 : apiLimit - apiUsed) : null;
+
   @override
-  List<Object?> get props => [apiUsed, backtestUsed, storageUsed];
+  List<Object?> get props => [
+    apiUsed,
+    apiLimit,
+    backtestUsed,
+    backtestLimit,
+    storageUsed,
+    storageLimit,
+    source,
+    resetAt,
+  ];
 }

@@ -31,3 +31,7 @@ class UpdateJournalStats extends JournalEvent {
   @override
   List<Object?> get props => [stats];
 }
+
+class JournalStreamFailed extends JournalEvent {
+  const JournalStreamFailed();
+}

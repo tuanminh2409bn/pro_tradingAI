@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/security/partner_access.dart';
+import '../../../logic/navigation_cubit.dart';
 import '../bloc/trading_room_bloc.dart';
 import '../bloc/trading_room_event.dart';
 import '../bloc/trading_room_state.dart';
@@ -17,6 +19,8 @@ import 'widgets/live_data_bar.dart';
 import 'widgets/chart_tools_sidebar.dart';
 import 'widgets/input_constraint_modal.dart';
 import 'widgets/news_red_zone_binder.dart';
+import 'widgets/forecast_panel.dart';
+import 'widgets/daily_cutoff_review_banner.dart';
 
 class TradingRoomWebPage extends StatefulWidget {
   final String? userId;
@@ -71,6 +75,24 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
                       if (state is TradingRoomLoaded &&
                           state.newsRedZoneLabel != null)
                         _NewsRedZoneBanner(label: state.newsRedZoneLabel!),
+                      if (state is TradingRoomLoaded &&
+                          state.isCutoffActive &&
+                          widget.userId?.isNotEmpty == true)
+                        state.isCutoffStatusAvailable
+                            ? DailyCutoffReviewBanner(
+                                review: () => context
+                                    .read<TradingRepository>()
+                                    .reviewDailyCutoff(widget.userId!),
+                                acknowledge: () => context
+                                    .read<TradingRepository>()
+                                    .acknowledgeDailyCutoff(widget.userId!),
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(
+                                  context.tr('cutoff_status_unavailable'),
+                                ),
+                              ),
                       Expanded(
                         child: isMobile
                             ? _buildMobileLayout(context)
@@ -100,7 +122,14 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
           child: Column(
             children: [
               const _SubTabBar(),
-              Expanded(child: _buildChartContainer()),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(child: _buildChartContainer()),
+                    _buildForecastPanel(),
+                  ],
+                ),
+              ),
               const SizedBox(height: 220, child: TerminalPanel()),
             ],
           ),
@@ -116,6 +145,7 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
       child: Column(
         children: [
           SizedBox(height: 400, child: _buildChartContainer()),
+          _buildForecastPanel(),
           const ExecutionPanel(),
           const SizedBox(height: 250, child: TerminalPanel()),
           const SizedBox(height: 300, child: AIChatPanel()),
@@ -139,6 +169,10 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
               candles: state.candles,
               signal: state.currentSignal,
               activeTool: _activeTool,
+              selectedTakeProfitIndex: state.selectedTakeProfitIndex,
+              onTimeframeSelected: (timeframe) => context
+                  .read<TradingRoomBloc>()
+                  .add(ChangeTimeframe(timeframe)),
             );
           } else if (state is TradingRoomError) {
             return Center(
@@ -152,7 +186,7 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Error: ${state.message}',
+                    context.tr(state.message),
                     style: const TextStyle(color: Colors.white70, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
@@ -174,6 +208,14 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
             child: CircularProgressIndicator(color: AppColors.primary),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildForecastPanel() {
+    return BlocBuilder<TradingRoomBloc, TradingRoomState>(
+      builder: (context, state) => ForecastPanel(
+        signal: state is TradingRoomLoaded ? state.currentSignal : null,
       ),
     );
   }
@@ -705,24 +747,29 @@ class _WebTopNavbar extends StatelessWidget {
           ),
           const Spacer(),
           // Link API Button
-          TextButton.icon(
-            onPressed: () => _showSyncDialog(context),
-            icon: Icon(Icons.link, size: 16, color: AppColors.primary),
-            label: Text(
-              context.tr('tr_link_api'),
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+          PartnerAccessGate(
+            child: TextButton.icon(
+              onPressed: () => context.read<NavigationCubit>().getNavBarItem(
+                NavbarItem.profile,
+              ),
+              icon: Icon(Icons.link, size: 16, color: AppColors.primary),
+              label: Text(
+                context.tr('tr_link_api'),
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.08),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
               ),
             ),
-            style: TextButton.styleFrom(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            ),
           ),
-          const SizedBox(width: 8),
-          const Icon(Icons.notifications_none, color: Colors.white38, size: 18),
           const SizedBox(width: 8),
           IconButton(
             onPressed: () =>
@@ -732,86 +779,6 @@ class _WebTopNavbar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _showSyncDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: Text(
-            context.tr('tr_link_broker_title'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.tr('tr_link_broker_desc'),
-                style: const TextStyle(color: AppColors.primary, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: context.tr('tr_account_number'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                obscureText: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: context.tr('tr_investor_password'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: context.tr('tr_broker_server'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                context.tr('tr_cancel'),
-                style: const TextStyle(color: Colors.white54),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(context.tr('tr_link_sending'))),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-              ),
-              child: Text(
-                context.tr('tr_link_now'),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

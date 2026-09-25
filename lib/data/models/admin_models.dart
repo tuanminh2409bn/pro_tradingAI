@@ -9,6 +9,7 @@ class SystemStats extends Equatable {
   final int totalTrades;
   final int activeSessions;
   final double globalPnl;
+  final bool isAvailable;
 
   const SystemStats({
     required this.dau,
@@ -19,13 +20,25 @@ class SystemStats extends Equatable {
     this.totalTrades = 0,
     this.activeSessions = 0,
     this.globalPnl = 0.0,
+    this.isAvailable = false,
   });
 
   @override
-  List<Object?> get props => [dau, mau, latency, totalTrades, globalPnl];
+  List<Object?> get props => [
+    dau,
+    mau,
+    growth,
+    latency,
+    pendingAlerts,
+    totalTrades,
+    activeSessions,
+    globalPnl,
+    isAvailable,
+  ];
 }
 
 class PendingRequest extends Equatable {
+  final String id;
   final String userId;
   final String username;
   final String type; // 'WITHDRAWAL', 'REWARD'
@@ -33,6 +46,7 @@ class PendingRequest extends Equatable {
   final DateTime date;
 
   const PendingRequest({
+    required this.id,
     required this.userId,
     required this.username,
     required this.type,
@@ -41,7 +55,7 @@ class PendingRequest extends Equatable {
   });
 
   @override
-  List<Object?> get props => [userId, type, amount];
+  List<Object?> get props => [id, userId, type, amount];
 }
 
 class AIConfig extends Equatable {
@@ -92,31 +106,55 @@ class ServiceStatus extends Equatable {
   List<Object?> get props => [name, isOnline, latencyMs];
 }
 
+class RadarAdminConfig extends Equatable {
+  final List<String> symbols;
+  final double sensitivity;
+
+  const RadarAdminConfig({required this.symbols, required this.sensitivity});
+
+  @override
+  List<Object?> get props => [symbols, sensitivity];
+}
+
 class GlobalRiskConfig extends Equatable {
   final String maxLeverage; // '1:100', '1:500', '1:1000'
   final bool newsGuardEnabled;
   final double maxDrawdownPct;
+  final bool isAvailable;
 
   const GlobalRiskConfig({
     this.maxLeverage = '1:500',
     this.newsGuardEnabled = true,
     this.maxDrawdownPct = 5.0,
+    this.isAvailable = true,
   });
+
+  const GlobalRiskConfig.unavailable()
+    : maxLeverage = '',
+      newsGuardEnabled = false,
+      maxDrawdownPct = 0,
+      isAvailable = false;
 
   factory GlobalRiskConfig.fromMap(Map<String, dynamic> map) {
     return GlobalRiskConfig(
       maxLeverage: map['maxLeverage'] ?? '1:500',
       newsGuardEnabled: map['newsGuardEnabled'] ?? true,
       maxDrawdownPct: (map['maxDrawdownPct'] ?? 5.0).toDouble(),
+      isAvailable: true,
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'maxLeverage': maxLeverage,
-        'newsGuardEnabled': newsGuardEnabled,
-        'maxDrawdownPct': maxDrawdownPct,
-      };
+    'maxLeverage': maxLeverage,
+    'newsGuardEnabled': newsGuardEnabled,
+    'maxDrawdownPct': maxDrawdownPct,
+  };
 
   @override
-  List<Object?> get props => [maxLeverage, newsGuardEnabled, maxDrawdownPct];
+  List<Object?> get props => [
+    maxLeverage,
+    newsGuardEnabled,
+    maxDrawdownPct,
+    isAvailable,
+  ];
 }

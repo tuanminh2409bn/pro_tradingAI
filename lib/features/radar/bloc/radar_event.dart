@@ -26,10 +26,16 @@ class SelectAsset extends RadarEvent {
   List<Object?> get props => [asset];
 }
 
+class ClearSelectedAsset extends RadarEvent {}
+
 class ToggleRadarAlert extends RadarEvent {
   final bool enabled;
   const ToggleRadarAlert(this.enabled);
 
   @override
   List<Object?> get props => [enabled];
+}
+
+class RadarStreamFailed extends RadarEvent {
+  const RadarStreamFailed();
 }

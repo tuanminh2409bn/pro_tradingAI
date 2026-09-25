@@ -92,3 +92,31 @@ class SaveRadarConfig extends AdminEvent {
   @override
   List<Object?> get props => [symbols, sensitivity];
 }
+
+class AdminStreamFailed extends AdminEvent {
+  const AdminStreamFailed();
+}
+
+class LoadDailyStats extends AdminEvent {
+  const LoadDailyStats();
+}
+
+class UpdateDailyStats extends AdminEvent {
+  final List<Map<String, dynamic>> dailyStats;
+  const UpdateDailyStats(this.dailyStats);
+
+  @override
+  List<Object?> get props => [dailyStats];
+}
+
+class LoadRadarConfig extends AdminEvent {
+  const LoadRadarConfig();
+}
+
+class UpdateRadarConfig extends AdminEvent {
+  final RadarAdminConfig? config;
+  const UpdateRadarConfig(this.config);
+
+  @override
+  List<Object?> get props => [config];
+}

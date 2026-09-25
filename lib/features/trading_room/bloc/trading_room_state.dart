@@ -24,6 +24,7 @@ class TradingRoomLoaded extends TradingRoomState {
   final TradingMode tradingMode;
   final RiskConfig? riskConfig;
   final bool isCutoffActive;
+  final bool isCutoffStatusAvailable;
   final List<ChatMessage> chatMessages;
   final bool isRiskConfigured;
   final bool isRiskConfigLoaded;
@@ -41,8 +42,16 @@ class TradingRoomLoaded extends TradingRoomState {
   /// Bumps when symbol changes so ExecutionPanel can reset local SL/TP UI.
   final int panelResetNonce;
 
-  /// Day 6 — active HIGH-impact news Red Zone label (Layer 5 news_column).
-  final String? newsRedZoneLabel;
+  /// User-highlighted TP target. TP3 dims TP1/TP2 to 40% on Layer 4.
+  final int selectedTakeProfitIndex;
+
+  /// Active scheduled HIGH-impact event with verified time and provenance.
+  final RedZoneOverlay? newsRedZone;
+  final int actionResultNonce;
+  final String actionMessageKey;
+  final bool actionSucceeded;
+  final bool positionsAvailable;
+  final bool positionsStale;
 
   const TradingRoomLoaded({
     required this.account,
@@ -54,6 +63,7 @@ class TradingRoomLoaded extends TradingRoomState {
     this.tradingMode = TradingMode.scalping,
     this.riskConfig,
     this.isCutoffActive = false,
+    this.isCutoffStatusAvailable = false,
     this.chatMessages = const [],
     this.isRiskConfigured = false,
     this.isRiskConfigLoaded = false,
@@ -66,7 +76,13 @@ class TradingRoomLoaded extends TradingRoomState {
     this.isLoadingHistory = false,
     this.symbolPrices = const {},
     this.panelResetNonce = 0,
-    this.newsRedZoneLabel,
+    this.selectedTakeProfitIndex = 2,
+    this.newsRedZone,
+    this.actionResultNonce = 0,
+    this.actionMessageKey = '',
+    this.actionSucceeded = false,
+    this.positionsAvailable = false,
+    this.positionsStale = false,
   });
 
   TradingRoomLoaded copyWith({
@@ -80,6 +96,7 @@ class TradingRoomLoaded extends TradingRoomState {
     TradingMode? tradingMode,
     RiskConfig? riskConfig,
     bool? isCutoffActive,
+    bool? isCutoffStatusAvailable,
     List<ChatMessage>? chatMessages,
     bool? isRiskConfigured,
     bool? isRiskConfigLoaded,
@@ -92,8 +109,14 @@ class TradingRoomLoaded extends TradingRoomState {
     bool? isLoadingHistory,
     Map<String, double>? symbolPrices,
     int? panelResetNonce,
-    String? newsRedZoneLabel,
+    int? selectedTakeProfitIndex,
+    RedZoneOverlay? newsRedZone,
     bool clearNewsRedZone = false,
+    int? actionResultNonce,
+    String? actionMessageKey,
+    bool? actionSucceeded,
+    bool? positionsAvailable,
+    bool? positionsStale,
   }) {
     return TradingRoomLoaded(
       account: account ?? this.account,
@@ -105,6 +128,8 @@ class TradingRoomLoaded extends TradingRoomState {
       tradingMode: tradingMode ?? this.tradingMode,
       riskConfig: riskConfig ?? this.riskConfig,
       isCutoffActive: isCutoffActive ?? this.isCutoffActive,
+      isCutoffStatusAvailable:
+          isCutoffStatusAvailable ?? this.isCutoffStatusAvailable,
       chatMessages: chatMessages ?? this.chatMessages,
       isRiskConfigured: isRiskConfigured ?? this.isRiskConfigured,
       isRiskConfigLoaded: isRiskConfigLoaded ?? this.isRiskConfigLoaded,
@@ -117,9 +142,14 @@ class TradingRoomLoaded extends TradingRoomState {
       isLoadingHistory: isLoadingHistory ?? this.isLoadingHistory,
       symbolPrices: symbolPrices ?? this.symbolPrices,
       panelResetNonce: panelResetNonce ?? this.panelResetNonce,
-      newsRedZoneLabel: clearNewsRedZone
-          ? null
-          : (newsRedZoneLabel ?? this.newsRedZoneLabel),
+      selectedTakeProfitIndex:
+          selectedTakeProfitIndex ?? this.selectedTakeProfitIndex,
+      newsRedZone: clearNewsRedZone ? null : (newsRedZone ?? this.newsRedZone),
+      actionResultNonce: actionResultNonce ?? this.actionResultNonce,
+      actionMessageKey: actionMessageKey ?? this.actionMessageKey,
+      actionSucceeded: actionSucceeded ?? this.actionSucceeded,
+      positionsAvailable: positionsAvailable ?? this.positionsAvailable,
+      positionsStale: positionsStale ?? this.positionsStale,
     );
   }
 
@@ -136,6 +166,7 @@ class TradingRoomLoaded extends TradingRoomState {
     tradingMode,
     riskConfig,
     isCutoffActive,
+    isCutoffStatusAvailable,
     chatMessages,
     isRiskConfigured,
     isRiskConfigLoaded,
@@ -148,8 +179,16 @@ class TradingRoomLoaded extends TradingRoomState {
     isLoadingHistory,
     symbolPrices,
     panelResetNonce,
-    newsRedZoneLabel,
+    selectedTakeProfitIndex,
+    newsRedZone,
+    actionResultNonce,
+    actionMessageKey,
+    actionSucceeded,
+    positionsAvailable,
+    positionsStale,
   ];
+
+  String? get newsRedZoneLabel => newsRedZone?.label;
 }
 
 class TradingRoomError extends TradingRoomState {

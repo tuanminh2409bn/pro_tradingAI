@@ -5,38 +5,25 @@ class ReferralRepository {
   final FirebaseFirestore _firestore;
 
   ReferralRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Stream thống kê referral — tự tạo document nếu chưa tồn tại.
+  /// Stream referral stats provisioned by the authoritative backend.
+  /// Missing data stays unavailable; the client must not derive a code from UID.
   Stream<ReferralStats> getReferralStats(String userId) {
-    return _firestore
-        .collection('referrals')
-        .doc(userId)
-        .snapshots()
-        .asyncMap((snapshot) async {
+    return _firestore.collection('referrals').doc(userId).snapshots().map((
+      snapshot,
+    ) {
       if (!snapshot.exists || snapshot.data() == null) {
-        // Tự tạo referral document cho user mới
-        final newStats = {
-          'totalEarnings': 0.0,
-          'f1Count': 0,
-          'f2Count': 0,
-          'referralLink': 'protrading.ai/ref/${userId.substring(0, 8)}',
-          'createdAt': FieldValue.serverTimestamp(),
-        };
-        await _firestore.collection('referrals').doc(userId).set(newStats);
-        return ReferralStats(
-          totalEarnings: 0.0,
-          f1Count: 0,
-          f2Count: 0,
-          referralLink: 'protrading.ai/ref/${userId.substring(0, 8)}',
-        );
+        return const ReferralStats.unavailable();
       }
       final data = snapshot.data()!;
       return ReferralStats(
         totalEarnings: (data['totalEarnings'] ?? 0).toDouble(),
         f1Count: (data['f1Count'] ?? 0).toInt(),
         f2Count: (data['f2Count'] ?? 0).toInt(),
-        referralLink: data['referralLink'] ?? 'protrading.ai/ref/${userId.substring(0, 8)}',
+        referralLink: data['referralLink'] is String
+            ? (data['referralLink'] as String).trim()
+            : '',
       );
     });
   }
@@ -50,17 +37,18 @@ class ReferralRepository {
         .orderBy('earningsContribution', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return MemberNode(
-          id: doc.id,
-          name: data['name'] ?? 'Trader',
-          avatarUrl: data['avatarUrl'] ?? '',
-          earningsContribution: (data['earningsContribution'] ?? 0).toDouble(),
-          level: data['level'] ?? 'F1',
-        );
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return MemberNode(
+              id: doc.id,
+              name: data['name'] ?? 'Trader',
+              avatarUrl: data['avatarUrl'] ?? '',
+              earningsContribution: (data['earningsContribution'] ?? 0)
+                  .toDouble(),
+              level: data['level'] ?? 'F1',
+            );
+          }).toList();
+        });
   }
 
   /// Stream lịch sử giao dịch hoa hồng.
@@ -73,31 +61,22 @@ class ReferralRepository {
         .limit(50)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return RewardTransaction(
-          title: data['title'] ?? '',
-          date: (data['date'] as Timestamp).toDate(),
-          amount: (data['amount'] ?? 0).toDouble(),
-          status: data['status'] ?? 'COMPLETED',
-          type: data['type'] ?? 'COMMISSION',
-        );
-      }).toList();
-    });
-  }
-
-  /// Tạo yêu cầu rút tiền.
-  Future<void> requestWithdrawal(String userId, double amount) async {
-    await _firestore
-        .collection('admin')
-        .doc('requests')
-        .collection('pending')
-        .add({
-      'userId': userId,
-      'type': 'WITHDRAWAL',
-      'amount': '\$${amount.toStringAsFixed(2)}',
-      'status': 'PENDING',
-      'date': FieldValue.serverTimestamp(),
-    });
+          return snapshot.docs
+              .map((doc) {
+                final data = doc.data();
+                final date = data['date'];
+                final amount = data['amount'];
+                if (date is! Timestamp || amount is! num) return null;
+                return RewardTransaction(
+                  title: (data['title'] ?? '').toString(),
+                  date: date.toDate(),
+                  amount: amount.toDouble(),
+                  status: (data['status'] ?? 'UNKNOWN').toString(),
+                  type: (data['type'] ?? 'UNKNOWN').toString(),
+                );
+              })
+              .whereType<RewardTransaction>()
+              .toList();
+        });
   }
 }
