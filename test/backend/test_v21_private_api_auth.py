@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import json
 import re
 import unittest
 from pathlib import Path
@@ -25,11 +26,11 @@ class Request:
 
 def load_handlers(verified_user_id):
     source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
-    wanted = {"link_account", "ai_chat"}
+    wanted = {"link_account", "ai_chat", "_bounded_llm_request", "_record_llm_usage"}
     nodes = [
         node
         for node in ast.parse(source).body
-        if isinstance(node, ast.AsyncFunctionDef) and node.name in wanted
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) and node.name in wanted
     ]
     for node in nodes:
         node.decorator_list = []
@@ -49,6 +50,7 @@ def load_handlers(verified_user_id):
         "DEEPSEEK_MODEL": "deepseek-flash",
         "LOCAL_QA_MODE": False,
         "asyncio": asyncio,
+        "json": json,
         "re": re,
         "HTTPException": HttpError,
         "symbol_bound_chat_context": symbol_bound_chat_context,
@@ -154,12 +156,18 @@ class PrivateApiAuthTests(unittest.IsolatedAsyncioTestCase):
         def create(**kwargs):
             self.assertEqual(kwargs['model'], 'deepseek-flash')
             self.assertEqual(kwargs['temperature'], 0.0)
+            self.assertEqual(kwargs['max_tokens'], 600)
+            self.assertEqual(kwargs['extra_body'], {'thinking': {'type': 'disabled'}})
             prompts.append(kwargs["messages"][0]["content"])
             return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="General answer"))])
 
-        handlers["ai_client"] = SimpleNamespace(
+        client = SimpleNamespace(
             chat=SimpleNamespace(completions=SimpleNamespace(create=create))
         )
+        def with_options(**kwargs):
+            self.assertEqual(kwargs, {'max_retries': 0, 'timeout': 20})
+            return client
+        handlers["ai_client"] = SimpleNamespace(with_options=with_options)
         request = Request(userId="alice", message="Discuss EURUSD",
                           symbol="EURUSD", timeframe="5")
         result = await handlers["ai_chat"](request, "Bearer alice")
@@ -167,6 +175,11 @@ class PrivateApiAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(prompts), 1)
         self.assertIn("Live market context unavailable", prompts[0])
         self.assertNotIn("3050.5", prompts[0])
+
+        handlers['get_chat_master_prompt'] = lambda: asyncio.sleep(0, result='a' * 24001)
+        oversized = await handlers['ai_chat'](request, 'Bearer alice')
+        self.assertTrue(oversized['fallback'])
+        self.assertEqual(len(prompts), 1, 'Oversized prompt must not call the paid provider')
 
     async def test_broker_link_writes_only_under_verified_owner(self):
         writes = {}

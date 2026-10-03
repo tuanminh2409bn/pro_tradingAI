@@ -622,6 +622,44 @@ def _create_seeded_analysis_completion(create_kwargs: dict):
         return ai_client.chat.completions.create(**create_kwargs)
 
 
+def _bounded_llm_request(model: str, messages: list, *, analysis: bool) -> dict:
+    """Bound paid inputs without silently removing trading evidence."""
+    if not isinstance(messages, list) or not messages:
+        raise ValueError('Invalid AI messages')
+    size = 0
+    for message in messages:
+        if (
+            not isinstance(message, dict)
+            or set(message) != {'role', 'content'}
+            or message['role'] not in {'system', 'user', 'assistant'}
+            or not isinstance(message['content'], str)
+        ):
+            raise ValueError('Invalid AI message')
+        size += len(message['content'].encode('utf-8'))
+    if size > 24000:
+        raise ValueError('AI input exceeds budget')
+    payload = dict(
+        model=model, messages=messages, temperature=0.0,
+        max_tokens=1500 if analysis else 600, thinking={'type': 'disabled'},
+    )
+    if analysis:
+        payload['response_format'] = {'type': 'json_object'}
+    return payload
+
+
+def _record_llm_usage(call: str, usage) -> None:
+    """Log counts only; never provider payloads, prompts or user identifiers."""
+    usage = usage if isinstance(usage, dict) else {}
+    details = usage.get('completion_tokens_details')
+    details = details if isinstance(details, dict) else {}
+    record = {'call': call if call in {'smc', 'vsa', 'macro', 'aggregator', 'chat'} else 'unknown'}
+    for key in ('prompt_tokens', 'completion_tokens', 'total_tokens',
+                'prompt_cache_hit_tokens', 'prompt_cache_miss_tokens', 'reasoning_tokens'):
+        value = details.get(key) if key == 'reasoning_tokens' else usage.get(key)
+        record[key] = value if type(value) is int and value >= 0 else None
+    print('[DeepSeek Usage] ' + json.dumps(record, sort_keys=True))
+
+
 async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) -> dict:
     """LLM (temp=0) or deterministic FeatureEngine fallback. No random.*."""
     if not bool(features.get("analysis_available")):
@@ -634,8 +672,7 @@ async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) ->
         return build_signal_from_features(features)
 
     async def provider(**kwargs):
-        payload = {key: kwargs[key] for key in ('model', 'messages', 'response_format', 'temperature')}
-        payload.update(max_tokens=1500, thinking={'type': 'disabled'})
+        payload = _bounded_llm_request(kwargs['model'], kwargs['messages'], analysis=True)
         async with httpx.AsyncClient(timeout=20) as client:
             response = await client.post(
                 'https://api.deepseek.com/chat/completions', json=payload,
@@ -645,6 +682,7 @@ async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) ->
             code = {402: 'payment_required', 429: 'rate_limited'}.get(response.status_code, 'unavailable')
             raise SpecialistProviderError(code)
         envelope = response.json()
+        _record_llm_usage(kwargs.get('agent'), envelope.get('usage'))
         return json.loads(envelope['choices'][0]['message']['content'])
 
     if DEEPSEEK_API_KEY:
@@ -1850,18 +1888,21 @@ async def ai_chat(
             "candle pattern, or actionable trading level."
         )
 
-        response = await asyncio.to_thread(
-            ai_client.chat.completions.create,
-            model=DEEPSEEK_MODEL,
-            messages=[
+        payload = _bounded_llm_request(
+            DEEPSEEK_MODEL, [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": req.message}
             ],
-            max_tokens=600,
-            temperature=0.0,
-            timeout=20,
-            extra_body={'thinking': {'type': 'disabled'}},
+            analysis=False,
         )
+        thinking = payload.pop('thinking')
+        client = ai_client.with_options(max_retries=0, timeout=20)
+        response = await asyncio.to_thread(
+            client.chat.completions.create, **payload,
+            extra_body={'thinking': thinking},
+        )
+        usage = getattr(response, 'usage', None)
+        _record_llm_usage('chat', usage.model_dump() if usage is not None else None)
 
         ai_response = response.choices[0].message.content
         metric_timer.finish(
