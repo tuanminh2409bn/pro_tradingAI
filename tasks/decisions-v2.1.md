@@ -76,6 +76,21 @@ Provider contracts, account access, real licensed samples and staging credential
 
 ## Official contract references
 
+### Referral identity / local PNG kit — 2026-10-03
+
+Owner delegation covers the technical choice: qr_flutter 4.1.0 (BSD-3) with
+qr 3.0.2, generated lockfile via pub, no paid QR provider. Canonical identity
+uses only an opaque server-issued 24-character code and the Firebase Web root
+`?ref=code`. Private registry plus owner identity are transactional and code
+replays keep the same allocation. Provision does not initialize money fields.
+Local artwork is original ProTrading text/card content; third-party videos are
+unavailable. Link registration attribution, financial settlement and production
+release are separate unfinished work. No public UID/token/profile data in PNGs.
+
+- Renderer API and license: https://pub.dev/documentation/qr_flutter/4.1.0/
+- QR package version used by renderer: https://pub.dev/packages/qr/versions/3.0.2
+- Runtime/independent PNG decode evidence: `web-referral-qa-2026-10-03.json`.
+
 ### Production news selection — 2026-10-03
 
 The owner delegated suitable provider choices and authorized production work.

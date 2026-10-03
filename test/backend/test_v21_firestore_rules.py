@@ -395,6 +395,19 @@ class FirestoreRulesTests(unittest.TestCase):
         self.assertEqual(_request("PATCH", marker, "alice", {"userId": "alice"}), 403)
         self.assertEqual(_request("DELETE", marker, "alice"), 403)
 
+    def test_referral_code_registry_is_backend_only(self):
+        code = uuid.uuid4().hex[:24]
+        registry = f"referral_codes/{code}"
+        self.assertEqual(_request("PATCH", registry, "_admin", {"userId": "alice"}), 200)
+        for uid in ("alice", "bob", None):
+            self.assertEqual(_request("GET", registry, uid), 403)
+            self.assertEqual(_request("PATCH", registry, uid, {"userId": "alice"}), 403)
+        owner = "referrals/alice"
+        self.assertEqual(_request("PATCH", owner, "_admin", {"referralCode": code}), 200)
+        self.assertEqual(_request("GET", owner, "alice"), 200)
+        self.assertEqual(_request("GET", owner, "bob"), 403)
+        self.assertEqual(_request("PATCH", owner, "alice", {"referralCode": "forged"}), 403)
+
     def test_admin_data_requires_verified_admin_claim(self):
         path = "admin/stats"
         self.assertEqual(_request("PATCH", path, "_admin", {"status": "READY"}), 200)

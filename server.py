@@ -69,6 +69,7 @@ from push_preferences import push_recipient_opted_in
 from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
 from community_api import community_write_intent
+from referral_api import canonical_referral_link, new_referral_code, ReferralCodeCollision
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
 from backtest_api import backtest_creation, same_backtest_creation
@@ -1469,6 +1470,53 @@ async def image_proxy(url: str):
     except Exception:
         print("[ImageProxy] Fetch failed")
         return Response(status_code=502)
+
+@cloud_firestore.transactional
+def commit_referral_identity(transaction, user_id: str, candidate_code: str) -> dict:
+    owner_ref = db.collection("referrals").document(user_id)
+    owner = owner_ref.get(transaction=transaction)
+    data = owner.to_dict() or {}
+    existing_code = data.get("referralCode")
+    code = existing_code if existing_code is not None else candidate_code
+    try:
+        link = canonical_referral_link(code)
+    except ValueError:
+        raise HTTPException(status_code=503, detail="Referral identity unavailable") from None
+    registry_ref = db.collection("referral_codes").document(code)
+    registry = registry_ref.get(transaction=transaction)
+    if existing_code is not None:
+        if not registry.exists or (registry.to_dict() or {}).get("userId") != user_id:
+            raise HTTPException(status_code=503, detail="Referral identity unavailable")
+        return {"code": code, "link": link}
+    if registry.exists:
+        raise ReferralCodeCollision()
+    transaction.create(registry_ref, {
+        "userId": user_id, "createdAt": firestore.SERVER_TIMESTAMP,
+    })
+    transaction.set(owner_ref, {
+        "referralCode": code, "referralLink": link,
+        "identityCreatedAt": firestore.SERVER_TIMESTAMP,
+    }, merge=True)
+    return {"code": code, "link": link}
+
+
+@app.post("/api/referral/identity")
+async def provision_referral_identity(authorization: str | None = Header(default=None)):
+    user_id = await verified_user_id(authorization)
+    try:
+        for _ in range(4):
+            try:
+                return await asyncio.to_thread(
+                    commit_referral_identity, db.transaction(), user_id, new_referral_code(),
+                )
+            except ReferralCodeCollision:
+                continue
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Referral identity unavailable") from None
+    raise HTTPException(status_code=503, detail="Referral identity unavailable")
+
 
 @cloud_firestore.transactional
 def commit_community_post(transaction, post_ref, user_id: str, content: str, author: dict) -> dict:

@@ -18,28 +18,34 @@ class LoadReferralData extends ReferralEvent {
 
 class UpdateReferralStats extends ReferralEvent {
   final ReferralStats stats;
-  const UpdateReferralStats(this.stats);
+  final int? generation;
+  const UpdateReferralStats(this.stats, {this.generation});
 
   @override
-  List<Object?> get props => [stats];
+  List<Object?> get props => [stats, generation];
 }
 
 class UpdateReferralNetwork extends ReferralEvent {
   final List<MemberNode> network;
-  const UpdateReferralNetwork(this.network);
+  final int? generation;
+  const UpdateReferralNetwork(this.network, {this.generation});
 
   @override
-  List<Object?> get props => [network];
+  List<Object?> get props => [network, generation];
 }
 
 class UpdateRewardHistory extends ReferralEvent {
   final List<RewardTransaction> history;
-  const UpdateRewardHistory(this.history);
+  final int? generation;
+  const UpdateRewardHistory(this.history, {this.generation});
 
   @override
-  List<Object?> get props => [history];
+  List<Object?> get props => [history, generation];
 }
 
 class ReferralStreamFailed extends ReferralEvent {
-  const ReferralStreamFailed();
+  final int? generation;
+  const ReferralStreamFailed({this.generation});
+  @override
+  List<Object?> get props => [generation];
 }

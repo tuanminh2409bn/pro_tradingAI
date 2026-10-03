@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-03",
+  "scope": "W26 server-issued code, canonical link, PNG QR and original banner",
+  "source_commit": null,
+  "production": {"status": "not_released", "llm_calls": 0},
+  "local": {
+    "environment": "actual server.py 8088; Auth 9099/Firestore 8080 Emulators; Flutter release 8789",
+    "authenticated_browser": true,
+    "opaque_code_bytes": 18,
+    "same_uid_replay_restores_same_code": true,
+    "registry_matches_verified_token_owner": true,
+    "claimed_uid_and_client_code_ignored": true,
+    "anonymous_identity_status": 401,
+    "no_financial_fields_created": true,
+    "money_and_member_counts_shown_unavailable": true,
+    "clipboard_matches_server_link": true,
+    "downloads": [
+      {"type": "qr", "size": [600, 600], "independent_decoder": "zxing-cpp",
+       "payload_matches_server_link": true,
+       "sha256": "0864c3fe941c190e05a2f3be473557f07629bad4aa44cedd73f840d6b2272b5f",
+       "proof": "web-local-referral-qr-2026-10-03.png"},
+      {"type": "banner", "size": [1200, 630], "independent_decoder": "zxing-cpp",
+       "payload_matches_server_link": true,
+       "sha256": "3873e52e57a9f463424016f58c5f315b68cf407b03045ae9784db296dddbe01b",
+       "proof": "web-local-referral-banner-2026-10-03.png"}
+    ],
+    "browser_download_observation": "IAB download-event wait timed out; actual named files were found in Downloads, copied and decoded",
+    "proofs": ["web-local-referral-2026-10-03.png", "web-local-referral-overview-2026-10-03.png"],
+    "llm_calls": 0
+  },
+  "verification": {
+    "python_emulator_suite": {"total": 285, "passed": 285},
+    "flutter_full_suite": {"passed": 170, "web_only_skip": 1},
+    "additional_referral_widget_tests": {"total": 2, "passed": 2},
+    "analyzer": {"errors": 0, "warnings": 0, "existing_mobile_infos": 3},
+    "local_web_build": "passed",
+    "parallel_allocation": {"requests": 20, "codes_for_one_uid": 1},
+    "registry_rules": "clients cannot read/write registry or forge owner referral document",
+    "asset_rights": "original ProTrading text/card artwork; no third-party artwork or video copied"
+  },
+  "remaining": [
+    "Registration attribution from ref query is not connected yet; no commissions are promised.",
+    "Licensed video rendering remains unavailable; PNG export is the supported local kit.",
+    "W27 financial policy, trusted receipt source, immutable ledger and Admin withdrawal remain open.",
+    "Production candidate and same-build readback have not run for this slice."
+  ]
+}

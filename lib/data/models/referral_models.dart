@@ -5,6 +5,8 @@ class ReferralStats extends Equatable {
   final int f1Count;
   final int f2Count;
   final String referralLink;
+  final String referralCode;
+  final String currency;
   final bool isAvailable;
 
   const ReferralStats({
@@ -12,6 +14,8 @@ class ReferralStats extends Equatable {
     required this.f1Count,
     required this.f2Count,
     required this.referralLink,
+    this.referralCode = '',
+    this.currency = 'USD',
     this.isAvailable = true,
   });
 
@@ -20,9 +24,53 @@ class ReferralStats extends Equatable {
       f1Count = 0,
       f2Count = 0,
       referralLink = '',
+      referralCode = '',
+      currency = '',
       isAvailable = false;
 
-  bool get hasReferralLink => referralLink.trim().isNotEmpty;
+  factory ReferralStats.fromJson(Map<String, dynamic> data) {
+    final earnings = data['totalEarnings'];
+    final f1 = data['f1Count'];
+    final f2 = data['f2Count'];
+    final currency = data['currency'];
+    final verified =
+        data['ledgerStatus'] == 'VERIFIED' &&
+        earnings is num &&
+        earnings.isFinite &&
+        earnings >= 0 &&
+        f1 is int &&
+        f1 >= 0 &&
+        f2 is int &&
+        f2 >= 0 &&
+        currency is String &&
+        RegExp(r'^[A-Z]{3}$').hasMatch(currency);
+    return ReferralStats(
+      totalEarnings: verified ? earnings.toDouble() : 0,
+      f1Count: verified ? f1 : 0,
+      f2Count: verified ? f2 : 0,
+      currency: verified ? currency : '',
+      referralCode: data['referralCode'] is String
+          ? data['referralCode'] as String
+          : '',
+      referralLink: data['referralLink'] is String
+          ? data['referralLink'] as String
+          : '',
+      isAvailable: verified,
+    );
+  }
+
+  ReferralIdentity? get identity {
+    try {
+      return ReferralIdentity.fromServerLink(
+        code: referralCode,
+        link: referralLink,
+      );
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  bool get hasReferralLink => identity != null;
 
   @override
   List<Object?> get props => [
@@ -30,6 +78,8 @@ class ReferralStats extends Equatable {
     f1Count,
     f2Count,
     referralLink,
+    referralCode,
+    currency,
     isAvailable,
   ];
 }
@@ -77,6 +127,22 @@ class ReferralIdentity extends Equatable {
   final Uri uri;
 
   const ReferralIdentity._({required this.code, required this.uri});
+
+  factory ReferralIdentity.fromServerLink({
+    required String code,
+    required String link,
+  }) {
+    if (!RegExp(r'^[A-Za-z0-9_-]{24}$').hasMatch(code)) {
+      throw ArgumentError('Invalid server-issued referral code');
+    }
+    final canonical = Uri.https('protrading-ai-2026.web.app', '/', {
+      'ref': code,
+    });
+    if (link != canonical.toString()) {
+      throw ArgumentError('Invalid referral origin or payload');
+    }
+    return ReferralIdentity._(code: code, uri: canonical);
+  }
 
   factory ReferralIdentity.fromServerIssuedCode({
     required Uri baseUri,

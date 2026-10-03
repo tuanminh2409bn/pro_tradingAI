@@ -3,6 +3,70 @@ import 'package:protrading_ai/data/models/referral_models.dart';
 
 void main() {
   group('Canonical referral identity', () {
+    test(
+      'provisioned identity accepts only the exact server origin and code',
+      () {
+        const code = 'abcdEFGH0123_-abcdEFGH01';
+        final identity = ReferralIdentity.fromServerLink(
+          code: code,
+          link: 'https://protrading-ai-2026.web.app/?ref=$code',
+        );
+        expect(
+          identity.qrPayload,
+          'https://protrading-ai-2026.web.app/?ref=$code',
+        );
+        for (final link in [
+          'http://protrading-ai-2026.web.app/?ref=$code',
+          'https://another.test/?ref=$code',
+          'https://protrading-ai-2026.web.app/?ref=$code&uid=alice',
+          'https://protrading-ai-2026.web.app/?ref=$code#private',
+        ]) {
+          expect(
+            () => ReferralIdentity.fromServerLink(code: code, link: link),
+            throwsArgumentError,
+          );
+        }
+      },
+    );
+
+    test(
+      'code-only document has a real link but no fabricated money or network counts',
+      () {
+        const code = 'abcdEFGH0123_-abcdEFGH01';
+        final stats = ReferralStats.fromJson({
+          'referralCode': code,
+          'referralLink': 'https://protrading-ai-2026.web.app/?ref=$code',
+          'totalEarnings': 100,
+        });
+        expect(stats.hasReferralLink, isTrue);
+        expect(stats.isAvailable, isFalse);
+        expect(stats.identity!.code, code);
+        expect(
+          ReferralStats.fromJson({'referralLink': '/demo'}).hasReferralLink,
+          isFalse,
+        );
+        final verified = ReferralStats.fromJson({
+          'ledgerStatus': 'VERIFIED',
+          'currency': 'USD',
+          'totalEarnings': 12.5,
+          'f1Count': 1,
+          'f2Count': 2,
+        });
+        expect(verified.isAvailable, isTrue);
+        expect(verified.totalEarnings, 12.5);
+        expect(
+          ReferralStats.fromJson({
+            'ledgerStatus': 'VERIFIED',
+            'currency': 'USD',
+            'totalEarnings': double.nan,
+            'f1Count': 1,
+            'f2Count': 2,
+          }).isAvailable,
+          isFalse,
+        );
+      },
+    );
+
     test('missing server-provisioned stats expose no fabricated link', () {
       const stats = ReferralStats.unavailable();
 

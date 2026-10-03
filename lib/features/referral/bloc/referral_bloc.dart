@@ -10,6 +10,7 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
   StreamSubscription? _statsSubscription;
   StreamSubscription? _networkSubscription;
   StreamSubscription? _historySubscription;
+  int _loadGeneration = 0;
 
   ReferralBloc({required ReferralRepository referralRepository})
     : _referralRepository = referralRepository,
@@ -25,51 +26,94 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     LoadReferralData event,
     Emitter<ReferralState> emit,
   ) async {
+    final generation = ++_loadGeneration;
     emit(ReferralLoading());
     try {
       final userId = event.userId;
+      await Future.wait([
+        if (_statsSubscription != null) _statsSubscription!.cancel(),
+        if (_networkSubscription != null) _networkSubscription!.cancel(),
+        if (_historySubscription != null) _historySubscription!.cancel(),
+      ]);
+      if (emit.isDone || generation != _loadGeneration) return;
 
-      _statsSubscription?.cancel();
-      _networkSubscription?.cancel();
-      _historySubscription?.cancel();
+      final identity = userId != null && userId.isNotEmpty
+          ? await _referralRepository.provisionIdentity()
+          : null;
+      if (emit.isDone || generation != _loadGeneration) return;
+      emit(
+        ReferralLoaded(
+          stats: identity == null
+              ? const ReferralStats.unavailable()
+              : ReferralStats(
+                  totalEarnings: 0,
+                  f1Count: 0,
+                  f2Count: 0,
+                  referralLink: identity.qrPayload,
+                  referralCode: identity.code,
+                  currency: '',
+                  isAvailable: false,
+                ),
+          network: const [],
+          history: const [],
+        ),
+      );
 
       if (userId != null && userId.isNotEmpty) {
         _statsSubscription = _referralRepository
             .getReferralStats(userId)
             .listen(
-              (stats) => add(UpdateReferralStats(stats)),
-              onError: (_) => add(const ReferralStreamFailed()),
+              (stats) {
+                if (!isClosed) {
+                  add(UpdateReferralStats(stats, generation: generation));
+                }
+              },
+              onError: (_) {
+                if (!isClosed) {
+                  add(ReferralStreamFailed(generation: generation));
+                }
+              },
             );
 
         _networkSubscription = _referralRepository
             .getNetwork(userId)
             .listen(
-              (network) => add(UpdateReferralNetwork(network)),
-              onError: (_) => add(const ReferralStreamFailed()),
+              (network) {
+                if (!isClosed) {
+                  add(UpdateReferralNetwork(network, generation: generation));
+                }
+              },
+              onError: (_) {
+                if (!isClosed) {
+                  add(ReferralStreamFailed(generation: generation));
+                }
+              },
             );
 
         _historySubscription = _referralRepository
             .getRewardHistory(userId)
             .listen(
-              (history) => add(UpdateRewardHistory(history)),
-              onError: (_) => add(const ReferralStreamFailed()),
+              (history) {
+                if (!isClosed) {
+                  add(UpdateRewardHistory(history, generation: generation));
+                }
+              },
+              onError: (_) {
+                if (!isClosed) {
+                  add(ReferralStreamFailed(generation: generation));
+                }
+              },
             );
       }
-
-      // Emit initial Loaded state immediately to avoid infinite spinner
-      emit(
-        const ReferralLoaded(
-          stats: ReferralStats.unavailable(),
-          network: [],
-          history: [],
-        ),
-      );
     } catch (_) {
-      emit(const ReferralError('common_data_unavailable'));
+      if (!emit.isDone && generation == _loadGeneration) {
+        emit(const ReferralError('common_data_unavailable'));
+      }
     }
   }
 
   void _onUpdateStats(UpdateReferralStats event, Emitter<ReferralState> emit) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     if (state is ReferralLoaded) {
       emit((state as ReferralLoaded).copyWith(stats: event.stats));
     }
@@ -79,6 +123,7 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     UpdateReferralNetwork event,
     Emitter<ReferralState> emit,
   ) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     if (state is ReferralLoaded) {
       emit((state as ReferralLoaded).copyWith(network: event.network));
     }
@@ -88,6 +133,7 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     UpdateRewardHistory event,
     Emitter<ReferralState> emit,
   ) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     if (state is ReferralLoaded) {
       emit((state as ReferralLoaded).copyWith(history: event.history));
     }
@@ -97,11 +143,13 @@ class ReferralBloc extends Bloc<ReferralEvent, ReferralState> {
     ReferralStreamFailed event,
     Emitter<ReferralState> emit,
   ) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     emit(const ReferralError('common_data_unavailable'));
   }
 
   @override
   Future<void> close() {
+    ++_loadGeneration;
     _statsSubscription?.cancel();
     _networkSubscription?.cancel();
     _historySubscription?.cancel();

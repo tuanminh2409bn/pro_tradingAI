@@ -206,7 +206,7 @@
   lại sau khi đủ nguồn và quyết định, với phạm vi hiện tại. Chưa phải deadline
   đã cam kết; thời gian chờ nhà cung cấp/giấy phép/nạp số dư không được xác định.
 
-## Community W24 — v1 đã phát hành, sửa khôi phục đang hoàn tất 03/10
+## Community W24 — v1 và sửa khôi phục đã phát hành 03/10
 
 - Đã nối post/comment/like/share qua backend/token và Firestore thật trên
   Emulator. Post/comment retry dùng cùng requestId, comment counter cùng
@@ -222,6 +222,10 @@
   Bundle Web public khớp SHA local; health đạt, API anonymous trả 401. SDK
   read-only xác nhận collection Community và leaderboard đều 0 document;
   browser QA Standard sau reload hiển thị đúng feed trống, không có ranking giả.
+- Source FE/Rules follow-up `43fd970` đã lên main và Firebase production;
+  public bundle SHA `895669ed8c3eed6669a2f837d12fba14e05d988844b2a363e9a1760dd3afbfe2`
+  khớp bản build đã kiểm thử. BE vẫn `f11707a` vì slice này không đổi backend.
+  QA giữ phiên đăng nhập sau reload và đọc đúng Community empty state.
 - Bản follow-up cho phép owner đọc đúng marker like (không list/write hoặc
   cross-user), tự khôi phục trạng thái đã thích, có retry khi đọc lỗi và bỏ
   callback cũ. Browser đăng nhập mới tự hiện “Đã thích · 1”, không gọi like lại.
@@ -235,6 +239,27 @@
   thiếu write-flow production, W25 verified-trade/leaderboard vẫn chưa nghiệm thu.
   Không gọi DeepSeek ở slice này. Probe Analysis/Chat production vẫn chờ câu
   xác nhận cụ thể do cơ chế duyệt tự động yêu cầu.
+
+## Referral W26 — cấp mã và PNG đã qua local, chưa release
+
+- API `/api/referral/identity` lấy UID từ token, cấp code 18 byte ngẫu nhiên,
+  registry private và owner document commit cùng transaction. 20 request đồng
+  thời giữ một code; retry không đổi code; giữ mọi field cũ không liên quan.
+  Không sinh totalEarnings/F1/F2 hoặc tự gán ledger verified.
+- Stats phân biệt identity có thật với tiền/count được xác minh. Chỉ ledger
+  `VERIFIED` + currency/number hợp lệ mới hiện tiền; thiếu nguồn vẫn hiện “—”.
+  BLoC bỏ callback/stream cũ sau reload/close, có retry lỗi API và token/UID guard.
+- QR 600×600 và banner gốc 1200×630 tải được từ Web thật. zxing-cpp giải mã
+  độc lập cả hai khớp link server; Clipboard cũng khớp. Dependency chọn theo
+  quyền delegated: qr_flutter 4.1.0 (BSD-3), qr 3.0.2 transitive; decoder QA chỉ
+  ở /tmp, không thêm backend dependency. Mobile giữ biên import bằng stub.
+- Emulator 285/285, Flutter full 170 đạt + 1 Web-only skip, gồm 2 widget test
+  viewport 390px/copy/ledger unavailable/retry. Analyzer không có
+  error/warning, 3 Mobile info cũ; local release build đạt.
+- Bằng chứng: `web-referral-qa-2026-10-03.json` và các PNG local đi kèm.
+  Chưa deploy slice này. Chưa nối registration attribution từ `ref`, chưa có
+  video và W27 ledger/withdrawal. W26/W27 tiếp tục mở; không coi link đã encode
+  đúng là toàn bộ chương trình giới thiệu đã hoàn tất.
 
 ## Tiếp tục
 

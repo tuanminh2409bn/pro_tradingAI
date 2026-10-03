@@ -5,11 +5,13 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_cubit.dart';
 import '../../../data/models/referral_models.dart';
 import '../../../data/repositories/referral_repository.dart';
 import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
+import 'referral_kit_card.dart';
 
 class ReferralWebPage extends StatelessWidget {
   final String? userId;
@@ -34,9 +36,20 @@ class ReferralWebPage extends StatelessWidget {
 
             if (state is ReferralError) {
               return Center(
-                child: Text(
-                  context.tr(state.message),
-                  style: const TextStyle(color: AppColors.bear),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      context.tr(state.message),
+                      style: const TextStyle(color: AppColors.bear),
+                    ),
+                    TextButton(
+                      onPressed: () => context.read<ReferralBloc>().add(
+                        LoadReferralData(userId: userId),
+                      ),
+                      child: Text(context.tr('community_retry')),
+                    ),
+                  ],
                 ),
               );
             }
@@ -59,6 +72,13 @@ class ReferralWebPage extends StatelessWidget {
                               if (isMobile) ...[
                                 _buildStatsCard(context, state.stats),
                                 const SizedBox(height: 24),
+                                if (state.stats.identity != null) ...[
+                                  ReferralKitCard(
+                                    key: ValueKey(state.stats.referralCode),
+                                    identity: state.stats.identity!,
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
                                 _buildNetworkCard(state.network),
                                 const SizedBox(height: 24),
                                 _buildHistoryCard(state.history),
@@ -72,6 +92,15 @@ class ReferralWebPage extends StatelessWidget {
                                         children: [
                                           _buildStatsCard(context, state.stats),
                                           const SizedBox(height: 24),
+                                          if (state.stats.identity != null) ...[
+                                            ReferralKitCard(
+                                              key: ValueKey(
+                                                state.stats.referralCode,
+                                              ),
+                                              identity: state.stats.identity!,
+                                            ),
+                                            const SizedBox(height: 24),
+                                          ],
                                           _buildHistoryCard(state.history),
                                         ],
                                       ),
@@ -135,9 +164,9 @@ class ReferralWebPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'YOUR PERFORMANCE',
-            style: TextStyle(
+          Text(
+            context.tr('referral_performance'),
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w900,
               color: Colors.white54,
@@ -145,32 +174,41 @@ class ReferralWebPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 28,
+            runSpacing: 20,
             children: [
               _buildStatItem(
-                'TOTAL EARNINGS',
+                context.tr('referral_total_earnings'),
                 stats.isAvailable
-                    ? '\$${stats.totalEarnings.toStringAsFixed(2)}'
+                    ? '${stats.currency} ${stats.totalEarnings.toStringAsFixed(2)}'
                     : '—',
                 AppColors.primary,
               ),
               _buildStatItem(
-                'F1 MEMBERS',
+                context.tr('referral_f1_members'),
                 stats.isAvailable ? '${stats.f1Count}' : '—',
                 Colors.white,
               ),
               _buildStatItem(
-                'F2 MEMBERS',
+                context.tr('referral_f2_members'),
                 stats.isAvailable ? '${stats.f2Count}' : '—',
                 Colors.white,
               ),
             ],
           ),
+          if (!stats.isAvailable)
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: Text(
+                context.tr('referral_ledger_unavailable'),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 40),
-          const Text(
-            'REFERRAL LINK',
-            style: TextStyle(
+          Text(
+            context.tr('referral_link_label'),
+            style: const TextStyle(
               fontSize: 9,
               color: Colors.white38,
               fontWeight: FontWeight.bold,
@@ -199,7 +237,7 @@ class ReferralWebPage extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: stats.hasReferralLink ? 'Copy referral link' : null,
+                  tooltip: context.tr('referral_copy_link'),
                   onPressed: stats.hasReferralLink
                       ? () async {
                           await Clipboard.setData(
@@ -208,7 +246,12 @@ class ReferralWebPage extends StatelessWidget {
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(context.tr('referral_link_copied')),
+                              content: Text(
+                                AppLocalizations.get(
+                                  context.read<LocaleCubit>().state,
+                                  'referral_link_copied',
+                                ),
+                              ),
                               backgroundColor: AppColors.primary,
                             ),
                           );

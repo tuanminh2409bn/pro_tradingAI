@@ -1,11 +1,55 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import '../../core/constants/backend_endpoints.dart';
 import '../models/referral_models.dart';
 
 class ReferralRepository {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final http.Client _client;
 
-  ReferralRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  ReferralRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    http.Client? client,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _client = client ?? http.Client();
+
+  Future<ReferralIdentity> provisionIdentity() async {
+    final user = _auth.currentUser;
+    final token = await user?.getIdToken();
+    if (user == null ||
+        token == null ||
+        token.isEmpty ||
+        _auth.currentUser?.uid != user.uid) {
+      throw StateError('Authentication is required');
+    }
+    final response = await _client
+        .post(
+          Uri.parse('${BackendEndpoints.apiBaseUrl}/api/referral/identity'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 15));
+    if (_auth.currentUser?.uid != user.uid) {
+      throw StateError('Identity changed');
+    }
+    if (response.statusCode != 200) {
+      throw StateError('Referral identity unavailable');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic> ||
+        data['code'] is! String ||
+        data['link'] is! String) {
+      throw const FormatException('Invalid referral identity');
+    }
+    return ReferralIdentity.fromServerLink(
+      code: data['code'] as String,
+      link: data['link'] as String,
+    );
+  }
 
   /// Stream referral stats provisioned by the authoritative backend.
   /// Missing data stays unavailable; the client must not derive a code from UID.
@@ -17,14 +61,7 @@ class ReferralRepository {
         return const ReferralStats.unavailable();
       }
       final data = snapshot.data()!;
-      return ReferralStats(
-        totalEarnings: (data['totalEarnings'] ?? 0).toDouble(),
-        f1Count: (data['f1Count'] ?? 0).toInt(),
-        f2Count: (data['f2Count'] ?? 0).toInt(),
-        referralLink: data['referralLink'] is String
-            ? (data['referralLink'] as String).trim()
-            : '',
-      );
+      return ReferralStats.fromJson(data);
     });
   }
 
