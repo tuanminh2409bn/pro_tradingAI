@@ -1,0 +1,46 @@
+{
+  "subject_hash": "e268f571ccbd",
+  "role": "standard",
+  "quota": {
+    "apiUsed": 2,
+    "apiLimit": 2,
+    "source": "server_enforced",
+    "resetAt": "2026-10-05 00:00:00+00:00"
+  },
+  "requests": [
+    {
+      "id": "lndJdho0SOB7xsZyQnuV",
+      "symbol": "BTCUSD",
+      "timeframe": "5",
+      "status": "ERROR",
+      "error": "quota_exhausted",
+      "cache_hit": null,
+      "setup_ready": null,
+      "veto": null
+    },
+    {
+      "id": "gF4t3DWqUOTZ0APyFdlU",
+      "symbol": "BTCUSD",
+      "timeframe": "5",
+      "status": "COMPLETED",
+      "error": null,
+      "cache_hit": false,
+      "setup_ready": false,
+      "veto": false
+    },
+    {
+      "id": "qa-web-runtime-1efa18a12b7e4a3bae053ec426f0a465",
+      "symbol": "ETHUSD",
+      "timeframe": "5",
+      "status": "COMPLETED",
+      "error": null,
+      "cache_hit": false,
+      "setup_ready": false,
+      "veto": true
+    }
+  ],
+  "date": "2026-10-03",
+  "backend_image": "protrading-ai:web-49660550a6fc",
+  "frontend_sha256": "c70917e5b065935f153158e893fc4edc7bc36bc18fcf166fd4c900ba515102f9",
+  "source_note": "Actual production QA via browser; Standard quota retained at 2/2 after rejected request."
+}

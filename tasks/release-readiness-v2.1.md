@@ -1,5 +1,12 @@
 # V2.1 Release Readiness and Rollback Record
 
+> **Trạng thái hiện tại — 2026-10-03:** FE/BE/Rules/index đã phát hành ngày 25/09;
+> BE TradingView đã phát hành ngày 03/10 và có QA production đăng nhập. Các
+> mục HOLD/auth/backend cũ phía dưới là hồ sơ lịch sử, không mô tả runtime hiện
+> tại. Nghiệm thu toàn bộ Web vẫn chưa đủ; xem
+> `checkpoint-2026-10-03-web-production-readiness.md` và checkpoint TradingView
+> production để biết điều kiện còn thiếu, identity mới và rollback assets.
+
 > The original immutable identities below describe the 2026-09-12 source. The
 > current Web candidate and production inspection are recorded in
 > `tasks/checkpoint-2026-09-17-web-auth-sessions.md`. Mobile release identities

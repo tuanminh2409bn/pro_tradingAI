@@ -1,13 +1,18 @@
 # Web provider matrix — local design, 2026-09-25
 
+> Cập nhật 2026-10-03: backend đã chạy TradingView theo yêu cầu chủ dự án, 21 mã
+> Web có dữ liệu được chấp nhận và 10/10 request QA đạt. Xem
+> `checkpoint-2026-10-03-web-production-readiness.md` và checkpoint TradingView
+> production. Lựa chọn nguồn/runtime không tự xác nhận quyền sử dụng thương mại.
+
 This file records choices, availability and evidence. It contains no credentials.
 The project owner delegated local provider choices; provider account access,
 redistribution rights and staging checks are still separate facts to verify.
 
 | Flow | Selected source | Local implementation | External/runtime gate |
 |---|---|---|---|
-| Market history MTF | OANDA v20 Practice midpoint candles, UTC aligned; `volume` means tick count | `oanda_history.py` fetches three exact closed series with 5 s timeout. `OANDA_PRACTICE_ACCOUNT_ID` and `OANDA_PRACTICE_TOKEN` are read only at runtime; absent/invalid data yields unavailable | Practice account, supported instrument, display rights, provider sample and authenticated browser pass |
-| Chart/marks | Existing TradingView stream | Chart display only; never substitutes for trusted OANDA MTF analysis. Paper P&L stays symbol-bound | Provider reliability and terms |
+| Market history MTF | TradingView anonymous exact-provider series on production; OANDA Practice remains optional adapter | `tradingview_history.py` validates exact closed bars/volume/NY session/DST; `MARKET_HISTORY_PROVIDER=tradingview`. OANDA credentials absent. 21 Web markets accepted, crypto browser QA passed; closed forex/metals fail closed | Commercial/non-display rights, forex open-session comparison and broader markets/load remain unverified |
+| Chart/marks | Existing TradingView stream | Separate chart session per WebSocket, shared symbol-bound marks. Analysis uses its own stateless validated history reader | Provider reliability/terms and sustained multi-user load |
 | High-impact calendar | Trading Economics Calendar API | Target selected; UI/news guard remains unavailable without approved adapter and source sample | API account, importance mapping, display/redistribution rights, budget |
 | Social sentiment | Official X API | Unavailable; no scraped or fabricated score | API scope, retention terms, budget and live sample |
 | AI | Existing DeepSeek integration | Temperature 0 and deterministic fallback; `DEEPSEEK_API_KEY` read at runtime | Account, quota/budget, 402/429 runtime test |

@@ -1,0 +1,137 @@
+{
+  "tested_at": "2026-10-03T04:00:11.414603+00:00",
+  "symbol": "OANDA:XAUUSD",
+  "anonymous": true,
+  "production_adapter_enabled": false,
+  "timeframes": [
+    {
+      "timeframe": "5",
+      "error": null,
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 4140.52,
+      "usable": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "last_closed_open_utc": "2026-10-02T20:55:00+00:00",
+      "last_closed_age_seconds": 25211.0,
+      "volume_range": [
+        634.0,
+        16275.0
+      ]
+    },
+    {
+      "timeframe": "15",
+      "error": null,
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 4140.52,
+      "usable": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unexpected_gap"
+        ],
+        "count": 150
+      },
+      "last_closed_open_utc": "2026-10-02T20:45:00+00:00",
+      "last_closed_age_seconds": 25212.0,
+      "volume_range": [
+        915.0,
+        38098.0
+      ]
+    },
+    {
+      "timeframe": "60",
+      "error": null,
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 4140.52,
+      "usable": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unexpected_gap"
+        ],
+        "count": 150
+      },
+      "last_closed_open_utc": "2026-10-02T20:00:00+00:00",
+      "last_closed_age_seconds": 25212.0,
+      "volume_range": [
+        3750.0,
+        98997.0
+      ]
+    },
+    {
+      "timeframe": "240",
+      "error": null,
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 4140.52,
+      "usable": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "timestamp_not_aligned"
+        ],
+        "count": 150
+      },
+      "last_closed_open_utc": "2026-10-02T17:00:00+00:00",
+      "last_closed_age_seconds": 25213.0,
+      "volume_range": [
+        9615.0,
+        385050.0
+      ]
+    },
+    {
+      "timeframe": "1D",
+      "error": null,
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772661600.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 4140.52,
+      "usable": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "timestamp_not_aligned",
+          "unexpected_gap"
+        ],
+        "count": 150
+      },
+      "last_closed_open_utc": "2026-10-01T21:00:00+00:00",
+      "last_closed_age_seconds": 25214.0,
+      "volume_range": [
+        357538.0,
+        2759675.0
+      ]
+    }
+  ]
+}

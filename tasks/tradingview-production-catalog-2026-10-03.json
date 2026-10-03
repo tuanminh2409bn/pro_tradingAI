@@ -1,0 +1,4856 @@
+{
+  "tested_at": "2026-10-03T05:35:26.574743+00:00",
+  "diagnostic_only": true,
+  "results": [
+    {
+      "symbol": "OANDA:XAUUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.734,
+      "metadata": {
+        "pro_name": "OANDA:XAUUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 4140.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAUUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.449,
+      "metadata": {
+        "pro_name": "OANDA:XAUUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 4140.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAUUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.234,
+      "metadata": {
+        "pro_name": "OANDA:XAUUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 4140.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAUUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.377,
+      "metadata": {
+        "pro_name": "OANDA:XAUUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 4140.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAUUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.555,
+      "metadata": {
+        "pro_name": "OANDA:XAUUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772661600.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 4140.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAGUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.227,
+      "metadata": {
+        "pro_name": "OANDA:XAGUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 60.3705,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAGUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.179,
+      "metadata": {
+        "pro_name": "OANDA:XAGUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 60.3705,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAGUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.195,
+      "metadata": {
+        "pro_name": "OANDA:XAGUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 60.3705,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAGUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.176,
+      "metadata": {
+        "pro_name": "OANDA:XAGUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 60.3705,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:XAGUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.494,
+      "metadata": {
+        "pro_name": "OANDA:XAGUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772661600.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 60.3705,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_metals_ny"
+    },
+    {
+      "symbol": "OANDA:EURUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.46,
+      "metadata": {
+        "pro_name": "OANDA:EURUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.12524,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.479,
+      "metadata": {
+        "pro_name": "OANDA:EURUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.12524,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.876,
+      "metadata": {
+        "pro_name": "OANDA:EURUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.12524,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.23,
+      "metadata": {
+        "pro_name": "OANDA:EURUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.12524,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.188,
+      "metadata": {
+        "pro_name": "OANDA:EURUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.12524,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.234,
+      "metadata": {
+        "pro_name": "OANDA:GBPUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.32405,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.179,
+      "metadata": {
+        "pro_name": "OANDA:GBPUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.32405,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.175,
+      "metadata": {
+        "pro_name": "OANDA:GBPUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.32405,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.489,
+      "metadata": {
+        "pro_name": "OANDA:GBPUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.32405,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.567,
+      "metadata": {
+        "pro_name": "OANDA:GBPUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.32405,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDJPY",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.508,
+      "metadata": {
+        "pro_name": "OANDA:USDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 157.874,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDJPY",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.194,
+      "metadata": {
+        "pro_name": "OANDA:USDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 157.874,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDJPY",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.317,
+      "metadata": {
+        "pro_name": "OANDA:USDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 157.874,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDJPY",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.262,
+      "metadata": {
+        "pro_name": "OANDA:USDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 157.874,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDJPY",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.174,
+      "metadata": {
+        "pro_name": "OANDA:USDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 157.874,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCHF",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.43,
+      "metadata": {
+        "pro_name": "OANDA:USDCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.82882,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCHF",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.69,
+      "metadata": {
+        "pro_name": "OANDA:USDCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.82882,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCHF",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.519,
+      "metadata": {
+        "pro_name": "OANDA:USDCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.82882,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCHF",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.589,
+      "metadata": {
+        "pro_name": "OANDA:USDCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.82882,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCHF",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.273,
+      "metadata": {
+        "pro_name": "OANDA:USDCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.82882,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.357,
+      "metadata": {
+        "pro_name": "OANDA:AUDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.69574,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.496,
+      "metadata": {
+        "pro_name": "OANDA:AUDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.69574,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "OANDA:AUDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.69574,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.177,
+      "metadata": {
+        "pro_name": "OANDA:AUDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.69574,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.176,
+      "metadata": {
+        "pro_name": "OANDA:AUDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.69574,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCAD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "OANDA:USDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.42503,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCAD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.396,
+      "metadata": {
+        "pro_name": "OANDA:USDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.42503,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCAD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.667,
+      "metadata": {
+        "pro_name": "OANDA:USDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.42503,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCAD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.475,
+      "metadata": {
+        "pro_name": "OANDA:USDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.42503,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:USDCAD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.229,
+      "metadata": {
+        "pro_name": "OANDA:USDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.42503,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.187,
+      "metadata": {
+        "pro_name": "OANDA:NZDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.5614,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "OANDA:NZDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.5614,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.951,
+      "metadata": {
+        "pro_name": "OANDA:NZDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.5614,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.314,
+      "metadata": {
+        "pro_name": "OANDA:NZDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.5614,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.932,
+      "metadata": {
+        "pro_name": "OANDA:NZDUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.5614,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURGBP",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.882,
+      "metadata": {
+        "pro_name": "OANDA:EURGBP",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "GBP",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.84986,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURGBP",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 1.825,
+      "metadata": {
+        "pro_name": "OANDA:EURGBP",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "GBP",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.84986,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURGBP",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.449,
+      "metadata": {
+        "pro_name": "OANDA:EURGBP",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "GBP",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.84986,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURGBP",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.171,
+      "metadata": {
+        "pro_name": "OANDA:EURGBP",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "GBP",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.84986,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURGBP",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.461,
+      "metadata": {
+        "pro_name": "OANDA:EURGBP",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "GBP",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.84986,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURJPY",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.224,
+      "metadata": {
+        "pro_name": "OANDA:EURJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 177.629,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURJPY",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.421,
+      "metadata": {
+        "pro_name": "OANDA:EURJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 177.629,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURJPY",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.391,
+      "metadata": {
+        "pro_name": "OANDA:EURJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 177.629,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURJPY",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.579,
+      "metadata": {
+        "pro_name": "OANDA:EURJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 177.629,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURJPY",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.186,
+      "metadata": {
+        "pro_name": "OANDA:EURJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 177.629,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPJPY",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 1.33,
+      "metadata": {
+        "pro_name": "OANDA:GBPJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 209.032,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPJPY",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.477,
+      "metadata": {
+        "pro_name": "OANDA:GBPJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 209.032,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPJPY",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.421,
+      "metadata": {
+        "pro_name": "OANDA:GBPJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 209.032,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPJPY",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.512,
+      "metadata": {
+        "pro_name": "OANDA:GBPJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 209.032,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPJPY",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.661,
+      "metadata": {
+        "pro_name": "OANDA:GBPJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 209.032,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURAUD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.212,
+      "metadata": {
+        "pro_name": "OANDA:EURAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.61728,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURAUD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.203,
+      "metadata": {
+        "pro_name": "OANDA:EURAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.61728,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURAUD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.527,
+      "metadata": {
+        "pro_name": "OANDA:EURAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.61728,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURAUD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.187,
+      "metadata": {
+        "pro_name": "OANDA:EURAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.61728,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:EURAUD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.209,
+      "metadata": {
+        "pro_name": "OANDA:EURAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.61728,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPAUD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.174,
+      "metadata": {
+        "pro_name": "OANDA:GBPAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.90308,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPAUD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.182,
+      "metadata": {
+        "pro_name": "OANDA:GBPAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.90308,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPAUD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.197,
+      "metadata": {
+        "pro_name": "OANDA:GBPAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.90308,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPAUD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.542,
+      "metadata": {
+        "pro_name": "OANDA:GBPAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.90308,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:GBPAUD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.206,
+      "metadata": {
+        "pro_name": "OANDA:GBPAUD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "AUD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.90308,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDNZD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.21,
+      "metadata": {
+        "pro_name": "OANDA:AUDNZD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "NZD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1.23928,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDNZD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.588,
+      "metadata": {
+        "pro_name": "OANDA:AUDNZD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "NZD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1.23928,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDNZD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.732,
+      "metadata": {
+        "pro_name": "OANDA:AUDNZD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "NZD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1.23928,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDNZD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.185,
+      "metadata": {
+        "pro_name": "OANDA:AUDNZD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "NZD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1.23928,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDNZD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "OANDA:AUDNZD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "NZD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1.23928,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:CADCHF",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.516,
+      "metadata": {
+        "pro_name": "OANDA:CADCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.5816,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:CADCHF",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.177,
+      "metadata": {
+        "pro_name": "OANDA:CADCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.5816,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:CADCHF",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.823,
+      "metadata": {
+        "pro_name": "OANDA:CADCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.5816,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:CADCHF",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.436,
+      "metadata": {
+        "pro_name": "OANDA:CADCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.5816,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:CADCHF",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.276,
+      "metadata": {
+        "pro_name": "OANDA:CADCHF",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CHF",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.5816,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDCAD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.351,
+      "metadata": {
+        "pro_name": "OANDA:AUDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 0.99144,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDCAD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.42,
+      "metadata": {
+        "pro_name": "OANDA:AUDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 0.99144,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDCAD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.208,
+      "metadata": {
+        "pro_name": "OANDA:AUDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 0.99144,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDCAD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.35,
+      "metadata": {
+        "pro_name": "OANDA:AUDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 0.99144,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:AUDCAD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.567,
+      "metadata": {
+        "pro_name": "OANDA:AUDCAD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 100000,
+        "currency_code": "CAD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 0.99144,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDJPY",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.398,
+      "metadata": {
+        "pro_name": "OANDA:NZDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 88.63,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDJPY",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.176,
+      "metadata": {
+        "pro_name": "OANDA:NZDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790838900.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 88.63,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDJPY",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.489,
+      "metadata": {
+        "pro_name": "OANDA:NZDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790258400.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 88.63,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDJPY",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.443,
+      "metadata": {
+        "pro_name": "OANDA:NZDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 88.63,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "OANDA:NZDJPY",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.695,
+      "metadata": {
+        "pro_name": "OANDA:NZDJPY",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "forex",
+        "pricescale": 1000,
+        "currency_code": "JPY",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 88.63,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "oanda_fx_ny"
+    },
+    {
+      "symbol": "BITSTAMP:BTCUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.171,
+      "metadata": {
+        "pro_name": "BITSTAMP:BTCUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 1,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 84621.52,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:BTCUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.214,
+      "metadata": {
+        "pro_name": "BITSTAMP:BTCUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 1,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 84607.54,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:BTCUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.567,
+      "metadata": {
+        "pro_name": "BITSTAMP:BTCUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 1,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 84578.07,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:BTCUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.474,
+      "metadata": {
+        "pro_name": "BITSTAMP:BTCUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 1,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 84672.29,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:BTCUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.631,
+      "metadata": {
+        "pro_name": "BITSTAMP:BTCUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 1,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 84500.84,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:ETHUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.543,
+      "metadata": {
+        "pro_name": "BITSTAMP:ETHUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 2677.42,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:ETHUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.412,
+      "metadata": {
+        "pro_name": "BITSTAMP:ETHUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 2676.18,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:ETHUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.173,
+      "metadata": {
+        "pro_name": "BITSTAMP:ETHUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 2675.17,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:ETHUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.191,
+      "metadata": {
+        "pro_name": "BITSTAMP:ETHUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 2681.27,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:ETHUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.508,
+      "metadata": {
+        "pro_name": "BITSTAMP:ETHUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 2668.04,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:BNBUSDT",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.489,
+      "metadata": {
+        "pro_name": "BINANCE:BNBUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 767.29,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:BNBUSDT",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.418,
+      "metadata": {
+        "pro_name": "BINANCE:BNBUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 767.2,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:BNBUSDT",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.177,
+      "metadata": {
+        "pro_name": "BINANCE:BNBUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 767.02,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:BNBUSDT",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.182,
+      "metadata": {
+        "pro_name": "BINANCE:BNBUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 768.36,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:BNBUSDT",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.297,
+      "metadata": {
+        "pro_name": "BINANCE:BNBUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 768.25,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:SOLUSDT",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.182,
+      "metadata": {
+        "pro_name": "BINANCE:SOLUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 119.67,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:SOLUSDT",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.186,
+      "metadata": {
+        "pro_name": "BINANCE:SOLUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 119.56,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:SOLUSDT",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 1.042,
+      "metadata": {
+        "pro_name": "BINANCE:SOLUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 119.18,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:SOLUSDT",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "BINANCE:SOLUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 119.4,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:SOLUSDT",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.359,
+      "metadata": {
+        "pro_name": "BINANCE:SOLUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 118.65,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:XRPUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.182,
+      "metadata": {
+        "pro_name": "BITSTAMP:XRPUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 1.48755,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:XRPUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.174,
+      "metadata": {
+        "pro_name": "BITSTAMP:XRPUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 1.48825,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:XRPUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.179,
+      "metadata": {
+        "pro_name": "BITSTAMP:XRPUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 1.48571,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:XRPUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "BITSTAMP:XRPUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 1.48914,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BITSTAMP:XRPUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.179,
+      "metadata": {
+        "pro_name": "BITSTAMP:XRPUSD",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 100000,
+        "currency_code": "USD",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 1.48456,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:ADAUSDT",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "BINANCE:ADAUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10000,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790960700.0,
+      "last_timestamp": 1791005400.0,
+      "last_close": 0.2466,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:ADAUSDT",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.19,
+      "metadata": {
+        "pro_name": "BINANCE:ADAUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10000,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790870400.0,
+      "last_timestamp": 1791004500.0,
+      "last_close": 0.2464,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:ADAUSDT",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.497,
+      "metadata": {
+        "pro_name": "BINANCE:ADAUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10000,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790463600.0,
+      "last_timestamp": 1791000000.0,
+      "last_close": 0.2455,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:ADAUSDT",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.411,
+      "metadata": {
+        "pro_name": "BINANCE:ADAUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10000,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1788840000.0,
+      "last_timestamp": 1790985600.0,
+      "last_close": 0.2477,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "BINANCE:ADAUSDT",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "BINANCE:ADAUSDT",
+        "timezone": "Etc/UTC",
+        "session": "24x7",
+        "type": "spot",
+        "pricescale": 10000,
+        "currency_code": "USDT",
+        "volume_type": "base"
+      },
+      "received": 151,
+      "closed": 150,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1778025600.0,
+      "last_timestamp": 1790899200.0,
+      "last_close": 0.2444,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": true,
+        "issues": [],
+        "count": 150
+      },
+      "session_profile": "crypto_utc"
+    },
+    {
+      "symbol": "FOREXCOM:DJI",
+      "timeframe": "5",
+      "error": "provider_symbol_mismatch",
+      "elapsed_seconds": 0.294,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DJI",
+      "timeframe": "15",
+      "error": "provider_symbol_mismatch",
+      "elapsed_seconds": 0.408,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DJI",
+      "timeframe": "60",
+      "error": "provider_symbol_mismatch",
+      "elapsed_seconds": 0.457,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DJI",
+      "timeframe": "240",
+      "error": "provider_symbol_mismatch",
+      "elapsed_seconds": 0.498,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DJI",
+      "timeframe": "1D",
+      "error": "provider_symbol_mismatch",
+      "elapsed_seconds": 0.397,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:SPX500",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.833,
+      "metadata": {
+        "pro_name": "FOREXCOM:SPX500",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 7721.93,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:SPX500",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.394,
+      "metadata": {
+        "pro_name": "FOREXCOM:SPX500",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790836200.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 7721.93,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:SPX500",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.175,
+      "metadata": {
+        "pro_name": "FOREXCOM:SPX500",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790254800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 7721.93,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:SPX500",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "FOREXCOM:SPX500",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1787922000.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 7721.93,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:SPX500",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.342,
+      "metadata": {
+        "pro_name": "FOREXCOM:SPX500",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 7721.93,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:NAS100",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.398,
+      "metadata": {
+        "pro_name": "FOREXCOM:NAS100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 30795.4,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:NAS100",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.418,
+      "metadata": {
+        "pro_name": "FOREXCOM:NAS100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790836200.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 30795.4,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:NAS100",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.679,
+      "metadata": {
+        "pro_name": "FOREXCOM:NAS100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790251200.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 30795.4,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:NAS100",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.714,
+      "metadata": {
+        "pro_name": "FOREXCOM:NAS100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1787922000.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 30795.4,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:NAS100",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "FOREXCOM:NAS100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 30795.3,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:UK100",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.496,
+      "metadata": {
+        "pro_name": "FOREXCOM:UK100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "GBP",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790925900.0,
+      "last_timestamp": 1790970900.0,
+      "last_close": 10498.75,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:UK100",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.422,
+      "metadata": {
+        "pro_name": "FOREXCOM:UK100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "GBP",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790832600.0,
+      "last_timestamp": 1790970300.0,
+      "last_close": 10498.75,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:UK100",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.247,
+      "metadata": {
+        "pro_name": "FOREXCOM:UK100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "GBP",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1790251200.0,
+      "last_timestamp": 1790967600.0,
+      "last_close": 10498.75,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:UK100",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.183,
+      "metadata": {
+        "pro_name": "FOREXCOM:UK100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "GBP",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 10498.75,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:UK100",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.176,
+      "metadata": {
+        "pro_name": "FOREXCOM:UK100",
+        "timezone": "America/New_York",
+        "session": "1700-1700:23456",
+        "type": "index",
+        "pricescale": 10,
+        "currency_code": "GBP",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 151,
+      "first_timestamp": 1772748000.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 10498.75,
+      "volume_unavailable": false,
+      "ohlcv_complete": false,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "FOREXCOM:DE40",
+      "timeframe": "5",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.187,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DE40",
+      "timeframe": "15",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.418,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DE40",
+      "timeframe": "60",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.295,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DE40",
+      "timeframe": "240",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.499,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:DE40",
+      "timeframe": "1D",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.501,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:JPN225",
+      "timeframe": "5",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.312,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:JPN225",
+      "timeframe": "15",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.598,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:JPN225",
+      "timeframe": "60",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.798,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:JPN225",
+      "timeframe": "240",
+      "error": "symbol_error",
+      "elapsed_seconds": 1.293,
+      "metadata": {}
+    },
+    {
+      "symbol": "FOREXCOM:JPN225",
+      "timeframe": "1D",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.188,
+      "metadata": {}
+    },
+    {
+      "symbol": "NYMEX:CL1!",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.174,
+      "metadata": {
+        "pro_name": "NYMEX:CL1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 100,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 91.26,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:CL1!",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.581,
+      "metadata": {
+        "pro_name": "NYMEX:CL1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 100,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 91.26,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:CL1!",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 1.209,
+      "metadata": {
+        "pro_name": "NYMEX:CL1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 100,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 91.26,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:CL1!",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 1.5,
+      "metadata": {
+        "pro_name": "NYMEX:CL1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 100,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787940000.0,
+      "last_timestamp": 1790964000.0,
+      "last_close": 91.26,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:CL1!",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.834,
+      "metadata": {
+        "pro_name": "NYMEX:CL1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 100,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772146800.0,
+      "last_timestamp": 1790892000.0,
+      "last_close": 91.11,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "ICEEUR:B1!",
+      "timeframe": "5",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.177,
+      "metadata": {}
+    },
+    {
+      "symbol": "ICEEUR:B1!",
+      "timeframe": "15",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.42,
+      "metadata": {}
+    },
+    {
+      "symbol": "ICEEUR:B1!",
+      "timeframe": "60",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.799,
+      "metadata": {}
+    },
+    {
+      "symbol": "ICEEUR:B1!",
+      "timeframe": "240",
+      "error": "symbol_error",
+      "elapsed_seconds": 1.496,
+      "metadata": {}
+    },
+    {
+      "symbol": "ICEEUR:B1!",
+      "timeframe": "1D",
+      "error": "symbol_error",
+      "elapsed_seconds": 0.177,
+      "metadata": {}
+    },
+    {
+      "symbol": "NYMEX:NG1!",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.173,
+      "metadata": {
+        "pro_name": "NYMEX:NG1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 3.039,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:NG1!",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.182,
+      "metadata": {
+        "pro_name": "NYMEX:NG1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 3.039,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:NG1!",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.418,
+      "metadata": {
+        "pro_name": "NYMEX:NG1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 3.039,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:NG1!",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.402,
+      "metadata": {
+        "pro_name": "NYMEX:NG1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787940000.0,
+      "last_timestamp": 1790964000.0,
+      "last_close": 3.039,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "NYMEX:NG1!",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.462,
+      "metadata": {
+        "pro_name": "NYMEX:NG1!",
+        "timezone": "America/New_York",
+        "session": "1800-1700",
+        "type": "futures",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": null
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772146800.0,
+      "last_timestamp": 1790892000.0,
+      "last_close": 3.035,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "OANDA:XPTUSD",
+      "timeframe": "5",
+      "error": null,
+      "elapsed_seconds": 0.416,
+      "metadata": {
+        "pro_name": "OANDA:XPTUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790929500.0,
+      "last_timestamp": 1790974500.0,
+      "last_close": 1682.266,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "OANDA:XPTUSD",
+      "timeframe": "15",
+      "error": null,
+      "elapsed_seconds": 0.17,
+      "metadata": {
+        "pro_name": "OANDA:XPTUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790835300.0,
+      "last_timestamp": 1790973900.0,
+      "last_close": 1682.266,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "OANDA:XPTUSD",
+      "timeframe": "60",
+      "error": null,
+      "elapsed_seconds": 0.181,
+      "metadata": {
+        "pro_name": "OANDA:XPTUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1790236800.0,
+      "last_timestamp": 1790971200.0,
+      "last_close": 1682.266,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "OANDA:XPTUSD",
+      "timeframe": "240",
+      "error": null,
+      "elapsed_seconds": 0.419,
+      "metadata": {
+        "pro_name": "OANDA:XPTUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1787936400.0,
+      "last_timestamp": 1790960400.0,
+      "last_close": 1682.266,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    },
+    {
+      "symbol": "OANDA:XPTUSD",
+      "timeframe": "1D",
+      "error": null,
+      "elapsed_seconds": 0.475,
+      "metadata": {
+        "pro_name": "OANDA:XPTUSD",
+        "timezone": "America/New_York",
+        "session": "1700-1700",
+        "type": "commodity",
+        "pricescale": 1000,
+        "currency_code": "USD",
+        "volume_type": "tick"
+      },
+      "received": 151,
+      "closed": 151,
+      "required": 150,
+      "invalid_ohlc": 0,
+      "missing_volume": 0,
+      "first_timestamp": 1772661600.0,
+      "last_timestamp": 1790888400.0,
+      "last_close": 1682.266,
+      "volume_unavailable": false,
+      "ohlcv_complete": true,
+      "backend_validation": {
+        "valid": false,
+        "issues": [
+          "unsupported_market_session"
+        ],
+        "count": 0
+      },
+      "session_profile": ""
+    }
+  ]
+}

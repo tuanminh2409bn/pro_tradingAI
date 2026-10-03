@@ -1,0 +1,65 @@
+{
+  "subject_hash": "e268f571ccbd",
+  "session_hash": "8008c64c8383",
+  "owner_matches": true,
+  "recording_version": 1,
+  "symbol": "BTCUSD",
+  "source_id": "server-websocket:BTCUSD:M5",
+  "bars": 2999,
+  "cursor": 98,
+  "visible_bars": 99,
+  "current_closed_price": 86053.99,
+  "initial_balance": 1000,
+  "max_loss_amount": 10,
+  "balance": 903.1102000000095,
+  "equity": 903.1102000000095,
+  "open_pl": 0,
+  "computed_balance_matches": true,
+  "is_playing": false,
+  "is_locked": false,
+  "pending_review": false,
+  "last_review": {
+    "loss_amount": 96.88979999999049,
+    "closed_trade_count": 2,
+    "is_acknowledged": true
+  },
+  "trades": [
+    {
+      "side": "BUY",
+      "quantity": 0.01,
+      "entry_at_visible_close": true,
+      "exit_at_visible_close": true,
+      "closed": true,
+      "profit": -0.8807
+    },
+    {
+      "side": "SELL",
+      "quantity": 0.01,
+      "entry_at_visible_close": true,
+      "exit_at_visible_close": true,
+      "closed": true,
+      "profit": -0.2691
+    },
+    {
+      "side": "BUY",
+      "quantity": 1,
+      "entry_at_visible_close": true,
+      "exit_at_visible_close": true,
+      "closed": true,
+      "profit": -95.74
+    }
+  ],
+  "verified_at": "2026-10-03",
+  "frontend_main_js_sha256": "81ef7ac34d52cfebdcb84e2e72663c2870019bb20341e3aea5a6f813198185ee",
+  "backend_image": "protrading-ai:web-49660550a6fc",
+  "browser": {
+    "buy_sell_close": true,
+    "loss_lock_stops_replay": true,
+    "refresh_preserves_pending_review": true,
+    "acknowledgement_then_close": true,
+    "restored_after_latest_release": true,
+    "locale": "vi",
+    "viewport": "1280x900"
+  },
+  "scope": "Private client-calculated training. Not broker-verified performance; no real order."
+}

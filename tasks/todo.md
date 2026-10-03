@@ -112,7 +112,7 @@ Status convention: `[ ]` not started, `[~]` in progress, `[x]` verified complete
 
 **Verification:** [x] Async two-client WebSocket test. [x] Symbol-flip P&L regression. [x] Connection lifecycle leak test.
 
-**Dependencies:** T02, T04. **Likely files:** `server.py`, `test_tradingview.py`, `test_day7_harden.py`. **Scope:** M.
+**Dependencies:** T02, T04. **Likely files:** `server.py`, `scripts/tradingview_probe.py`, `test_day7_harden.py`. **Scope:** M.
 
 ### T10 — Volume end to end [~]
 

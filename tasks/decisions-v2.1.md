@@ -2,6 +2,14 @@
 
 Status values: `PENDING`, `APPROVED`, `REJECTED`, `SUPERSEDED`.
 
+> Cập nhật Web 2026-10-03: G6 đã được chủ dự án duyệt cho push/deploy FE/BE và
+> Rules/index, Web/BE đã triển khai ngày 25/09, backend TradingView triển khai
+> ngày 03/10. G5 cho nguồn nến đã có chỉ đạo chọn TradingView tạm thời; tài khoản
+> OANDA và quyền sử dụng dữ liệu thương mại vẫn chưa có bằng chứng. Live trading
+> tiếp tục ngoài phạm vi. Các dòng LOCAL/PENDING bên dưới là quyết định gốc,
+> không phải lý do xin lại quyền triển khai đã được duyệt. Xem
+> `checkpoint-2026-10-03-web-production-readiness.md` cho điều kiện còn thiếu.
+
 | Gate | Decision needed | Recommended safe default | Status | Owner |
 |---|---|---|---|---|
 | G1 | Firestore Rules, indexes, canonical paths, migrations/backfills | Local Rules/index patch approved 2026-09-24; deploy only after staging, existing-document audit, and separate G6 approval | APPROVED for local Rules/index only; migration and deployment pending | Project owner |

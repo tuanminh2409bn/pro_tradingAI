@@ -13,12 +13,23 @@ Ngày lập: 2026-09-17. Đây là nhánh triển khai **chỉ cho Web** của `
 
 ## 2. Mốc xuất phát
 
+Rà soát điều kiện nghiệm thu hiện tại ngày 2026-10-03:
+[Web production readiness](checkpoint-2026-10-03-web-production-readiness.md).
+Tài khoản QA và vị trí lưu credential an toàn: [QA access](qa-access.md).
+
+Cập nhật triển khai và nghiệm thu runtime 2026-10-03:
+[Analysis/quota, Backtest, Profile và cache release](checkpoint-2026-10-03-web-runtime.md).
+BE/FE đã phát hành cùng phần source kiểm thử; Backtest BUY/SELL/close, risk lock,
+refresh/ack và số dư đã đối soát trên production. Standard Analysis 2/2 và reset
+UTC đã được kiểm tra. Các hàng còn thiếu nguồn/chính sách/bằng chứng vẫn mở.
+
 - Checklist tổng ghi 4/50 việc hoàn tất (T13, T14, T18, T20), 41 việc dở, 5 chưa bắt đầu; số này không phải số riêng của Web.
 - Baseline mới nhất ngày 2026-09-17: Python discovery 178 test, 166 đạt và 12 ca Emulator được skip khi không có tiến trình local; Firestore Emulator chạy đủ 12 ca Rules, trong đó 3 ca nền đạt và 9 ca bảo mật/chức năng đang đỏ; Flutter 103/103 đạt; `git diff --check` đạt. `flutter analyze --no-fatal-infos --no-fatal-warnings` không có error/warning và còn 5 `info` API cũ (2 Web, 3 Mobile). `flutter build web --release` đạt trên source hiện tại; manifest SHA-256 `04a1c8cbe14b8338c97be3ebab1d4c28c75b85e35571335ee2ba935f9b50719e`, dung lượng 41 MB.
 - T27 đã có kiểm tra tín hiệu, token và idempotency cho paper trade trên local. Backend hiện lấy nến phân tích từ nguồn server, kiểm tra lại daily-loss trước paper execution và các API riêng tư chính yêu cầu Firebase ID token; latch/review bền vững vẫn chờ cổng G1.
 - Bản release local đã có bằng chứng trình duyệt đăng nhập cho Trading Room, Journal, News, Backtest, Community, Radar, Referral và Profile ở desktop; menu responsive và nhãn trợ năng của Community, Radar, Backtest được kiểm tra thêm ở chiều rộng 600 px. Admin chưa thể nghiệm thu runtime vì tài khoản QA không có custom claim `admin=true`.
 - Cập nhật local 2026-09-24: G1 đã được duyệt cho Rules/index trên máy. Firestore Emulator đạt 15/15 ca, gồm query signals và quyền referral/broadcast; ba composite index cho Backtest, trade history và pending requests đã được khai báo. Chưa audit document cũ, chưa kiểm tra browser trên source mới và chưa deploy.
 - Cập nhật local 2026-09-25: xem `tasks/checkpoint-2026-09-25-web-local.md`. Firestore Emulator đạt 21/21 ca; Python 212 ca (21 skip ngoài Emulator), Flutter 117/117, Web release build đạt. Browser mới chỉ kiểm tra login chưa đăng nhập; mọi hàng cần provider hoặc luồng đăng nhập vẫn chưa PASS.
+- Cập nhật production 2026-10-03: backend TradingView đã triển khai; 21 mã Web có nến được chấp nhận, 10/10 request QA hoàn tất, browser đăng nhập chạy XAUUSD (đóng cửa) và BTCUSD (phân tích/VETO). Đối chiếu 60 nến crypto với Bitstamp trùng OHLCV trong mẫu; Python 239 ca, 216 đạt/23 skip cần Emulator. Xem [checkpoint nguồn nến production](checkpoint-2026-10-03-tradingview-production.md). W09/W11/W12 vẫn cần hoàn tất các hàng nghiệm thu còn lại, quyền nguồn thương mại, phiên forex mở cửa và bằng chứng ba chuyên gia; không suy ra toàn bộ Web hoàn thành.
 
 ## 3. Quy tắc thực hiện
 
