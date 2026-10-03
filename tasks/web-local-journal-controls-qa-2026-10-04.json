@@ -1,0 +1,31 @@
+{
+  "environment": "Auth/Firestore Emulator only",
+  "qa_origin": "http://127.0.0.1:8795",
+  "qa_bundle_sha256": "ba52cd885122074eb083769ad3201b0f9c2be6a4850c602853634ed870bb25e3",
+  "file": "protrading-journal-2026-10-03.csv",
+  "bytes": 255,
+  "sha256": "60c90239eb04e9838b0a815c4509217642d649d121737b4027995d97a430a7eb",
+  "decoder": "Python csv.DictReader",
+  "loaded_records": 3,
+  "filtered_records": 1,
+  "symbol": "BTCUSD",
+  "side": "SHORT",
+  "outcome": "loss",
+  "utc_timestamp_matches": true,
+  "negative_profit_preserved": true,
+  "unproven_metrics_blank": true,
+  "closed_field_allowlist": true,
+  "no_paid_ai_calls": true,
+  "emulator_broker_link_is_fixture_not_provider_evidence": true,
+  "production_writes": 0,
+  "reset_full_export": {
+    "file": "protrading-journal-2026-10-03 (1).csv",
+    "bytes": 431,
+    "sha256": "1ad1a7aceac02f595d87c3fe9368d358ff9c0fb66461d1c168e0095b032a9adf",
+    "rows": 3,
+    "forex_precision_preserved": true,
+    "paper_labels_preserved": true,
+    "unproven_metrics_blank": true
+  },
+  "locale_controls_en_vi": true
+}

@@ -12,6 +12,7 @@ import '../bloc/journal_bloc.dart';
 import '../bloc/journal_event.dart';
 import '../bloc/journal_state.dart';
 import 'widgets/journal_audio_button.dart';
+import 'widgets/journal_trade_log.dart';
 
 class JournalWebPage extends StatelessWidget {
   final String? userId;
@@ -105,10 +106,9 @@ class JournalWebPage extends StatelessWidget {
                                   state.stats.heatmapData,
                                 ),
                                 const SizedBox(height: 24),
-                                _buildTradeLogTable(
-                                  context,
-                                  state.trades,
-                                  isMobile,
+                                JournalTradeLog(
+                                  trades: state.trades,
+                                  scopeId: userId,
                                 ),
                               ],
                             ),
@@ -619,83 +619,6 @@ class JournalWebPage extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildTradeLogTable(
-    BuildContext context,
-    List<TradeRecord> trades,
-    bool isMobile,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  context.tr('journal_trade_log'),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-                if (!isMobile)
-                  Row(
-                    children: [
-                      _buildTableBtn(context.tr('journal_export_csv')),
-                      const SizedBox(width: 8),
-                      _buildTableBtn(context.tr('journal_filter')),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          if (trades.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(40),
-              child: Text(
-                context.tr('journal_no_trades_recorded'),
-                style: const TextStyle(color: Colors.white24, fontSize: 13),
-              ),
-            )
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: isMobile ? 600 : 0),
-                child: _TradeTable(trades: trades),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTableBtn(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.white10),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: Colors.white70,
-        ),
-      ),
-    );
-  }
 }
 
 class _ProgressBar extends StatelessWidget {
@@ -777,97 +700,6 @@ class _EquityPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
-}
-
-class _TradeTable extends StatelessWidget {
-  final List<TradeRecord> trades;
-  const _TradeTable({required this.trades});
-
-  @override
-  Widget build(BuildContext context) {
-    return Table(
-      columnWidths: const {
-        0: IntrinsicColumnWidth(),
-        1: IntrinsicColumnWidth(),
-        2: IntrinsicColumnWidth(),
-        3: IntrinsicColumnWidth(),
-        4: IntrinsicColumnWidth(),
-        5: IntrinsicColumnWidth(),
-        6: IntrinsicColumnWidth(),
-        7: IntrinsicColumnWidth(),
-        8: IntrinsicColumnWidth(),
-      },
-      children: [
-        _buildRow([
-          context.tr('symbol'),
-          context.tr('action'),
-          context.tr('size'),
-          context.tr('entry'),
-          context.tr('exit'),
-          context.tr('swap'),
-          context.tr('commission'),
-          context.tr('slippage'),
-          context.tr('net_pl'),
-        ], isHeader: true),
-        ...trades.map(
-          (trade) => _buildRow([
-            trade.symbol,
-            trade.action,
-            '${trade.lotSize} ${context.tr("journal_lots")}',
-            trade.entryPrice.toStringAsFixed(2),
-            trade.exitPrice.toStringAsFixed(2),
-            _formatBrokerMetric(trade.swap, trade),
-            _formatBrokerMetric(trade.commission, trade),
-            _formatBrokerMetric(trade.slippage, trade, decimalPlaces: 5),
-            '${trade.netProfit >= 0 ? '+' : ''}\$${trade.netProfit.toStringAsFixed(2)}',
-          ], isPositive: trade.netProfit >= 0),
-        ),
-      ],
-    );
-  }
-
-  String _formatBrokerMetric(
-    double? value,
-    TradeRecord trade, {
-    int decimalPlaces = 2,
-  }) {
-    final source = trade.metricSource;
-    final currency = trade.metricCurrency;
-    if (value == null || source == null || currency == null) return '—';
-    return '${value.toStringAsFixed(decimalPlaces)} $currency\n$source';
-  }
-
-  TableRow _buildRow(
-    List<String> cells, {
-    bool isHeader = false,
-    bool? isPositive,
-  }) {
-    return TableRow(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-      ),
-      children: cells.map((cell) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Text(
-            cell,
-            textAlign: TextAlign.left,
-            style: TextStyle(
-              fontSize: isHeader ? 12 : 14,
-              fontWeight: isHeader ? FontWeight.w900 : FontWeight.normal,
-              color: isHeader
-                  ? Colors.white38
-                  : (cell.contains('\$') && isPositive != null
-                        ? (isPositive ? AppColors.primary : AppColors.bear)
-                        : Colors.white70),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 }
 
 class _WebTopNavbar extends StatelessWidget {
