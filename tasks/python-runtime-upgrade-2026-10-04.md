@@ -29,3 +29,28 @@ Giữ contract API, cổng, credential path, provider, Rules và hành vi nghi�
 - Dependency snapshot không thay thế security updates dài hạn; cập nhật version
   phải qua một lát riêng có kiểm thử. Không tuyên bố W35 hoặc toàn Web đạt 100%
   chỉ nhờ nâng runtime.
+
+## Kết quả candidate trên VPS — chưa cutover
+
+- Host thực tế: Ubuntu 16.04.7, kernel `4.4.0-210-generic`, Docker `18.09.7`,
+  libseccomp `2.5.1-1ubuntu1~16.04.1`. Backend đang chạy Debian 11 Bullseye,
+  Python 3.10.18, không privileged và không tắt seccomp.
+- Pull base Python 3.12.15 đúng digest đã đạt. Build mặc định seccomp thất bại
+  ở apt verification; container dùng một lần cũng không tạo được thread Python.
+  Chỉ trong chẩn đoán không mount/credential, `seccomp=unconfined` làm apt và
+  thread chạy được. Đây là bằng chứng lỗi tương thích host, không phải thiếu
+  keyring; **không dùng unconfined cho build release hoặc production**.
+- `pip download --only-binary` cũng bị thread denied; chưa có bằng chứng toàn
+  bộ dependency cài được hoặc test ứng dụng đạt trong image 3.12 trên VPS.
+- Dockerfile giữ default Bullseye đang tương thích. Build arg
+  `PYTHON_RUNTIME_IMAGE` cho phép chọn digest Python 3.12 đã ghi ở trên sau
+  khi chuẩn bị host mới/snapshot, test candidate và rollback. Constraints vẫn
+  giữ version thư viện production; không ép nâng thư viện.
+- Cần chuyển sang VPS/OS và Docker được hỗ trợ trước khi nghiệm thu runtime
+  Python 3.12. Không nâng OS tại chỗ/reboot host đang phục vụ khách bằng một
+  lệnh không có snapshot và môi trường thay thế. Container Referral `7ef3ab6`
+  vẫn phục vụ production, FE không thay đổi ở lát runtime này.
+- Nguồn chẩn đoán chính thức:
+  https://github.com/docker-library/official-images/issues/16829
+
+Log build nằm trên VPS `/tmp/protrading-runtime-base-build-193e6a7.log`.
