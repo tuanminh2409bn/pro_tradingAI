@@ -111,6 +111,14 @@ Cập nhật QA full-stack local 2026-09-25: Web + FastAPI + Auth/Firestore Emul
 
 ### P5 — Backtest, Community, Referral Web (T36–T41)
 
+Cập nhật production 2026-10-03: quota tạo phiên Backtest qua token API đã
+triển khai FE/BE/Rules, session và counter được cấp trong cùng transaction;
+Standard 2/tuần, Professional 50/ngày, Enterprise 300/ngày, riêng với Analysis.
+Browser QA tạo hai phiên, lần thứ ba bị chặn và vẫn restore phiên cũ được;
+Profile đúng 2/2, reset 05/10 07:00 VN. Emulator 272/272 và Flutter 151/151.
+Xem `web-production-backtest-quota-2026-10-03.json`. W22/W23/W28 vẫn cần các
+chốt quyền nguồn/role/nghiệm thu còn lại; không coi quota là toàn kế hoạch PASS.
+
 | Việc | Kết quả cần đạt | Kiểm tra để đóng việc | Phụ thuộc |
 |---|---|---|---|
 | [ ] W22 · Replay Backtest trên Web (M) | Repo/BLoC/page dùng lịch sử được duyệt; nút play/pause/x1/x5/x10/cursor chạy thật, bỏ giá/ticker/số dư cố định. | No-future-data unit tests, widget controls, browser playback và parity mẫu lịch sử. | W09, G5 |

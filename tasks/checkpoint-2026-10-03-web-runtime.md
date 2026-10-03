@@ -162,6 +162,22 @@
 
 ## Mốc hoàn thành kế hoạch
 
+- Backtest quota source `0de11ce` đã lên main/FE/BE/Rules. Client tạo phiên
+  qua API có token; session + counter commit nguyên tử. Standard 2/tuần,
+  Professional 50/ngày, Enterprise 300/ngày; counter độc lập với Analysis.
+  Restore không trừ lượt; replay score vẫn là mô phỏng riêng tư.
+- Browser production QA tạo hai phiên, hai recording lưu được; lần thứ ba
+  báo hết quota tiếng Việt và dừng spinner. Restore vẫn chạy khi hết quota.
+  Profile hiển thị Analysis 2/2, Backtest 2/2, reset cả hai 05/10 07:00 VN.
+  Emulator 272/272, Flutter 151/151, image 246 đạt + 26 skip; Web build đạt,
+  analyzer 0 error/warning và 3 Mobile info có sẵn. Bằng chứng:
+  `web-production-backtest-quota-2026-10-03.json` và bốn ảnh quota mới.
+- Chủ dự án đã xác nhận nạp DeepSeek và giao lựa chọn phương án để tiếp tục.
+  Probe production đã soạn (QA Standard riêng, 1 Analysis + 1 Chat, không PII)
+  bị auto-review chặn vì cần xác nhận cụ thể identity/payload/đích/chi phí.
+  Đã hỏi qua async input; chưa chạy probe, không vượt QA quota hoặc tự cấp
+  Admin. Trong khi chờ tiếp tục phần code/Emulator độc lập.
+
 - Điều tra chi phí DeepSeek và bản sửa cost controls đã lên BE production:
   source `64f7341`, live `protrading-ai:cost-64f7341`. Input cap 24.000 byte
   UTF-8/call, tắt retry Chat, log usage chỉ số token. Giữ output cap 1.500/600,
@@ -192,10 +208,12 @@
 
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
-2. Tiếp tục quota Backtest và kiểm thử các role khác bằng danh tính đúng quyền.
+2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục
+   ma trận các role khác bằng danh tính đúng quyền và bước AI thật được duyệt.
 3. Tiếp tục các hàng News, Community, Referral, Admin, Radar, Push, Data Lake
    và role matrix còn mở trong `web-completion-plan.md`.
 
-Việc nạp số dư DeepSeek đang chờ chủ tài khoản. Thiếu Macro/calendar/sentiment
+Chủ tài khoản đã xác nhận nạp DeepSeek; bằng chứng AI thành công còn chờ probe
+được duyệt. Thiếu Macro/calendar/sentiment
 có nguồn, quyền sử dụng thương mại market feed và các hàng nghiệm thu khác
 vẫn ngăn tuyên bố hoàn thành 100%; không thay dữ liệu thiếu bằng dữ liệu giả.

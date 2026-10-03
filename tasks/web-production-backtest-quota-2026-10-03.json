@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-03",
+  "source_commit": "0de11ced52d2ff4efbb47102bc8175018b605a9d",
+  "backend": {
+    "image": "protrading-ai:backtest-0de11ce",
+    "image_sha256": "2c1fada6847bd80c9e371b9bd090fe14430298e492c3e2c195b91d58bb24ed4e",
+    "live_container": "protrading-ai-backtest-live-0de11ce",
+    "rollback_container": "protrading-ai-cost-live-64f7341",
+    "candidate": "stopped after health/startup verification"
+  },
+  "frontend": {
+    "main_js_sha256": "0fca31e3e1aeb1f5723a2fe9e70e235ebc20b573d352cb185f156ef4e6fd3e7d",
+    "public_hash_matches": true
+  },
+  "firestore_rules": "deployed; client session creation denied; allocation immutable; recording updates remain owner-only",
+  "checks": {
+    "python_emulator": {"total": 272, "passed": 272},
+    "isolated_final_image": {"total": 272, "passed": 246, "emulator_skipped": 26},
+    "flutter": {"total": 151, "passed": 151},
+    "analyzer": {"errors": 0, "warnings": 0, "existing_mobile_infos": 3},
+    "web_release_build": "passed",
+    "public_backend_health": "ok"
+  },
+  "browser_standard_qa": {
+    "new_sessions_allocated": 2,
+    "recordings_saved": 2,
+    "third_creation": "quota_exhausted; localized Vietnamese; spinner ends",
+    "restore_after_exhaustion": "succeeded, paused, no new allowance consumed",
+    "api_used": 2,
+    "api_limit": 2,
+    "backtest_used": 2,
+    "backtest_limit": 2,
+    "source": "server_enforced",
+    "both_reset_at_utc": "2026-10-05T00:00:00+00:00",
+    "both_reset_at_vietnam": "2026-10-05 07:00"
+  },
+  "paid_ai_calls_in_this_backtest_qa": 0,
+  "limitations": [
+    "Dedicated production QA identity and one real Analysis plus Chat probe were rejected by automatic approval review; explicit request is pending, no probe executed",
+    "Market history redistribution rights, remaining role matrix and full-plan acceptance are still open",
+    "Clients creating sessions directly must update to the token API; earlier saved sessions remain restorable",
+    "SSH multiplex session expired during rollout; restored with existing authorized credentials, then BE/Rules and FE verified together",
+    "Existing Python 3.10 support warning remains an operations follow-up"
+  ]
+}
