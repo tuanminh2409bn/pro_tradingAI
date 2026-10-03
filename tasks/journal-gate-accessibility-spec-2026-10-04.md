@@ -39,3 +39,14 @@
   kết nối mở Profile. Restore true mở lại Journal; không sửa production.
 - Bằng chứng: `web-local-journal-gate-qa-2026-10-04.json` và hai PNG locked/
   unlocked. Đây là local paper fixture, không chứng minh MetaApi/broker thật.
+
+## Production đã đạt phần guard
+
+- Source `bfc93b0` trên main và Firebase Hosting. Public bundle SHA
+  `de9d6e7f286a327242b151df7b15c473c3bb5e50069dcb09a561ba69445aefd1`,
+  3,786,221 bytes khớp local build; URL Emulator không lẫn vào production.
+- Reload QA Standard, Journal EN/VI chỉ còn gate và action kết nối trong AX;
+  không còn dữ liệu preview hoặc nút CSV/filter/TTS. Screenshot VI rõ ràng.
+  Không bấm xuyên gate hoặc sửa broker flag production để nghiệm thu.
+- Xem `web-production-journal-gate-qa-2026-10-04.json` và screenshot đính kèm.
+  BE/Rules giữ nguyên; không gọi DeepSeek hay sửa claim/quota.

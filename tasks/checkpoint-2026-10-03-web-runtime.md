@@ -366,6 +366,21 @@
 - Toàn kế hoạch vẫn 7 mục đóng / 29 mục mở. W18/W19 còn broker sample và
   positive entitled runtime; DeepSeek live vẫn 401 và chờ nơi lưu key hợp lệ.
 
+### Journal gate — release 04/10
+
+- `bfc93b0` đã lên main/Firebase; bundle public 3,786,221 bytes SHA
+  `de9d6e7f286a327242b151df7b15c473c3bb5e50069dcb09a561ba69445aefd1`
+  khớp local. Gate chặn pointer/focus/semantics, UID trống khóa, owner đổi
+  reset snapshot; dùng EN/VI hiện có. Bốn reproducing tests đỏ trước sửa,
+  sau sửa 6/6; full Flutter 209 đạt + 2 skip, analyzer chỉ 3 info Mobile cũ.
+- Native Emulator chuyển fixture true→false→true: relock loại preview khỏi AX,
+  Enter nút kết nối mở Profile, restore mở lại controls. Production Standard
+  EN/VI chỉ còn gate/action trong AX. Không sửa claim/quota/broker flag thật,
+  không gọi AI. Xem `journal-gate-accessibility-spec-2026-10-04.md`.
+- W18/W19 vẫn mở. Rà tiếp math/P&L: source trước sửa đang đổi Profit Factor
+  all-wins từ infinity thành zero và tính break-even vào mẫu số average loss;
+  không được suy ra risk adherence/discipline từ best/worst P&L.
+
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
 2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục

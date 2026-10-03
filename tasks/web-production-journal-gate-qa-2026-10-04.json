@@ -1,0 +1,31 @@
+{
+  "observed_at_utc": "2026-10-03T21:02:54Z",
+  "local_date": "2026-10-04",
+  "url": "https://protrading-ai-2026.web.app/",
+  "source_commit": "bfc93b0fc544d61a4a81598fe4359641c75e90d5",
+  "public_bundle_sha256": "de9d6e7f286a327242b151df7b15c473c3bb5e50069dcb09a561ba69445aefd1",
+  "public_bundle_bytes": 3786221,
+  "public_bundle_matches_local_production_build": true,
+  "qa_role": "standard",
+  "broker_linked": false,
+  "observations": {
+    "locked_gate_english_vietnamese": true,
+    "connect_action_in_accessibility": true,
+    "private_preview_data_in_accessibility": false,
+    "csv_filter_tts_controls_in_accessibility": false,
+    "positive_broker_csv_audio_acceptance": false
+  },
+  "screenshot": "web-production-journal-gate-accessibility-2026-10-04.png",
+  "screenshot_sha256": "029723057e3ff954b29628bd29224de44a4207f176d232eff802f82ee7ac0aaa",
+  "local_guard_evidence": "web-local-journal-gate-qa-2026-10-04.json",
+  "impact": {
+    "production_user_claim_quota_writes": 0,
+    "model_calls": 0,
+    "backend_or_rules_deployment": false
+  },
+  "limitations": [
+    "Production QA remains unlinked; no gate bypass or positive broker operation was attempted.",
+    "Keyboard isolation, relock and unlocked operation have widget and local Emulator proof; production observation proves the locked accessibility tree only.",
+    "W18 and W19 remain open for provider data and entitled runtime acceptance."
+  ]
+}
