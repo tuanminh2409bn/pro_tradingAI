@@ -34,6 +34,7 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
+      key: ValueKey(widget.userId),
       create: (context) =>
           NewsBloc(newsRepository: context.read<NewsRepository>())
             ..add(LoadNewsData(userId: widget.userId)),
@@ -372,7 +373,10 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                       color: Colors.white30,
                       size: 18,
                     ),
-                    onPressed: state.chatMessages.isEmpty
+                    onPressed:
+                        state.chatMessages.isEmpty ||
+                            state.isAiThinking ||
+                            state.isLoadingHistory
                         ? null
                         : () {
                             showDialog(
@@ -474,6 +478,17 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                   ),
           ),
           // ── AI Thinking Indicator ──
+          if (state.chatErrorKey.isNotEmpty)
+            Semantics(
+              liveRegion: true,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  context.tr(state.chatErrorKey),
+                  style: const TextStyle(color: AppColors.bear),
+                ),
+              ),
+            ),
           if (state.isAiThinking)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
@@ -493,6 +508,7 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                     Expanded(
                       child: TextField(
                         controller: _chatController,
+                        enabled: !state.isAiThinking && !state.isLoadingHistory,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
@@ -514,26 +530,32 @@ class _NewsFeedWebPageState extends State<NewsFeedWebPage> {
                             vertical: 12,
                           ),
                         ),
-                        onSubmitted: (val) {
-                          if (val.trim().isNotEmpty) {
-                            innerContext.read<NewsBloc>().add(
-                              AskAIAnalyst(val),
-                            );
-                            _chatController.clear();
-                          }
-                        },
+                        onSubmitted:
+                            state.isAiThinking || state.isLoadingHistory
+                            ? null
+                            : (val) {
+                                if (val.trim().isNotEmpty) {
+                                  innerContext.read<NewsBloc>().add(
+                                    AskAIAnalyst(val),
+                                  );
+                                  _chatController.clear();
+                                }
+                              },
                       ),
                     ),
                     const SizedBox(width: 12),
                     IconButton(
-                      onPressed: () {
-                        if (_chatController.text.trim().isNotEmpty) {
-                          innerContext.read<NewsBloc>().add(
-                            AskAIAnalyst(_chatController.text),
-                          );
-                          _chatController.clear();
-                        }
-                      },
+                      tooltip: context.tr('news_ai_send'),
+                      onPressed: state.isAiThinking || state.isLoadingHistory
+                          ? null
+                          : () {
+                              if (_chatController.text.trim().isNotEmpty) {
+                                innerContext.read<NewsBloc>().add(
+                                  AskAIAnalyst(_chatController.text),
+                                );
+                                _chatController.clear();
+                              }
+                            },
                       icon: const Icon(
                         Icons.send,
                         color: AppColors.primary,
@@ -765,10 +787,20 @@ class _NewsCard extends StatelessWidget {
                           const SizedBox(height: 16),
                           const Divider(color: Colors.white10),
                           const SizedBox(height: 16),
+                          if (article.type == 'OFFICIAL') ...[
+                            Text(
+                              context.tr('news_official_release'),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           Text(
                             article.summary.isNotEmpty
                                 ? article.summary
-                                : 'No description available for this article.',
+                                : context.tr('news_summary_unavailable'),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,

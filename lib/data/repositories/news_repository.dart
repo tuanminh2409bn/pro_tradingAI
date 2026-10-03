@@ -104,6 +104,97 @@ ScheduledNewsEvent? selectNextScheduledNewsEvent(
   return candidates.isEmpty ? null : candidates.first;
 }
 
+NewsArticle? parseNewsArticle(Map<String, dynamic> data, {DateTime? now}) {
+  final title = data['title'];
+  if (title is! String || title.trim().isEmpty) return null;
+  final clock = now ?? DateTime.now();
+  final rawPublished = data['published_at'];
+  final timestamp = data['timestamp'];
+  DateTime? published;
+  if (data.containsKey('published_at')) {
+    if (rawPublished is int &&
+        rawPublished > 0 &&
+        rawPublished <= clock.millisecondsSinceEpoch ~/ 1000 + 300) {
+      published = DateTime.fromMillisecondsSinceEpoch(
+        rawPublished * 1000,
+        isUtc: true,
+      );
+    }
+  } else if (timestamp is Timestamp) {
+    published = timestamp.toDate();
+  }
+  String text(String key, String fallback) {
+    final value = data[key];
+    return value is String && value.trim().isNotEmpty ? value.trim() : fallback;
+  }
+
+  final score = data['sentimentScore'];
+  return NewsArticle(
+    title: title.trim(),
+    source: text('source', '__SOURCE_UNAVAILABLE__'),
+    timeAgo: published == null
+        ? '__TIME_UNAVAILABLE__'
+        : NewsRepository._formatTimeAgo(published, clock),
+    sentimentScore:
+        score is num && score.isFinite && score >= -100 && score <= 100
+        ? score.toInt()
+        : null,
+    type: text('type', 'ALERT'),
+    impact: text('impact', 'LOW'),
+    summary: text('summary', ''),
+    url: text('url', ''),
+    imageUrl: text('imageUrl', ''),
+    scheduledEvent: parseScheduledNewsEvent(
+      data,
+      nowEpochSeconds: clock.millisecondsSinceEpoch ~/ 1000,
+    ),
+  );
+}
+
+SentimentPulse parseSentimentPulse(
+  Map<String, dynamic>? data, {
+  DateTime? now,
+}) {
+  if (data == null) return const SentimentPulse.unavailable();
+  final source = data['provenance'];
+  final updatedAt = data['updatedAt'];
+  final clock = now ?? DateTime.now();
+  if (source is! Map ||
+      source['license_status'] != 'approved' ||
+      source['provider_type'] != 'x' ||
+      source['license_ref'] is! String ||
+      (source['license_ref'] as String).trim().isEmpty ||
+      source['provider'] is! String ||
+      (source['provider'] as String).trim().isEmpty ||
+      updatedAt is! Timestamp ||
+      clock.difference(updatedAt.toDate()) > const Duration(hours: 1) ||
+      updatedAt.toDate().difference(clock) > const Duration(minutes: 5)) {
+    return const SentimentPulse.unavailable();
+  }
+  final score = data['fearGreedIndex'] ?? data['globalScore'];
+  final fear = data['bearish'] ?? data['fearPercent'];
+  final neutral = data['neutral'] ?? data['neutralPercent'];
+  final greed = data['bullish'] ?? data['greedPercent'];
+  final phase = data['mood'] ?? data['phase'];
+  if ([score, fear, neutral, greed].any(
+        (value) => value is! num || !value.isFinite || value < 0 || value > 100,
+      ) ||
+      phase is! String ||
+      !{'GREED', 'FEAR', 'NEUTRAL'}.contains(phase.toUpperCase())) {
+    return const SentimentPulse.unavailable();
+  }
+  if (((fear as num) + (neutral as num) + (greed as num) - 100).abs() > 1) {
+    return const SentimentPulse.unavailable();
+  }
+  return SentimentPulse(
+    globalScore: (score as num).toInt(),
+    fearPercent: fear.toDouble(),
+    neutralPercent: neutral.toDouble(),
+    greedPercent: greed.toDouble(),
+    phase: phase.toUpperCase(),
+  );
+}
+
 class NewsRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -116,41 +207,28 @@ class NewsRepository {
   Stream<List<NewsArticle>> getNewsFeed() {
     return _firestore
         .collection('news')
-        .orderBy('timestamp', descending: true)
+        .where('provenance.license_status', isEqualTo: 'approved')
         .snapshots()
         .map((snapshot) {
           if (snapshot.docs.isEmpty) {
             return <NewsArticle>[];
           }
-          return snapshot.docs
-              .map((doc) {
-                final data = doc.data();
-                final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-                final timestamp = data['timestamp'] as Timestamp?;
-                final timeStr = timestamp != null
-                    ? _formatTimeAgo(timestamp.toDate())
-                    : '__TIME_UNAVAILABLE__';
-                final title = (data['title'] ?? '').toString().trim();
-                final source = (data['source'] ?? '').toString().trim();
-                final storedTime = (data['timeAgo'] ?? '').toString().trim();
+          final now = DateTime.now();
+          int publication(Map<String, dynamic> data) {
+            final epoch = data['published_at'];
+            if (epoch is int) return epoch;
+            final timestamp = data['timestamp'];
+            return timestamp is Timestamp ? timestamp.seconds : 0;
+          }
 
-                return NewsArticle(
-                  title: title,
-                  source: source.isEmpty ? '__SOURCE_UNAVAILABLE__' : source,
-                  timeAgo: storedTime.isEmpty ? timeStr : storedTime,
-                  sentimentScore: (data['sentimentScore'] ?? 0).toInt(),
-                  type: data['type'] ?? 'ALERT',
-                  impact: data['impact'] ?? 'LOW',
-                  summary: data['summary'] ?? '',
-                  url: data['url'] ?? '',
-                  imageUrl: data['imageUrl'] ?? '',
-                  scheduledEvent: parseScheduledNewsEvent(
-                    data,
-                    nowEpochSeconds: now,
-                  ),
-                );
-              })
-              .where((article) => article.title.isNotEmpty)
+          final documents = snapshot.docs.toList()
+            ..sort(
+              (left, right) =>
+                  publication(right.data()).compareTo(publication(left.data())),
+            );
+          return documents
+              .map((doc) => parseNewsArticle(doc.data(), now: now))
+              .whereType<NewsArticle>()
               .toList();
         });
   }
@@ -184,41 +262,11 @@ class NewsRepository {
   }
 
   Stream<SentimentPulse> getSentimentPulse() {
-    return _firestore.collection('analytics').doc('sentiment').snapshots().map((
-      snapshot,
-    ) {
-      final data = snapshot.data();
-      if (data == null) {
-        return const SentimentPulse.unavailable();
-      }
-      final score = data['fearGreedIndex'] ?? data['globalScore'];
-      final fear = data['bearish'] ?? data['fearPercent'];
-      final neutral = data['neutral'] ?? data['neutralPercent'];
-      final greed = data['bullish'] ?? data['greedPercent'];
-      final phase = (data['mood'] ?? data['phase'] ?? '').toString().trim();
-      if (score is! num ||
-          fear is! num ||
-          neutral is! num ||
-          greed is! num ||
-          score < 0 ||
-          score > 100 ||
-          fear < 0 ||
-          fear > 100 ||
-          neutral < 0 ||
-          neutral > 100 ||
-          greed < 0 ||
-          greed > 100 ||
-          phase.isEmpty) {
-        return const SentimentPulse.unavailable();
-      }
-      return SentimentPulse(
-        globalScore: score.toInt(),
-        fearPercent: fear.toDouble(),
-        neutralPercent: neutral.toDouble(),
-        greedPercent: greed.toDouble(),
-        phase: phase,
-      );
-    });
+    return _firestore
+        .collection('analytics')
+        .doc('sentiment')
+        .snapshots()
+        .map((snapshot) => parseSentimentPulse(snapshot.data()));
   }
 
   // ─── Chat History (Firestore) ───
@@ -273,8 +321,8 @@ class NewsRepository {
     await batch.commit();
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
-    final diff = DateTime.now().difference(dateTime);
+  static String _formatTimeAgo(DateTime dateTime, DateTime now) {
+    final diff = now.difference(dateTime);
     if (diff.inDays > 0) return '${diff.inDays}d ago';
     if (diff.inHours > 0) return '${diff.inHours}h ago';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
@@ -282,11 +330,11 @@ class NewsRepository {
   }
 
   Future<String> getAISentimentAnalysis(String query) async {
-    const friendly =
-        'Hệ thống AI đang thực hiện phân tích kỹ thuật tạm thời. Vui lòng thử lại sau vài giây.';
     try {
       final token = await _auth.currentUser?.getIdToken();
-      if (token == null || token.isEmpty) return friendly;
+      if (token == null || token.isEmpty) {
+        throw StateError('AI access unavailable');
+      }
       final uri = Uri.parse('$_serverBaseUrl/api/ai/chat');
       final response = await http
           .post(
@@ -303,25 +351,21 @@ class NewsRepository {
           )
           .timeout(const Duration(seconds: 30));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
-          if (data['fallback'] == true || data['status'] == 'error') {
-            return (data['response'] ?? data['message'] ?? friendly).toString();
-          }
-          return data['response'] ??
-              data['message'] ??
-              data['reply'] ??
-              data['content'] ??
-              data['text'] ??
-              friendly;
-        }
-        return friendly;
-      } else {
-        return friendly;
+      if (response.statusCode != 200) throw StateError('AI unavailable');
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic> ||
+          data['fallback'] == true ||
+          data['status'] == 'error') {
+        throw StateError('AI unavailable');
       }
-    } catch (e) {
-      return friendly;
+      final reply =
+          data['response'] ?? data['reply'] ?? data['content'] ?? data['text'];
+      if (reply is! String || reply.trim().isEmpty) {
+        throw StateError('AI unavailable');
+      }
+      return reply.trim();
+    } catch (_) {
+      throw StateError('AI unavailable');
     }
   }
 }

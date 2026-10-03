@@ -11,6 +11,8 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
   StreamSubscription? _newsSubscription;
   StreamSubscription? _pulseSubscription;
   String? _userId;
+  int _chatGeneration = 0;
+  Future<void> _chatWriteTail = Future.value();
 
   NewsBloc({required NewsRepository newsRepository})
     : _newsRepository = newsRepository,
@@ -29,6 +31,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     LoadNewsData event,
     Emitter<NewsState> emit,
   ) async {
+    _chatGeneration++;
     emit(NewsLoading());
     _userId = event.userId;
     try {
@@ -81,76 +84,89 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     AskAIAnalyst event,
     Emitter<NewsState> emit,
   ) async {
-    if (state is NewsLoaded) {
-      final currentState = state as NewsLoaded;
+    if (state is! NewsLoaded) return;
+    final current = state as NewsLoaded;
+    final userId = _userId;
+    final generation = _chatGeneration;
+    final query = event.query.trim();
+    if (current.isAiThinking ||
+        current.isLoadingHistory ||
+        query.isEmpty ||
+        userId == null ||
+        userId.isEmpty) {
+      return;
+    }
 
-      // Build user message map
-      final userMsgMap = {'text': event.query, 'isAi': false};
-      final updatedMessages = List<Map<String, dynamic>>.from(
-        currentState.chatMessages,
-      )..add(userMsgMap);
+    emit(
+      current.copyWith(
+        chatMessages: [
+          ...current.chatMessages,
+          {'text': query, 'isAi': false},
+        ],
+        isAiThinking: true,
+        chatErrorKey: '',
+      ),
+    );
+    _queueChatMessage(
+      userId: userId,
+      message: ChatMessage(
+        id: 'user_${DateTime.now().microsecondsSinceEpoch}',
+        content: query,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ),
+    );
 
-      emit(
-        currentState.copyWith(
-          chatMessages: updatedMessages,
-          isAiThinking: true,
+    String response;
+    var succeeded = false;
+    try {
+      response = await _newsRepository.getAISentimentAnalysis(query);
+      succeeded = true;
+    } catch (_) {
+      response = '__AI_UNAVAILABLE__';
+    }
+    if (!_isCurrentChat(generation, userId, emit)) return;
+    final latest = state as NewsLoaded;
+    emit(
+      latest.copyWith(
+        chatMessages: [
+          ...latest.chatMessages,
+          {'text': response, 'isAi': true},
+        ],
+        isAiThinking: false,
+      ),
+    );
+    if (succeeded) {
+      _queueChatMessage(
+        userId: userId,
+        message: ChatMessage(
+          id: 'ai_${DateTime.now().microsecondsSinceEpoch}',
+          content: response,
+          isUser: false,
+          timestamp: DateTime.now(),
         ),
       );
-
-      // Persist user message to Firestore
-      if (_userId != null && _userId!.isNotEmpty) {
-        final userChatMsg = ChatMessage(
-          id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-          content: event.query,
-          isUser: true,
-          timestamp: DateTime.now(),
-        );
-        unawaited(
-          _saveChatMessageBestEffort(userId: _userId!, message: userChatMsg),
-        );
-      }
-
-      try {
-        final aiResponse = await _newsRepository.getAISentimentAnalysis(
-          event.query,
-        );
-
-        final aiMsgMap = {'text': aiResponse, 'isAi': true};
-        final finalMessages = List<Map<String, dynamic>>.from(updatedMessages)
-          ..add(aiMsgMap);
-
-        emit(
-          currentState.copyWith(
-            chatMessages: finalMessages,
-            isAiThinking: false,
-          ),
-        );
-
-        // Persist AI response to Firestore
-        if (_userId != null && _userId!.isNotEmpty) {
-          final aiChatMsg = ChatMessage(
-            id: 'ai_${DateTime.now().millisecondsSinceEpoch}',
-            content: aiResponse,
-            isUser: false,
-            timestamp: DateTime.now(),
-          );
-          unawaited(
-            _saveChatMessageBestEffort(userId: _userId!, message: aiChatMsg),
-          );
-        }
-      } catch (_) {
-        final errorMsg = {'text': '__AI_UNAVAILABLE__', 'isAi': true};
-        final errorMessages = List<Map<String, dynamic>>.from(updatedMessages)
-          ..add(errorMsg);
-
-        emit(
-          currentState.copyWith(
-            chatMessages: errorMessages,
-            isAiThinking: false,
-          ),
-        );
-      }
     }
+  }
+
+  bool _isCurrentChat(
+    int generation,
+    String? userId,
+    Emitter<NewsState> emit,
+  ) =>
+      !isClosed &&
+      !emit.isDone &&
+      generation == _chatGeneration &&
+      userId == _userId &&
+      state is NewsLoaded;
+
+  void _queueChatMessage({
+    required String userId,
+    required ChatMessage message,
+  }) {
+    _chatWriteTail = _chatWriteTail.then(
+      (_) => _saveChatMessageBestEffort(userId: userId, message: message),
+    );
   }
 
   Future<void> _saveChatMessageBestEffort({
@@ -169,6 +185,7 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
   }
 
   void _onStreamFailed(NewsStreamFailed event, Emitter<NewsState> emit) {
+    _chatGeneration++;
     emit(const NewsError('common_data_unavailable'));
   }
 
@@ -178,19 +195,22 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     LoadNewsChatHistory event,
     Emitter<NewsState> emit,
   ) async {
-    if (state is NewsLoaded && _userId != null && _userId!.isNotEmpty) {
+    final userId = _userId;
+    final generation = _chatGeneration;
+    if (state is NewsLoaded && (state as NewsLoaded).isAiThinking) return;
+    if (state is NewsLoaded && userId != null && userId.isNotEmpty) {
       emit((state as NewsLoaded).copyWith(isLoadingHistory: true));
       List<ChatMessage> chatMessages;
       try {
         chatMessages = await _newsRepository.loadChatHistory(
-          userId: _userId!,
+          userId: userId,
           chatType: 'news_feed',
         );
       } catch (_) {
         chatMessages = const [];
       }
 
-      if (state is NewsLoaded) {
+      if (_isCurrentChat(generation, userId, emit)) {
         // Convert ChatMessage list back to Map format for UI compatibility
         final mappedMessages = <Map<String, dynamic>>[];
         // Add welcome message if no history
@@ -238,27 +258,49 @@ class NewsBloc extends Bloc<NewsEvent, NewsState> {
     Emitter<NewsState> emit,
   ) async {
     if (state is NewsLoaded) {
+      final current = state as NewsLoaded;
+      if (current.isAiThinking || current.isLoadingHistory) return;
+      final userId = _userId;
+      final generation = ++_chatGeneration;
+      emit(current.copyWith(isLoadingHistory: true, chatErrorKey: ''));
       final welcomeMsg = [
         {'text': '__WELCOME__', 'isAi': true},
       ];
-      if (_userId != null && _userId!.isNotEmpty) {
+      if (userId != null && userId.isNotEmpty) {
         try {
+          // Drain accepted writes before deleting, so a late save cannot revive history.
+          await _chatWriteTail.timeout(const Duration(seconds: 10));
+          if (!_isCurrentChat(generation, userId, emit)) return;
           await _newsRepository.clearChatHistory(
-            userId: _userId!,
+            userId: userId,
             chatType: 'news_feed',
           );
         } catch (_) {
+          if (_isCurrentChat(generation, userId, emit)) {
+            emit(
+              (state as NewsLoaded).copyWith(
+                isLoadingHistory: false,
+                chatErrorKey: 'news_ai_clear_failed',
+              ),
+            );
+          }
           return;
         }
       }
-      if (state is NewsLoaded) {
-        emit((state as NewsLoaded).copyWith(chatMessages: welcomeMsg));
+      if (_isCurrentChat(generation, userId, emit)) {
+        emit(
+          (state as NewsLoaded).copyWith(
+            chatMessages: welcomeMsg,
+            isLoadingHistory: false,
+          ),
+        );
       }
     }
   }
 
   @override
   Future<void> close() {
+    _chatGeneration++;
     _newsSubscription?.cancel();
     _pulseSubscription?.cancel();
     return super.close();

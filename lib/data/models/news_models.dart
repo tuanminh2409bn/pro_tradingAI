@@ -4,8 +4,8 @@ class NewsArticle extends Equatable {
   final String title;
   final String source;
   final String timeAgo;
-  final int sentimentScore;
-  final String type; // 'FOREXFACTORY', 'TWITTER', 'ALERT'
+  final int? sentimentScore;
+  final String type; // 'FOREXFACTORY', 'TWITTER', 'ALERT', 'OFFICIAL'
   final String impact; // 'HIGH', 'MEDIUM', 'LOW'
   final String summary;
   final String url;
