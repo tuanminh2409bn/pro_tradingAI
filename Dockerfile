@@ -31,6 +31,7 @@ COPY push_preferences.py .
 COPY specialist_analysis.py .
 COPY analysis_pipeline.py .
 COPY quota_store.py .
+COPY official_news.py .
 
 # Không ép cứng cổng ở đây, Google Cloud sẽ cấp biến môi trường PORT
 CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}

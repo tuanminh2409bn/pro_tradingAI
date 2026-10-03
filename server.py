@@ -69,6 +69,7 @@ from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
+from official_news import APPROVED_NEWS_FEEDS, MAX_BYTES as NEWS_MAX_BYTES, parse_official_feed
 
 LOCAL_QA_MODE = os.environ.get("PROTRADING_LOCAL_QA", "") == "1"
 if LOCAL_QA_MODE:
@@ -887,7 +888,7 @@ async def startup_event():
     )
     print("SERVER: Listening to Firebase analysis_requests...")
     # Start background loops
-    if APPROVED_NEWS_FEEDS:
+    if APPROVED_NEWS_FEEDS and not LOCAL_QA_MODE:
         asyncio.create_task(news_crawler_loop())
         print("SERVER: Approved news crawler started.")
     else:
@@ -1042,9 +1043,7 @@ async def _check_service_status():
 # Chạy mỗi 15 phút, push vào Firestore news + analytics/sentiment
 # ─────────────────────────────────────────────────────────────
 
-# Populated only after G5 records an approved provider, license reference and
-# sandbox contract. Empty is the safe product state: unavailable, not fabricated.
-APPROVED_NEWS_FEEDS: tuple[dict, ...] = ()
+# The approved registry and text-only rights are recorded in official_news.py.
 
 BULLISH_KEYWORDS = [
     'rally', 'surge', 'gain', 'rise', 'bullish', 'breakout', 'higher', 'upside',
@@ -1182,19 +1181,26 @@ async def enrich_articles_with_og_images(articles: list) -> list:
 
 async def fetch_rss_feed(feed: dict) -> list:
     if (
-        feed.get("license_status") != "approved"
+        feed not in APPROVED_NEWS_FEEDS
+        or feed.get("license_status") != "approved"
         or not str(feed.get("license_ref", "")).strip()
     ):
         return []
     try:
-        async with httpx.AsyncClient(timeout=12, follow_redirects=True) as client:
-            headers = {"User-Agent": "Mozilla/5.0 ProTradingAI/2.0"}
-            resp = await client.get(feed["url"], headers=headers)
-            if resp.status_code == 200:
-                items = _parse_rss_xml(resp.text, feed["source"], feed["category"])
-                print(f"📰 [News] {feed['source']}: {len(items)} articles")
-                return items
-    except Exception:
+        async with httpx.AsyncClient(timeout=12, follow_redirects=False) as client:
+            async with client.stream('GET', feed['url'], headers={'User-Agent': 'ProTradingAI/2.1', 'Accept-Encoding': 'identity'}) as response:
+                if response.status_code != 200:
+                    return []
+                body = bytearray()
+                async for chunk in response.aiter_bytes(chunk_size=16384):
+                    body.extend(chunk)
+                    if len(body) > NEWS_MAX_BYTES:
+                        return []
+            items = parse_official_feed(body.decode('utf-8-sig'), feed_url=feed['url'],
+                                        now_epoch_seconds=int(time.time()))
+            print(f"📰 [News] {feed['source']}: {len(items)} official releases")
+            return items
+    except (httpx.HTTPError, UnicodeDecodeError):
         print(f"⚠️ [News] {feed['source']} fetch failed")
     return []
 
@@ -1205,14 +1211,14 @@ async def push_news_to_firestore(articles: list):
     pushed = 0
     updated = 0
     for article in articles:
-        doc_id = article.pop('id', None)
+        doc_id = article.get('id')
         if not doc_id:
             continue
         try:
             doc_ref = news_col.document(doc_id)
             existing = await asyncio.to_thread(doc_ref.get)
             if not existing.exists:
-                await asyncio.to_thread(doc_ref.set, article)
+                await asyncio.to_thread(doc_ref.set, {key: value for key, value in article.items() if key != 'id'})
                 pushed += 1
             else:
                 # If the existing doc has no imageUrl but we now have one, update it
@@ -1272,16 +1278,16 @@ async def news_crawler_loop():
         try:
             print("🔄 [News Crawler] Fetching RSS feeds...")
             all_articles = []
-            tasks = [fetch_rss_feed(feed) for feed in APPROVED_NEWS_FEEDS]
+            tasks = [asyncio.wait_for(fetch_rss_feed(feed), timeout=15) for feed in APPROVED_NEWS_FEEDS]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             for r in results:
                 if isinstance(r, list):
                     all_articles.extend(r)
 
             if all_articles:
-                all_articles = await enrich_articles_with_og_images(all_articles)
+                all_articles = list({article['id']: article for article in all_articles}.values())
                 await push_news_to_firestore(all_articles)
-                await update_sentiment_pulse(all_articles)
+                # Official releases supply no social mentions or broker impact rating.
             else:
                 print("⚠️ [News Crawler] No articles fetched.")
         except Exception:

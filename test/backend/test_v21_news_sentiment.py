@@ -118,8 +118,14 @@ class NewsSentimentContractTests(unittest.TestCase):
         )
 
         self.assertNotIn("RSS_FEEDS = [", server_source)
-        self.assertIn("APPROVED_NEWS_FEEDS: tuple[dict, ...] = ()", server_source)
-        self.assertIn("if APPROVED_NEWS_FEEDS:", server_source)
+        from official_news import APPROVED_NEWS_FEEDS, LICENSE_REF
+        self.assertTrue(APPROVED_NEWS_FEEDS)
+        for feed in APPROVED_NEWS_FEEDS:
+            self.assertEqual(feed['license_status'], 'approved')
+            self.assertEqual(feed['license_ref'], LICENSE_REF)
+            self.assertTrue(feed['url'].startswith('https://www.federalreserve.gov/feeds/'))
+        self.assertIn("if APPROVED_NEWS_FEEDS and not LOCAL_QA_MODE:", server_source)
+        self.assertIn("items = parse_official_feed", server_source)
 
 
 if __name__ == "__main__":
