@@ -31,35 +31,44 @@ class ProfileRepository {
   /// Tự tạo profile document cho user mới nếu chưa tồn tại.
   /// Gọi ngay sau khi đăng nhập thành công.
   Future<void> ensureProfileExists(String userId) async {
-    final docRef = _firestore.collection('users').doc(userId);
-    final doc = await docRef.get();
-    if (doc.exists) {
-      // Cập nhật lastSeen để tính DAU
-      await docRef.update({'lastSeen': FieldValue.serverTimestamp()});
-      return;
-    }
-    // Lấy thông tin từ Firebase Auth
     final user = _auth.currentUser;
-    final email = user?.email ?? '';
-    final displayName = user?.displayName ?? '';
+    if (user == null || userId != user.uid) {
+      throw StateError('Profile owner must match the signed-in user');
+    }
+    final email = user.email ?? '';
+    final displayName = user.displayName ?? '';
+    final avatarUrl = user.photoURL ?? '';
     final username = displayName.isNotEmpty
         ? displayName.toLowerCase().replaceAll(' ', '_')
         : email.split('@').first;
-
-    await docRef.set({
-      'username': username,
-      'email': email,
-      'displayName': displayName,
-      'tier': 'FREE',
-      'totalTrades': 0,
-      'winRate': 0.0,
-      'rank': 0,
-      'avatarUrl': user?.photoURL ?? '',
-      'brokerLinked': false,
-      'syncGateDismissed': false,
-      'manualRiskMode': false,
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastSeen': FieldValue.serverTimestamp(),
+    final docRef = _firestore.collection('users').doc(userId);
+    await _firestore.runTransaction<void>((transaction) async {
+      if (_auth.currentUser?.uid != userId) {
+        throw StateError('Profile identity changed');
+      }
+      final doc = await transaction.get(docRef);
+      if (_auth.currentUser?.uid != userId) {
+        throw StateError('Profile identity changed');
+      }
+      if (doc.exists) {
+        transaction.update(docRef, {'lastSeen': FieldValue.serverTimestamp()});
+        return;
+      }
+      transaction.set(docRef, {
+        'username': username,
+        'email': email,
+        'displayName': displayName,
+        'tier': 'FREE',
+        'totalTrades': 0,
+        'winRate': 0.0,
+        'rank': 0,
+        'avatarUrl': avatarUrl,
+        'brokerLinked': false,
+        'syncGateDismissed': false,
+        'manualRiskMode': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
     });
   }
 
