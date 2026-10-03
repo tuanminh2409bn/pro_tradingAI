@@ -17,6 +17,9 @@ Rà soát điều kiện nghiệm thu hiện tại ngày 2026-10-03:
 [Web production readiness](checkpoint-2026-10-03-web-production-readiness.md).
 Tài khoản QA và vị trí lưu credential an toàn: [QA access](qa-access.md).
 
+Cập nhật production mới nhất 2026-10-04:
+[Journal, Radar, Community và các gate còn mở](checkpoint-2026-10-04-web-production.md).
+
 Cập nhật triển khai và nghiệm thu runtime 2026-10-03:
 [Analysis/quota, Backtest, Profile, News và cache release](checkpoint-2026-10-03-web-runtime.md).
 BE/FE đã phát hành cùng phần source kiểm thử; Backtest BUY/SELL/close, risk lock,

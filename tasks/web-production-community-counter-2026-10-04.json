@@ -1,0 +1,59 @@
+{
+  "recorded_at_utc": "2026-10-03T23:24:58Z",
+  "environment": "Firebase Hosting production, existing Standard QA session",
+  "url": "https://protrading-ai-2026.web.app/",
+  "source_commit": "e43f7f5ad613c0287f7f09aad87bd658208edf5c",
+  "github_main_matches_source": true,
+  "public_bundle": {
+    "http_status": 200,
+    "bytes": 3793346,
+    "sha256": "7d90f0321070005cc31f18fa5937e39bd2a71d99d571b60237efad0f7a71a238",
+    "matches_local_production_build": true,
+    "production_endpoints_present": true,
+    "qa_endpoints_and_emulator_warning_absent": true
+  },
+  "native_observations": {
+    "vi_empty_counter_accessibility_label": "Đã nhập 0 / 2000 ký tự.",
+    "draft_entered_without_publishing": "QA counter check",
+    "vi_filled_counter_accessibility_label": "Đã nhập 16 / 2000 ký tự.",
+    "publish_disabled_when_empty_and_enabled_with_draft": true,
+    "draft_cleared_after_probe": true,
+    "vi_restored_counter_accessibility_label": "Đã nhập 0 / 2000 ký tự.",
+    "en_empty_counter_accessibility_label": "0 / 2000 input characters.",
+    "final_locale": "vi",
+    "final_draft_empty": true,
+    "publish_action_invoked": false
+  },
+  "verification": {
+    "existing_community_regression_tests_passed": 14,
+    "dart_format_and_diff_check_passed": true,
+    "flutter_analyze_errors": 0,
+    "flutter_analyze_warnings": 0,
+    "flutter_analyze_preexisting_mobile_infos": 3,
+    "flutter_analyze_exit_code": 1,
+    "production_web_build_passed": true,
+    "inherited_radar_full_suite_passed": 247,
+    "inherited_radar_full_suite_web_only_vm_skips": 2,
+    "full_suite_rerun_for_counter_copy_slice": false
+  },
+  "screenshot": {
+    "path": "tasks/web-production-community-counter-2026-10-04.png",
+    "bytes": 28684,
+    "sha256": "a4cc219b981df7567dbd77cfdb1bc83383c164e3c6a0018d8b6176647533c162"
+  },
+  "implementation_source": "https://api.flutter.dev/flutter/material/TextField/buildCounter.html",
+  "unchanged_runtime": {
+    "backend_source": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+    "firestore_rules_source": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c"
+  },
+  "impact": {
+    "model_requests_requested_by_this_probe": 0,
+    "production_posts_or_comments_requested": 0,
+    "production_qa_created": 0
+  },
+  "limitations": [
+    "Native production observations cover the post composer counter; no production comment or post was submitted",
+    "The shared comment counter is covered by existing local widget regressions, not a new production write flow",
+    "This accessibility and localization slice does not close W24, W25, W34 or the complete Web plan"
+  ]
+}

@@ -432,7 +432,9 @@
   unavailable, Backtest config hiện đúng, Community feed/leaderboard trống,
   Referral kit/các financial empty-state có thật và Profile MFA disabled có
   lý do. Đây là navigation/render smoke, không phải write/role/provider E2E.
-  Community counter ký tự còn English trong VI; W34 chưa đóng.
+  Community counter đã sửa EN/VI trong FE `e43f7f5`; native production bản
+  nháp 0 → 16 → 0 đúng semantics và không đăng bài. W34 chưa đóng; xem
+  `web-production-community-counter-2026-10-04.json` và checkpoint 04/10.
 - Tổng 36 hàng nghiệm thu: 7 đóng/29 mở. Các gate AI key 401, đọc credential
   và paid/new-QA probe chờ duyệt, broker/license/provider/role/worker/FCM,
   ledger/payment và supported-host/SLA/rollback vẫn cản nghiệm thu 100%.
