@@ -12,6 +12,8 @@ import '../bloc/journal_bloc.dart';
 import '../bloc/journal_event.dart';
 import '../bloc/journal_state.dart';
 import 'widgets/journal_audio_button.dart';
+import 'widgets/journal_equity_painter.dart';
+import 'widgets/journal_heatmap.dart';
 import 'widgets/journal_trade_log.dart';
 
 class JournalWebPage extends StatelessWidget {
@@ -100,10 +102,9 @@ class JournalWebPage extends StatelessWidget {
                                     ],
                                   ),
                                 const SizedBox(height: 24),
-                                _buildHeatmapCard(
-                                  context,
-                                  isMobile,
-                                  state.stats.heatmapData,
+                                JournalHeatmap(
+                                  data: buildJournalHeatmap(state.trades),
+                                  compact: isMobile,
                                 ),
                                 const SizedBox(height: 24),
                                 JournalTradeLog(
@@ -313,7 +314,7 @@ class JournalWebPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.tr('equity_growth_curve'),
+            context.tr('journal_closed_pnl_curve'),
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w900,
@@ -334,7 +335,7 @@ class JournalWebPage extends StatelessWidget {
                       ),
                     ),
                   )
-                : CustomPaint(painter: _EquityPainter(data: equityData)),
+                : CustomPaint(painter: JournalEquityPainter(data: equityData)),
           ),
           const SizedBox(height: 12),
           Row(
@@ -445,180 +446,6 @@ class JournalWebPage extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildHeatmapCard(
-    BuildContext context,
-    bool isMobile,
-    List<HeatmapEntry> heatmapData,
-  ) {
-    final int cols = isMobile ? 12 : 24;
-    const int rows = 5;
-
-    final heatmapLookup = <String, HeatmapEntry>{};
-    for (final entry in heatmapData) {
-      if (entry.dayOfWeek >= 1 && entry.dayOfWeek <= 5) {
-        final hourIndex = isMobile ? (entry.hourSlot ~/ 2) : entry.hourSlot;
-        final key = '${entry.dayOfWeek}-$hourIndex';
-        if (heatmapLookup.containsKey(key)) {
-          final existing = heatmapLookup[key]!;
-          heatmapLookup[key] = HeatmapEntry(
-            dayOfWeek: entry.dayOfWeek,
-            hourSlot: hourIndex,
-            totalPnL: existing.totalPnL + entry.totalPnL,
-            tradeCount: existing.tradeCount + entry.tradeCount,
-          );
-        } else {
-          heatmapLookup[key] = entry;
-        }
-      }
-    }
-
-    double maxLoss = 0;
-    double maxProfit = 0;
-    for (final entry in heatmapLookup.values) {
-      if (entry.totalPnL < 0 && entry.totalPnL.abs() > maxLoss) {
-        maxLoss = entry.totalPnL.abs();
-      }
-      if (entry.totalPnL > 0 && entry.totalPnL > maxProfit) {
-        maxProfit = entry.totalPnL;
-      }
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.tr('journal_heatmap_title'),
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Colors.white54,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Column(
-                children: [
-                  Text(
-                    context.tr('mon'),
-                    style: const TextStyle(fontSize: 12, color: Colors.white24),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    context.tr('fri'),
-                    style: const TextStyle(fontSize: 12, color: Colors.white24),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: cols,
-                    mainAxisSpacing: 2,
-                    crossAxisSpacing: 2,
-                  ),
-                  itemCount: cols * rows,
-                  itemBuilder: (context, index) {
-                    final day = (index ~/ cols) + 1;
-                    final hour = index % cols;
-                    final key = '$day-$hour';
-                    final entry = heatmapLookup[key];
-
-                    Color cellColor;
-                    if (entry == null || entry.tradeCount == 0) {
-                      cellColor = Colors.white.withValues(alpha: 0.03);
-                    } else if (entry.totalPnL < 0) {
-                      final intensity = maxLoss > 0
-                          ? (entry.totalPnL.abs() / maxLoss).clamp(0.2, 1.0)
-                          : 0.4;
-                      cellColor = AppColors.bear.withValues(alpha: intensity);
-                    } else {
-                      final intensity = maxProfit > 0
-                          ? (entry.totalPnL / maxProfit).clamp(0.2, 1.0)
-                          : 0.4;
-                      cellColor = AppColors.primary.withValues(
-                        alpha: intensity,
-                      );
-                    }
-
-                    return Tooltip(
-                      message: entry != null && entry.tradeCount > 0
-                          ? '${entry.tradeCount} ${context.tr("journal_lots")}, P&L: \$${entry.totalPnL.toStringAsFixed(2)}'
-                          : context.tr('journal_no_trades_cell'),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: cellColor,
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.bear.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                context.tr('journal_heatmap_loss'),
-                style: const TextStyle(fontSize: 11, color: Colors.white38),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                context.tr('journal_no_trades_cell'),
-                style: const TextStyle(fontSize: 11, color: Colors.white38),
-              ),
-              const SizedBox(width: 16),
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                context.tr('journal_heatmap_profit'),
-                style: const TextStyle(fontSize: 11, color: Colors.white38),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ProgressBar extends StatelessWidget {
@@ -662,44 +489,6 @@ class _ProgressBar extends StatelessWidget {
       ],
     );
   }
-}
-
-class _EquityPainter extends CustomPainter {
-  final List<double> data;
-  _EquityPainter({required this.data});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
-
-    final paint = Paint()
-      ..color = const Color(0xFF3772FF)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    double minVal = data.reduce(math.min);
-    double maxVal = data.reduce(math.max);
-    double range = maxVal - minVal;
-    if (range == 0) range = 1;
-
-    double dx = size.width / (data.length - 1);
-
-    for (int i = 0; i < data.length; i++) {
-      double x = i * dx;
-      double y = size.height - ((data[i] - minVal) / range) * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
 
 class _WebTopNavbar extends StatelessWidget {

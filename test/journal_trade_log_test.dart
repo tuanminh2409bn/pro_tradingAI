@@ -200,4 +200,27 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('forex entry and exit preserve their measured precision', (
+    tester,
+  ) async {
+    await show(
+      tester,
+      records: [
+        TradeRecord(
+          symbol: 'EURUSD',
+          action: 'LONG',
+          lotSize: 0.15,
+          entryPrice: 1.1234567,
+          exitPrice: 1.1234568,
+          netProfit: 1,
+          closeTime: DateTime.utc(2026, 10, 4),
+          executionMode: 'paper',
+        ),
+      ],
+    );
+    expect(find.text('1.1234567'), findsOneWidget);
+    expect(find.text('1.1234568'), findsOneWidget);
+    expect(find.text('1.12'), findsNothing);
+  });
 }

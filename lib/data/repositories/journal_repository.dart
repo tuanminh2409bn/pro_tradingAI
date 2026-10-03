@@ -193,6 +193,25 @@ class JournalRepository {
   }
 }
 
+/// Web heatmap uses the same UTC clock as the behavioral insight. The source
+/// list stays owner-scoped at the repository boundary; this helper performs no I/O.
+List<HeatmapEntry> buildJournalHeatmap(List<TradeRecord> trades) {
+  final grouped = <String, HeatmapEntry>{};
+  for (final trade in trades) {
+    if (!trade.netProfit.isFinite) continue;
+    final closed = trade.closeTime.toUtc();
+    final key = '${closed.weekday}-${closed.hour}';
+    final previous = grouped[key];
+    grouped[key] = HeatmapEntry(
+      dayOfWeek: closed.weekday,
+      hourSlot: closed.hour,
+      totalPnL: (previous?.totalPnL ?? 0) + trade.netProfit,
+      tradeCount: (previous?.tradeCount ?? 0) + 1,
+    );
+  }
+  return grouped.values.where((entry) => entry.totalPnL.isFinite).toList();
+}
+
 String buildJournalInsight({
   required int totalTrades,
   required double winRate,

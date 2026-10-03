@@ -326,8 +326,8 @@ class _TradeTable extends StatelessWidget {
                 : 'journal_mode_unavailable',
           ),
           '${trade.lotSize} ${context.tr('journal_lots')}',
-          trade.entryPrice.toStringAsFixed(2),
-          trade.exitPrice.toStringAsFixed(2),
+          _price(trade.entryPrice),
+          _price(trade.exitPrice),
           _metric(trade.swap, trade),
           _metric(trade.commission, trade),
           _metric(trade.slippage, trade, decimalPlaces: 5),
@@ -335,6 +335,8 @@ class _TradeTable extends StatelessWidget {
         ], positive: trade.netProfit >= 0),
     ],
   );
+
+  String _price(double value) => value.isFinite ? value.toString() : '—';
 
   String _metric(double? value, TradeRecord trade, {int decimalPlaces = 2}) {
     final source = trade.metricSource;
