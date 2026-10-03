@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../constants/colors.dart';
+import '../localization/app_localizations.dart';
 import '../security/partner_access.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../logic/navigation_cubit.dart';
@@ -187,84 +188,121 @@ class BrokerLinkGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final uid = userId;
-    if (uid == null || uid.isEmpty) return child;
+    final connect =
+        onConnect ??
+        () => context.read<NavigationCubit>().getNavBarItem(NavbarItem.profile);
+    if (uid == null || uid.trim().isEmpty) {
+      return BrokerLinkGateView(
+        linked: false,
+        onConnect: connect,
+        child: child,
+      );
+    }
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      key: ValueKey(uid),
       stream: FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .snapshots(),
       builder: (context, snap) {
         final data = snap.data?.data();
-        final linked = data?['brokerLinked'] == true;
-        if (linked) return child;
-        return Stack(
-          children: [
-            ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: AbsorbPointer(child: child),
-            ),
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.45),
-                alignment: Alignment.center,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: Container(
-                    margin: const EdgeInsets.all(24),
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.35),
+        final linked =
+            snap.connectionState == ConnectionState.active &&
+            !snap.hasError &&
+            data?['brokerLinked'] == true;
+        return BrokerLinkGateView(
+          linked: linked,
+          onConnect: connect,
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+/// Presents the broker-link state; data authorization remains in Rules/API.
+class BrokerLinkGateView extends StatelessWidget {
+  final bool linked;
+  final Widget child;
+  final VoidCallback onConnect;
+
+  const BrokerLinkGateView({
+    super.key,
+    required this.linked,
+    required this.child,
+    required this.onConnect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        ExcludeFocus(
+          excluding: !linked,
+          child: linked
+              ? child
+              : ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: ExcludeSemantics(child: AbsorbPointer(child: child)),
+                ),
+        ),
+        if (!linked)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.45),
+              alignment: Alignment.center,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        context.tr('journal_locked_title'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'JOURNAL LOCKED',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1,
-                          ),
+                      const SizedBox(height: 8),
+                      Text(
+                        context.tr('journal_locked_body'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          height: 1.4,
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Link your broker on Web (Profile → Link Broker) to unlock full Journal analytics.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.black,
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.black,
-                          ),
-                          onPressed:
-                              onConnect ??
-                              () => context
-                                  .read<NavigationCubit>()
-                                  .getNavBarItem(NavbarItem.profile),
-                          child: const Text(
-                            'CONNECT NOW',
-                            style: TextStyle(fontWeight: FontWeight.w900),
-                          ),
+                        onPressed: onConnect,
+                        child: Text(
+                          context.tr('sync_gate_connect'),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+      ],
     );
   }
 }

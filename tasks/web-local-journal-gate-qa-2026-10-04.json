@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-04",
+  "environment": "local_auth_firestore_emulators",
+  "browser": "Codex In-app Browser",
+  "origin": "http://127.0.0.1:8799/",
+  "emulator_warning_verified_before_fixture_login": true,
+  "source_base_commit": "ae80ecf",
+  "gate_source_sha256": "f105e3d86429135b9ae489e957a7ced0c95f7378b92857bfe1c08fe29f5caf64",
+  "gate_test_sha256": "221867676f7f6a68d8c35b9da03f650c3a6c08e9a25799f3d66c68196662920b",
+  "emulator_bundle_sha256": "e3d732a7c240dcc9d2f396ed558781259f8894c255f06478ecf1935e0b041479",
+  "fixture_kind": "explicitly_labeled_synthetic_paper_records",
+  "observations": {
+    "linked_fixture_shows_trade_controls": true,
+    "relock_hides_preview_data_and_csv_tts_controls_from_accessibility": true,
+    "locked_gate_english_vietnamese": true,
+    "keyboard_enter_on_connect_navigates_profile": true,
+    "restore_reopens_journal_controls": true,
+    "fixture_broker_flag_restored": true
+  },
+  "tests": {
+    "initial_reproducing_failures": 4,
+    "gate_widget_tests_passed": 6,
+    "full_flutter_tests_passed": 209,
+    "web_only_tests_skipped_on_vm": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "pre_existing_mobile_info": 3
+  },
+  "screenshots": [
+    {
+      "file": "web-local-journal-gate-locked-2026-10-04.png",
+      "sha256": "b606185d037bb99075aefce96d3c538cf998bad6cb525443181dd9d528550626"
+    },
+    {
+      "file": "web-local-journal-gate-unlocked-2026-10-04.png",
+      "sha256": "06cccf775fd21cebe30b88228b172e1151886e5dd81a4aa6ac9daa3a74cf8bb7"
+    }
+  ],
+  "impact": {
+    "production_identity_or_data_writes": 0,
+    "model_calls": 0,
+    "fixture_broker_flag_sequence": [true, false, true]
+  },
+  "limitations": [
+    "Fixture brokerLinked is a local guard test, not provider acceptance.",
+    "This origin is not in the QA backend CORS allowlist; unrelated API/market-room connectivity is unavailable here.",
+    "Broker data, entitled production CSV and audio remain unverified."
+  ]
+}
