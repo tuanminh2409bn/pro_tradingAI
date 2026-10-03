@@ -55,6 +55,25 @@
 - Full backend + Auth/Firestore Emulator: 263/263 đạt; py_compile và
   git diff --check đạt. Không gọi completion thật trong đợt điều tra/sửa này.
 
+## Triển khai đã kiểm tra
+
+- Commit code `64f734164f99b27fa1ce9039b3e88ecd130d7823` đã push main.
+- BE live `protrading-ai-cost-live-64f7341`, image `protrading-ai:cost-64f7341`,
+  SHA `186018fc349f2af36fef2ea23ef1687b7b341512303920d70087e96402b8243a`.
+  server.py SHA `0a3fd802dac2d920816ff9dd425a4e12119dfb777d5c35a2868bde7752acb07c`
+  trùng source đã kiểm thử. Kế thừa image services, không thêm dependency.
+- Final image chạy network=none: 263 ca, 239 đạt / 24 skip cần Emulator.
+  SDK thật + MockTransport chạy handler Chat: success đọc usage và 429 chỉ
+  gửi 1 request, fallback; không dùng key thật hoặc gọi nhà cung cấp.
+- Candidate 8019 worker=0 đạt health; pending analysis trước cutover bằng 0.
+  Localhost/public health sau cutover đạt; anonymous Chat 401 trước provider.
+  WSS public BTCUSD/M5 init 3.000 nến, giá dương; không tạo analysis/chat/lệnh.
+- Candidate riêng đã dừng. Container services cũ stopped còn sẵn rollback.
+  FE không có thay đổi trong bản sửa chi phí này. Không đổi quotas, Rules,
+  schema, public API hoặc live trading. Không có trần USD tổng hệ thống.
+- Cảnh báo support Python 3.10.18 từ thư viện Google vẫn là việc vận hành
+  đã ghi ở checkpoint readiness; bản sửa này không nâng runtime.
+
 ## Nguồn chính thức
 
 - [DeepSeek Chat Completion](https://api-docs.deepseek.com/api/create-chat-completion/):

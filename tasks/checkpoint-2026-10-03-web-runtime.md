@@ -162,6 +162,16 @@
 
 ## Mốc hoàn thành kế hoạch
 
+- Điều tra chi phí DeepSeek và bản sửa cost controls đã lên BE production:
+  source `64f7341`, live `protrading-ai:cost-64f7341`. Input cap 24.000 byte
+  UTF-8/call, tắt retry Chat, log usage chỉ số token. Giữ output cap 1.500/600,
+  thinking disabled, specialist/cache/quota hiện có. Emulator 263/263;
+  final image 239 đạt + 24 skip; SDK HTTP mock, health, anonymous 401 và
+  WSS public đạt, không gọi completion thật khi kiểm chứng. Chi phí ảnh
+  $2,10/200 request chưa đối chiếu đủ với log cũ; không coi là giá một click.
+  Chi tiết: `deepseek-cost-investigation-2026-10-03.md`. Chưa có trần USD
+  tổng hệ thống hoặc quota Chat riêng; chưa chứng minh mức tiết kiệm thực tế.
+
 - Checklist có 36 mục W, đã đóng 7 và còn 29; nhiều mục mở đã có phần code
   hoặc runtime proof. Đây là số mục nghiệm thu, không phải phần trăm code.
 - Code còn cần hoàn thiện gồm quota Backtest, Community comment/share,
