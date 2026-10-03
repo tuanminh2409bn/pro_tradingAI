@@ -5,6 +5,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_cubit.dart';
 import '../../../core/utils/png_download.dart';
+import '../../../core/utils/referral_video.dart';
 import '../../../data/models/referral_models.dart';
 import '../referral_kit_renderer.dart';
 
@@ -19,7 +20,7 @@ class _ReferralKitCardState extends State<ReferralKitCard> {
   bool _exporting = false;
   String? _feedback;
 
-  Future<void> _download(bool banner) async {
+  Future<void> _download(bool banner, {bool video = false}) async {
     if (_exporting) return;
     final identity = widget.identity;
     final locale = context.read<LocaleCubit>().state;
@@ -34,18 +35,37 @@ class _ReferralKitCardState extends State<ReferralKitCard> {
         locale: locale,
       );
       if (!mounted || widget.identity.code != identity.code) return;
-      final queued = await downloadPng(
-        bytes,
-        'protrading-referral-${identity.code}-${banner ? 'banner' : 'qr'}.png',
-      );
-      if (!mounted) return;
+      final bool queued;
+      if (video) {
+        final result = await renderReferralVideo(
+          bytes,
+          isCancelled: () => !mounted || widget.identity.code != identity.code,
+        );
+        if (!mounted || widget.identity.code != identity.code) return;
+        if (result == null) {
+          setState(() => _feedback = 'referral_video_unavailable');
+          return;
+        }
+        queued = await downloadReferralVideo(
+          result,
+          'protrading-referral-${identity.code}-video',
+        );
+      } else {
+        queued = await downloadPng(
+          bytes,
+          'protrading-referral-${identity.code}-${banner ? 'banner' : 'qr'}.png',
+        );
+      }
+      if (!mounted || widget.identity.code != identity.code) return;
       setState(
         () => _feedback = queued
             ? 'referral_download_ready'
             : 'referral_download_failed',
       );
     } catch (_) {
-      if (mounted) setState(() => _feedback = 'referral_download_failed');
+      if (mounted && widget.identity.code == identity.code) {
+        setState(() => _feedback = 'referral_download_failed');
+      }
     } finally {
       if (mounted) setState(() => _exporting = false);
     }
@@ -99,7 +119,25 @@ class _ReferralKitCardState extends State<ReferralKitCard> {
               icon: const Icon(Icons.download),
               label: Text(context.tr('referral_download_banner')),
             ),
+            OutlinedButton.icon(
+              onPressed: _exporting || !isReferralVideoSupported()
+                  ? null
+                  : () => _download(true, video: true),
+              icon: const Icon(Icons.movie_outlined),
+              label: Text(context.tr('referral_download_video')),
+            ),
           ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Text(
+            context.tr(
+              isReferralVideoSupported()
+                  ? 'referral_video_description'
+                  : 'referral_video_unavailable',
+            ),
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
         ),
         if (_exporting)
           const Padding(

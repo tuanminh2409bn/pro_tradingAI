@@ -1,0 +1,41 @@
+{
+  "environment": "Firebase Emulator",
+  "file": "protrading-referral-HrBXaj1IRzX_LQPMNfBDnNMe-video (1).mp4",
+  "bytes": 97261,
+  "sha256": "566e96a509b1317d12e4412b578e7ff8254d003baff1cb795d220cdedd96153f",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "codec": "h264",
+  "dimensions": [
+    1200,
+    630
+  ],
+  "duration_seconds": 5.975067,
+  "frame_count": 69,
+  "audio_streams": 0,
+  "qr_frames": [
+    {
+      "frame": "first",
+      "timestamp": 0.0,
+      "matches_server_payload": true
+    },
+    {
+      "frame": "middle",
+      "timestamp": 3.0225,
+      "matches_server_payload": true
+    },
+    {
+      "frame": "last",
+      "timestamp": 5.941766666666667,
+      "matches_server_payload": true
+    }
+  ],
+  "animated_accent_changes": true,
+  "local_frontend_sha256": "0fc5db78dd48f19736beac3cee16e66370711a664f66d8d85ae5daa517d12e43",
+  "paid_ai_calls": 0,
+  "reproduced_before_fix": {
+    "codec": "vp9",
+    "container": "MP4",
+    "sha256": "f75c8044e68775d3c9bb60fb929c15f12e87f5084a58eb757c96771dd0fcc610",
+    "phone_compatibility_risk": true
+  }
+}

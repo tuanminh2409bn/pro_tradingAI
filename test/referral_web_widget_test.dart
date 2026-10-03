@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:protrading_ai/core/utils/referral_video.dart';
 import 'package:protrading_ai/core/localization/locale_cubit.dart';
 import 'package:protrading_ai/data/models/referral_models.dart';
 import 'package:protrading_ai/data/repositories/referral_repository.dart';
@@ -92,6 +93,15 @@ void main() {
       expect(find.text('ĐĂNG KÝ TỪ LINK CỦA BẠN'), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.byType(QrImageView), findsOneWidget);
+      expect(find.text('Tải video'), findsOneWidget);
+      expect(
+        find.textContaining(
+          isReferralVideoSupported()
+              ? 'Video 6 giây không âm thanh'
+              : 'Trình duyệt này chưa hỗ trợ xuất video',
+        ),
+        findsOneWidget,
+      );
       final copy = find.byTooltip('Sao chép link giới thiệu');
       await tester.ensureVisible(copy);
       await tester.tap(copy);

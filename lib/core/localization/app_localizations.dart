@@ -212,10 +212,15 @@ class AppLocalizations {
       'referral_code_label': 'YOUR REFERRAL CODE',
       'referral_kit_title': 'QR & Marketing Kit',
       'referral_kit_description':
-          'Download your QR or a personalized ProTrading banner as PNG.',
+          'Download your QR, personalized banner or referral video.',
       'referral_qr_label': 'QR for your referral link',
       'referral_download_qr': 'Download QR',
       'referral_download_banner': 'Download banner',
+      'referral_download_video': 'Download video',
+      'referral_video_description':
+          '6-second silent video with your QR. MP4 or WebM, depending on your browser. Keep this page open while it is created.',
+      'referral_video_unavailable':
+          'Video export is unavailable in this browser. You can still download the QR and banner.',
       'referral_download_ready': 'Download requested from your browser.',
       'referral_download_failed':
           'Unable to create the download. Please retry.',
@@ -694,10 +699,15 @@ class AppLocalizations {
       'referral_code_label': 'MÃ GIỚI THIỆU CỦA BẠN',
       'referral_kit_title': 'QR & Bộ tài liệu giới thiệu',
       'referral_kit_description':
-          'Tải mã QR hoặc banner ProTrading cá nhân hóa dạng PNG.',
+          'Tải mã QR, banner hoặc video giới thiệu cá nhân hóa.',
       'referral_qr_label': 'QR chứa link giới thiệu của bạn',
       'referral_download_qr': 'Tải QR',
       'referral_download_banner': 'Tải banner',
+      'referral_download_video': 'Tải video',
+      'referral_video_description':
+          'Video 6 giây không âm thanh, có QR của bạn. MP4 hoặc WebM tùy trình duyệt. Giữ trang mở trong lúc tạo video.',
+      'referral_video_unavailable':
+          'Trình duyệt này chưa hỗ trợ xuất video. Bạn vẫn có thể tải QR và banner.',
       'referral_download_ready': 'Đã gửi yêu cầu tải tệp tới trình duyệt.',
       'referral_download_failed':
           'Không thể tạo tệp tải xuống. Vui lòng thử lại.',
