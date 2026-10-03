@@ -329,6 +329,25 @@
 
 ## Tiếp tục
 
+### Journal controls và DeepSeek — cập nhật 04/10
+
+- FE `3eea7de` đã lên main/Firebase; public bundle SHA
+  `8b5d0f090a16d65d5c4ed1fe6f386633742dbef546f713cc00df67c54b71133d`
+  khớp build, không lẫn QA URL. CSV/filter dùng danh sách owner đang đọc,
+  giữ gate broker. Local browser/decoder qua subset 1/3 và reset 3/3, không
+  giả phí và giữ precision/UTC; production QA vẫn JOURNAL LOCKED, mode của
+  bản ghi cũ Unverified. Chưa có positive download production.
+- Full Flutter 195 đạt + 2 skip Web, target cuối 11/11; analyzer 0 error /
+  warning, 3 info Mobile cũ. Xem `journal-controls-spec-2026-10-04.md`.
+- Hai GET chỉ đọc DeepSeek `/user/balance` và `/models` từ live container
+  cùng trả 401. Key đang có không khớp mask screenshot; không in key/số dư,
+  không gọi model, tạo QA hoặc sửa env. Đã hỏi nơi lưu key hợp lệ; chờ trả
+  lời và phê duyệt paid probe riêng. Tài khoản nạp tiền chưa được xác minh
+  qua key đúng. Xem `deepseek-readonly-auth-check-2026-10-04.json`.
+- Web heatmap bỏ weekday 6/7 và dùng giờ local trong khi insight dùng UTC;
+  bảng giá làm tròn hai chữ số và equity một điểm có phép chia cho zero.
+  Các lỗi Journal này cần sửa riêng trước khi nghiệm thu W19/W34.
+
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
 2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục

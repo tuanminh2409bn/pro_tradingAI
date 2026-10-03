@@ -60,9 +60,23 @@
 - JSON và ảnh: `web-local-journal-controls-qa-2026-10-04.json`,
   `web-local-journal-controls-filtered-2026-10-04.png`,
   `web-local-journal-controls-2026-10-04.png`.
-- Production QA có một paper record nhưng chưa brokerLinked nên Journal
+- Production QA có một closed record thiếu metadata mode nên hiện Unverified;
+  chưa brokerLinked nên Journal
   bị gate chặn; không bật cờ broker hoặc gọi control qua overlay để tạo PASS.
   W18/W19 vẫn cần source broker và browser có danh tính/entitlement đúng.
 - Quan sát cần sửa trong lát tiếp theo: Web heatmap chỉ nhận weekday 1–5,
   nên bỏ trade cuối tuần; giá trong bảng cũ làm tròn hai chữ số, khác precision
   CSV. Không coi CSV đã đạt là đã nghiệm thu toàn Journal.
+
+## Release production
+
+- FE source `3eea7de0d337ba93ddc0b101e220eda660370521` đã lên GitHub main
+  và Firebase Hosting. Public bundle 3,783,747 bytes có SHA
+  `8b5d0f090a16d65d5c4ed1fe6f386633742dbef546f713cc00df67c54b71133d`
+  khớp build local; không có URL QA/Emulator, endpoint VPS đúng.
+- Reload bằng QA đang đăng nhập thấy hai control thật và bộ đếm 1/1 dưới
+  gate JOURNAL LOCKED. Không thao tác xuyên gate; positive CSV production
+  vẫn chưa nghiệm thu. Ảnh: `web-production-journal-gate-2026-10-04.png`.
+- Guard finite-profit/strict filename cuối cùng có 11/11 target test đạt;
+  full suite 195+2 skip ở build trước các guard cuối, không đổi logic khác.
+  BE/Rules giữ nguyên và không phát sinh gọi model từ lát này.

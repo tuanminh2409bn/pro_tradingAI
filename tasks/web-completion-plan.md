@@ -102,7 +102,7 @@ Cập nhật QA full-stack local 2026-09-25: Web + FastAPI + Auth/Firestore Emul
 
 | Việc | Kết quả cần đạt | Kiểm tra để đóng việc | Phụ thuộc |
 |---|---|---|---|
-| [ ] W18 · Journal số liệu broker (M) | Swap/commission/slippage có nguồn và tiền tệ; paper/broker được phân biệt; thiếu dữ liệu hiển thị unavailable. | Model/repository tests với hai schema trade + mẫu broker sandbox được duyệt + browser review. | W04–W05, G5 |
+| [ ] W18 · Journal số liệu broker (M) | Swap/commission/slippage có nguồn và tiền tệ; paper/broker được phân biệt; thiếu dữ liệu hiển thị unavailable. **04/10:** FE `3eea7de` đã lên main/production, nối bộ lọc và CSV thật, local browser + Python parser xác minh subset/reset/precision/blank metrics. Production QA thiếu broker link nên gate vẫn chặn; cần sample broker và positive production flow. | Model/repository tests với hai schema trade + mẫu broker sandbox được duyệt + browser review; `journal-controls-spec-2026-10-04.md`. | W04–W05, G5 |
 | [ ] W19 · Insight và TTS Web (M) | Heatmap/insight dựa trên trade thật; nút TTS phát/dừng audio thật hoặc trạng thái tắt rõ ràng khi chưa có provider. | Test tính toán, audio lifecycle và browser playback; kiểm tra mất provider. | W18, G2/G5 cho TTS |
 | [ ] W20 · News và sentiment có giấy phép (M) | Chỉ nhận nguồn được duyệt, lưu provenance/freshness; nguồn hỏng/không được duyệt fail closed. | Parser/score/dedupe tests + provider sandbox sample + browser empty/error state. | W04–W05, G5 |
 | [ ] W21 · What-If và Red Zone liên tab (M) | Scenario không chứa trường đặt lệnh; lưu theo UID; cùng event ID/thời điểm đi từ News sang overlay Trading Room, hết hạn thì xóa. | Python/Dart contract, auth isolation, injected-clock test và browser cross-tab flow. | W20, W12, G1 |

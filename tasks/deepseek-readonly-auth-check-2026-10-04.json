@@ -1,0 +1,24 @@
+{
+  "environment": "VPS production",
+  "backend_container": "protrading-ai-referral-live-7ef3ab6",
+  "backend_source": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+  "credential_source": "existing container environment, same source used by server.py",
+  "balance_endpoint": "https://api.deepseek.com/user/balance",
+  "balance_http_status": 401,
+  "model_catalog_endpoint": "https://api.deepseek.com/models",
+  "model_catalog_http_status": 401,
+  "model_catalog_verified": false,
+  "key_matches_user_screenshot_mask": false,
+  "actual_key_logged": false,
+  "balance_amount_logged": false,
+  "model_completion_calls": 0,
+  "qa_accounts_created": 0,
+  "production_writes": 0,
+  "owner_reports_top_up": true,
+  "funded_account_verified": false,
+  "next_requirement": "Locate the valid website key through a secure store; do not paste it into chat or repository",
+  "official_contracts": [
+    "https://api-docs.deepseek.com/api/get-user-balance/",
+    "https://api-docs.deepseek.com/api/list-models/"
+  ]
+}
