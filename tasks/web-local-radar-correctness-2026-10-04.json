@@ -1,0 +1,52 @@
+{
+  "checked_at_utc": "2026-10-03T22:38:29Z",
+  "environment": "Firebase Auth/Firestore Emulator, local native browser",
+  "origin": "http://127.0.0.1:8803/",
+  "fixture_only": true,
+  "fixture_description": "Owned QA-only ETHUSD/H4 Radar document; every confirmation provenance field explicitly identifies a test fixture, no real AI or broker",
+  "bundle": {
+    "bytes": 3777873,
+    "served_matches_build": true,
+    "sha256": "a8c1989bbbea92a1c053ae753bc452b1aeb0ce59911d78c90340b44dc1ad2740"
+  },
+  "source_sha256": {
+    "lib/logic/navigation_cubit.dart": "84e97e5e0a0ccd1c0f57aca07d278b4e4bb4c72243b21126486ed1249cfc5ada",
+    "lib/features/trading_room/bloc/trading_room_bloc.dart": "51f2fe3d74b93a05935b08cc3a4007baf8ef27f37da1a26ed6e26fc2f090c59c",
+    "lib/features/radar/bloc/radar_bloc.dart": "7004a5f46f5956c8fbab055bdc7c27c8d35e46b9266d77d4e6fa0df46da80ff7",
+    "lib/features/radar/web/radar_web_page.dart": "dd3ebcb577966c6240f8b77db4befc8e86d000264a7e659f21da9382c56abb14"
+  },
+  "native_en_vi_observations": {
+    "reported_price_display": "2688.331234",
+    "invented_usd_price_symbol": false,
+    "unmeasured_strength_message": true,
+    "fixed_four_of_five_strength_bars": false,
+    "push_control_disabled_with_reason": true,
+    "recorded_data_freshness_unverified_message": true,
+    "closed_detail_stays_closed_after_fixture_price_update": true,
+    "selected_asset_chart_header": "ETHUSD H4",
+    "selected_asset_chart_mode": "Day Trading",
+    "chart_price_and_risk_at_8803": "unavailable; local QA API CORS origin is not allowlisted"
+  },
+  "checks": {
+    "reproducing_failures_before_fix": 4,
+    "target_flutter_passed": 14,
+    "full_flutter_passed": 247,
+    "full_flutter_web_only_vm_skipped": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "analyzer_preexisting_mobile_infos": 3,
+    "emulator_web_release_build": "PASS",
+    "route_tests": "M5/M15/H1/H4/D1 matrix, explicit target over persisted symbol, normal restore, invalid target rejection, zero analysis requests"
+  },
+  "screenshots": [
+    {"path": "tasks/web-local-radar-correctness-2026-10-04.png", "sha256": "9e2aabd3975ee70d3e5ffc8cd241d78b467a1d5744f1be9f923498d57d016085"},
+    {"path": "tasks/web-local-radar-chart-target-2026-10-04.png", "sha256": "2cbfa296d74925ea5906b36d597ec84a2862d077eee5f685eb36079daba65815"}
+  ],
+  "impact": {"model_requests_in_this_probe": 0, "production_user_mutations_requested": 0, "production_qa_created": 0},
+  "limitations": [
+    "Local confirmation is explicitly a fixture; no commercial rights or real AI confirmation are asserted",
+    "Origin 8803 is outside QA API CORS allowlist; route is verified, feed/risk parity is not",
+    "Worker/provider freshness, 50-100 assets, multi-user load, device FCM and role matrix remain unverified",
+    "The complete Web plan remains open"
+  ]
+}

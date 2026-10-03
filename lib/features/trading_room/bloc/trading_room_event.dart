@@ -10,10 +10,16 @@ abstract class TradingRoomEvent extends Equatable {
 
 class LoadTradingData extends TradingRoomEvent {
   final String? userId;
-  const LoadTradingData({this.userId});
+  final String? initialSymbol;
+  final String? initialTimeframe;
+  const LoadTradingData({
+    this.userId,
+    this.initialSymbol,
+    this.initialTimeframe,
+  });
 
   @override
-  List<Object?> get props => [userId];
+  List<Object?> get props => [userId, initialSymbol, initialTimeframe];
 }
 
 class UpdateSymbol extends TradingRoomEvent {

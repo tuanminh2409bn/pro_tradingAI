@@ -63,6 +63,12 @@ class _WebDashboardShellState extends State<WebDashboardShell> {
                           case NavbarItem.tradingRoom:
                             return TradingRoomWebPage(
                               userId: userId,
+                              initialSymbol: context
+                                  .read<NavigationCubit>()
+                                  .tradingRoomSymbol,
+                              initialTimeframe: context
+                                  .read<NavigationCubit>()
+                                  .tradingRoomTimeframe,
                               onMenuPressed: onMenuPressed,
                             );
                           case NavbarItem.journal:

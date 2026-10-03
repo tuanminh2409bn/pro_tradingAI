@@ -224,8 +224,23 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
           .getTradingAccount(newUserId)
           .listen((account) => add(UpdateAccount(account)));
 
-      const defaultSymbol = 'XAUUSD';
+      final requestedSymbol = event.initialSymbol?.trim().toUpperCase();
+      final hasChartTarget =
+          requestedSymbol != null &&
+          RegExp(r'^[A-Z0-9]{3,16}$').hasMatch(requestedSymbol);
+      final defaultSymbol = hasChartTarget ? requestedSymbol : 'XAUUSD';
+      final requestedTimeframe = TradingMode.scalping.normalizeTimeframe(
+        event.initialTimeframe?.trim().toUpperCase() ?? '5',
+      );
+      final initialMode = TradingMode.values.firstWhere(
+        (mode) => mode.allowsTimeframe(requestedTimeframe),
+        orElse: () => TradingMode.scalping,
+      );
+      final initialTimeframe = initialMode.allowsTimeframe(requestedTimeframe)
+          ? requestedTimeframe
+          : initialMode.executionTf;
       _tradingRepository.changeSymbol(defaultSymbol);
+      _tradingRepository.changeTimeframe(initialTimeframe);
 
       _candleSubscription = _tradingRepository
           .getCandleStream(defaultSymbol)
@@ -252,7 +267,8 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
             source: 'unavailable',
           ),
           currentSymbol: defaultSymbol,
-          currentTimeframe: TradingMode.scalping.executionTf,
+          currentTimeframe: initialTimeframe,
+          tradingMode: initialMode,
           candles: const [],
           positions: const [],
           isRiskConfigured: false,
@@ -268,7 +284,9 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       _startPositionRefreshTimer();
 
       // Restore saved symbol asynchronously
-      _restorePersistedSymbol();
+      if (!hasChartTarget) {
+        _restorePersistedSymbol();
+      }
 
       // Fetch risk config and positions in the background
       if (newUserId.isNotEmpty) {
@@ -283,7 +301,9 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
 
   Future<void> _restorePersistedSymbol() async {
     try {
+      final nonce = _analysisRequestNonce;
       final prefs = await SharedPreferences.getInstance();
+      if (isClosed || nonce != _analysisRequestNonce) return;
       final savedSymbol = prefs.getString('selected_symbol');
       if (savedSymbol != null && savedSymbol != 'XAUUSD') {
         add(UpdateSymbol(savedSymbol));

@@ -49,10 +49,19 @@ class RadarAsset extends Equatable {
   @override
   List<Object?> get props => [
     symbol,
+    fullName,
     price,
     changePercent,
+    volatilityStatus,
+    hasAiConfirmation,
     aiSignal,
+    sparklineData,
     confirmationId,
+    rationale,
+    model,
+    provider,
+    licenseRef,
+    timeframe,
     confirmedAt,
   ];
 }

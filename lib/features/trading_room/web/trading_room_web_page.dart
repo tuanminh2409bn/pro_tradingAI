@@ -24,8 +24,16 @@ import 'widgets/daily_cutoff_review_banner.dart';
 
 class TradingRoomWebPage extends StatefulWidget {
   final String? userId;
+  final String? initialSymbol;
+  final String? initialTimeframe;
   final VoidCallback? onMenuPressed;
-  const TradingRoomWebPage({super.key, this.userId, this.onMenuPressed});
+  const TradingRoomWebPage({
+    super.key,
+    this.userId,
+    this.initialSymbol,
+    this.initialTimeframe,
+    this.onMenuPressed,
+  });
 
   @override
   State<TradingRoomWebPage> createState() => _TradingRoomWebPageState();
@@ -39,7 +47,13 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
     return BlocProvider(
       create: (context) =>
           TradingRoomBloc(tradingRepository: context.read<TradingRepository>())
-            ..add(LoadTradingData(userId: widget.userId)),
+            ..add(
+              LoadTradingData(
+                userId: widget.userId,
+                initialSymbol: widget.initialSymbol,
+                initialTimeframe: widget.initialTimeframe,
+              ),
+            ),
       child: NewsRedZoneBinder(
         child: Scaffold(
           backgroundColor: AppColors.background,
@@ -193,7 +207,11 @@ class _TradingRoomWebPageState extends State<TradingRoomWebPage> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.read<TradingRoomBloc>().add(
-                      LoadTradingData(userId: widget.userId),
+                      LoadTradingData(
+                        userId: widget.userId,
+                        initialSymbol: widget.initialSymbol,
+                        initialTimeframe: widget.initialTimeframe,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,

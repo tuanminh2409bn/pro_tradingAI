@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../data/models/trading_models.dart';
 
 enum NavbarItem {
   tradingRoom,
@@ -9,11 +10,42 @@ enum NavbarItem {
   referral,
   profile,
   radar,
-  admin
+  admin,
 }
 
 class NavigationCubit extends Cubit<NavbarItem> {
   NavigationCubit() : super(NavbarItem.tradingRoom);
 
-  void getNavBarItem(NavbarItem navbarItem) => emit(navbarItem);
+  String? _tradingRoomSymbol;
+  String? _tradingRoomTimeframe;
+  String? get tradingRoomSymbol => _tradingRoomSymbol;
+  String? get tradingRoomTimeframe => _tradingRoomTimeframe;
+
+  void getNavBarItem(NavbarItem navbarItem) {
+    _tradingRoomSymbol = null;
+    _tradingRoomTimeframe = null;
+    emit(navbarItem);
+  }
+
+  /// Page-entry target. An already-open chart uses TradingRoom events.
+  bool openTradingRoom(String symbol, {String? timeframe}) {
+    final normalizedSymbol = symbol.trim().toUpperCase();
+    final normalizedTimeframe = timeframe == null
+        ? null
+        : TradingMode.scalping.normalizeTimeframe(
+            timeframe.trim().toUpperCase(),
+          );
+    if (state == NavbarItem.tradingRoom ||
+        !RegExp(r'^[A-Z0-9]{3,16}$').hasMatch(normalizedSymbol) ||
+        (normalizedTimeframe != null &&
+            !TradingMode.values.any(
+              (mode) => mode.allowsTimeframe(normalizedTimeframe),
+            ))) {
+      return false;
+    }
+    _tradingRoomSymbol = normalizedSymbol;
+    _tradingRoomTimeframe = normalizedTimeframe;
+    emit(NavbarItem.tradingRoom);
+    return true;
+  }
 }
