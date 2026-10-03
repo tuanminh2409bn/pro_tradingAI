@@ -36,6 +36,22 @@ Status values: `PENDING`, `APPROVED`, `REJECTED`, `SUPERSEDED`.
   khi có bằng chứng specialist/aggregator/chat thật; giữ giới hạn token và
   kiểm thử offline trước khi gọi provider.
 
+## Community W24 — delegation ngày 2026-10-03
+
+- Hoàn thiện đăng bài/bình luận/lượt thích/chia sẻ bằng UID từ token. Đăng bài
+  và bình luận chuyển sang API backend với requestId; transaction xác nhận
+  author, tạo timestamp và tăng counter một lần. Tên hiển thị lấy từ Auth,
+  không suy tên từ email riêng tư. Nội dung 2.000 ký tự cho post, 1.000 cho comment.
+- `community/{postId}/comments/{commentId}` công khai khi parent tồn tại, chỉ
+  backend ghi. Client không tạo/update post trực tiếp; quyền xóa post vẫn chỉ
+  thuộc owner. Các client cũ cần cập nhật hoặc tải lại bản Web mới.
+- UI hiển thị 100 bình luận gần nhất, giữ draft khi lỗi, bỏ kết quả async cũ
+  sau đóng/reload. Link chỉ mang public post ID, không UID/token/query riêng tư,
+  mở đúng document kể cả ngoài 50 bài gần nhất của feed.
+- Kiểm thử ghi nội dung dùng Auth/Firestore Emulator và backend/Web thật trên
+  localhost. Chưa đăng thông điệp QA lên Community production cho khách hàng.
+  Không coi việc này là nghiệm thu W25 về broker trade và leaderboard.
+
 ## Local provider choices, chosen by project owner delegation on 2026-09-24
 
 - Market history: OANDA v20 Practice is the target for supported forex/gold instruments. Its candle contract includes `complete`, granularities M5/M15/H1/H4/D and tick-count `volume`; label this **tick volume**, never exchange-traded volume. Keep analysis unavailable until a licensed account supplies enough closed bars for each timeframe and the symbol is actually supported. Existing TradingView stream may display prices but does not substitute for an independently verified MTF history.

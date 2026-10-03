@@ -14,6 +14,7 @@ import '../../profile/web/profile_web_page.dart';
 import '../../admin/web/admin_web_page.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../../core/security/admin_access.dart';
+import '../../../core/utils/community_post_link.dart';
 
 class WebDashboardShell extends StatelessWidget {
   const WebDashboardShell({super.key});
@@ -22,10 +23,14 @@ class WebDashboardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final authState = context.read<AuthBloc>().state;
     final String? userId = authState.user?.uid;
+    final sharedPostId = sharedCommunityPostId(Uri.base);
     final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
     return BlocProvider(
-      create: (context) => NavigationCubit(),
+      create: (context) => NavigationCubit()
+        ..getNavBarItem(
+          sharedPostId == null ? NavbarItem.tradingRoom : NavbarItem.community,
+        ),
       child: SyncGateHost(
         userId: userId,
         child: LayoutBuilder(
@@ -71,6 +76,7 @@ class WebDashboardShell extends StatelessWidget {
                           case NavbarItem.community:
                             return CommunityWebPage(
                               onMenuPressed: onMenuPressed,
+                              sharedPostId: sharedPostId,
                             );
                           case NavbarItem.radar:
                             return RadarWebPage(onMenuPressed: onMenuPressed);

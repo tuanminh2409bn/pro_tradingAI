@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 const int communityPostMaxLength = 2000;
+const int communityCommentMaxLength = 1000;
 
 String normalizeCommunityPostContent(String rawContent) => rawContent.trim();
 
@@ -54,13 +55,38 @@ class CommunityPost extends Equatable {
     id,
     ownerId,
     userName,
+    avatarUrl,
     timeAgo,
     content,
+    tradeInfo,
     profit,
+    isProfit,
+    chartImageUrl,
     likes,
+    comments,
+    isVerified,
     tradeVerified,
     verificationReference,
   ];
+}
+
+class CommunityComment extends Equatable {
+  final String id;
+  final String ownerId;
+  final String userName;
+  final String content;
+  final String timeAgo;
+
+  const CommunityComment({
+    required this.id,
+    required this.ownerId,
+    required this.userName,
+    required this.content,
+    required this.timeAgo,
+  });
+
+  @override
+  List<Object?> get props => [id, ownerId, userName, content, timeAgo];
 }
 
 class LeaderboardEntry extends Equatable {

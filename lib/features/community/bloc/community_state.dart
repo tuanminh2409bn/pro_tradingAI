@@ -21,6 +21,13 @@ class CommunityLoaded extends CommunityState {
   final Set<String> likedPostIds;
   final Set<String> likingPostIds;
   final int likeFailureNonce;
+  final String? commentsPostId;
+  final List<CommunityComment> comments;
+  final bool commentsLoading;
+  final bool commentsError;
+  final bool isCommenting;
+  final int commentResultNonce;
+  final bool commentSucceeded;
 
   const CommunityLoaded({
     required this.posts,
@@ -31,6 +38,13 @@ class CommunityLoaded extends CommunityState {
     this.likedPostIds = const <String>{},
     this.likingPostIds = const <String>{},
     this.likeFailureNonce = 0,
+    this.commentsPostId,
+    this.comments = const [],
+    this.commentsLoading = false,
+    this.commentsError = false,
+    this.isCommenting = false,
+    this.commentResultNonce = 0,
+    this.commentSucceeded = false,
   });
 
   CommunityLoaded copyWith({
@@ -42,6 +56,14 @@ class CommunityLoaded extends CommunityState {
     Set<String>? likedPostIds,
     Set<String>? likingPostIds,
     int? likeFailureNonce,
+    String? commentsPostId,
+    bool clearComments = false,
+    List<CommunityComment>? comments,
+    bool? commentsLoading,
+    bool? commentsError,
+    bool? isCommenting,
+    int? commentResultNonce,
+    bool? commentSucceeded,
   }) {
     return CommunityLoaded(
       posts: posts ?? this.posts,
@@ -52,6 +74,19 @@ class CommunityLoaded extends CommunityState {
       likedPostIds: likedPostIds ?? this.likedPostIds,
       likingPostIds: likingPostIds ?? this.likingPostIds,
       likeFailureNonce: likeFailureNonce ?? this.likeFailureNonce,
+      commentsPostId: clearComments
+          ? null
+          : commentsPostId ?? this.commentsPostId,
+      comments: clearComments ? const [] : comments ?? this.comments,
+      commentsLoading: clearComments
+          ? false
+          : commentsLoading ?? this.commentsLoading,
+      commentsError: clearComments
+          ? false
+          : commentsError ?? this.commentsError,
+      isCommenting: clearComments ? false : isCommenting ?? this.isCommenting,
+      commentResultNonce: commentResultNonce ?? this.commentResultNonce,
+      commentSucceeded: commentSucceeded ?? this.commentSucceeded,
     );
   }
 
@@ -65,6 +100,13 @@ class CommunityLoaded extends CommunityState {
     likedPostIds,
     likingPostIds,
     likeFailureNonce,
+    commentsPostId,
+    comments,
+    commentsLoading,
+    commentsError,
+    isCommenting,
+    commentResultNonce,
+    commentSucceeded,
   ];
 }
 

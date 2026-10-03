@@ -171,7 +171,7 @@
   Profile hiển thị Analysis 2/2, Backtest 2/2, reset cả hai 05/10 07:00 VN.
   Emulator 272/272, Flutter 151/151, image 246 đạt + 26 skip; Web build đạt,
   analyzer 0 error/warning và 3 Mobile info có sẵn. Bằng chứng:
-  `web-production-backtest-quota-2026-10-03.json` và bốn ảnh quota mới.
+  `web-production-backtest-quota-2026-10-03.json` và các ảnh quota mới.
 - Chủ dự án đã xác nhận nạp DeepSeek và giao lựa chọn phương án để tiếp tục.
   Probe production đã soạn (QA Standard riêng, 1 Analysis + 1 Chat, không PII)
   bị auto-review chặn vì cần xác nhận cụ thể identity/payload/đích/chi phí.
@@ -203,6 +203,25 @@
 - Ước lượng sơ bộ cho lập kế hoạch: 10–15 ngày làm việc cho code/kiểm thử còn
   lại sau khi đủ nguồn và quyết định, với phạm vi hiện tại. Chưa phải deadline
   đã cam kết; thời gian chờ nhà cung cấp/giấy phép/nạp số dư không được xác định.
+
+## Community W24 — bản đang chuẩn bị phát hành 03/10
+
+- Đã nối post/comment/like/share qua backend/token và Firestore thật trên
+  Emulator. Post/comment retry dùng cùng requestId, comment counter cùng
+  transaction; 20 concurrent deliveries chỉ tạo một record. Rules chặn client
+  tạo/update post hoặc comment, owner vẫn có quyền xóa post; parent bị xóa thì
+  comment không còn được đọc công khai.
+- UI có danh sách 100 comment gần nhất, loading/error/retry, giữ draft khi lỗi,
+  khóa send khi pending, bỏ callback cũ sau close/reload. Share link không chứa
+  UID/token/PII; lookup theo document và mở đúng bài sau đăng nhập mới. Browser
+  local đã ghi một post/comment, count like/comment 1/1; like retry giữ 1.
+- Python Emulator **279/279**, Flutter **160/160**, syntax/diff check và Web
+  local/release build đạt. Analyzer 0 error/0 warning, còn 3 info Mobile cũ.
+  Bằng chứng: `web-community-qa-2026-10-03.json` và hai ảnh local đi kèm.
+- Chưa đăng nội dung QA cho khách hàng trên Community production; W24 còn
+  chờ phát hành/readback, W25 verified-trade/leaderboard vẫn chưa nghiệm thu.
+  Không gọi DeepSeek ở slice này. Probe Analysis/Chat production vẫn chờ câu
+  xác nhận cụ thể do cơ chế duyệt tự động yêu cầu.
 
 ## Tiếp tục
 

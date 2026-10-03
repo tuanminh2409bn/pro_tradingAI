@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import 'dart:ui';
 import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_cubit.dart';
 import '../../../data/models/community_models.dart';
 import '../../../data/repositories/community_repository.dart';
 import '../bloc/community_bloc.dart';
 import '../bloc/community_event.dart';
 import '../bloc/community_state.dart';
 import 'widgets/community_like_button.dart';
+import 'widgets/community_comments_dialog.dart';
+import '../../../core/utils/community_post_link.dart';
 
 class CommunityWebPage extends StatefulWidget {
   final VoidCallback? onMenuPressed;
-  const CommunityWebPage({super.key, this.onMenuPressed});
+  final String? sharedPostId;
+  const CommunityWebPage({super.key, this.onMenuPressed, this.sharedPostId});
 
   @override
   State<CommunityWebPage> createState() => _CommunityWebPageState();
@@ -23,6 +28,18 @@ class CommunityWebPage extends StatefulWidget {
 class _CommunityWebPageState extends State<CommunityWebPage> {
   final TextEditingController _postController = TextEditingController();
   int _lastLikeFailureNonce = 0;
+  Stream<CommunityPost?>? _sharedPostStream;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final postId = widget.sharedPostId;
+    if (postId != null) {
+      _sharedPostStream ??= context.read<CommunityRepository>().watchPost(
+        postId,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -50,11 +67,17 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                         previous.likeFailureNonce != current.likeFailureNonce),
                 listener: (context, state) {
                   if (state is! CommunityLoaded) return;
+                  final language = context.read<LocaleCubit>().state;
                   if (state.likeFailureNonce != _lastLikeFailureNonce) {
                     _lastLikeFailureNonce = state.likeFailureNonce;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(context.tr('community_like_failed')),
+                        content: Text(
+                          AppLocalizations.get(
+                            language,
+                            'community_like_failed',
+                          ),
+                        ),
                       ),
                     );
                     return;
@@ -64,8 +87,14 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                     SnackBar(
                       content: Text(
                         state.postSucceeded
-                            ? context.tr('community_post_success')
-                            : context.tr('community_post_failed'),
+                            ? AppLocalizations.get(
+                                language,
+                                'community_post_success',
+                              )
+                            : AppLocalizations.get(
+                                language,
+                                'community_post_failed',
+                              ),
                       ),
                       backgroundColor: state.postSucceeded
                           ? AppColors.primary
@@ -75,6 +104,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                 },
                 builder: (context, state) {
                   if (state is CommunityLoading || state is CommunityInitial) {
+                    _lastLikeFailureNonce = 0;
                     return const Center(
                       child: CircularProgressIndicator(
                         color: AppColors.primary,
@@ -84,9 +114,20 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
 
                   if (state is CommunityError) {
                     return Center(
-                      child: Text(
-                        context.tr(state.message),
-                        style: const TextStyle(color: AppColors.bear),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            context.tr(state.message),
+                            style: const TextStyle(color: AppColors.bear),
+                          ),
+                          TextButton(
+                            onPressed: () => context.read<CommunityBloc>().add(
+                              LoadCommunityData(),
+                            ),
+                            child: Text(context.tr('community_retry')),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -169,6 +210,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
               Expanded(
                 child: TextField(
                   controller: _postController,
+                  enabled: !state.isPosting,
                   maxLines: 4,
                   maxLength: communityPostMaxLength,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -231,7 +273,76 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
   }
 
   Widget _buildFeedList(BuildContext context, CommunityLoaded state) {
-    final posts = state.posts;
+    final posts = state.posts
+        .where((post) => post.id != widget.sharedPostId)
+        .toList();
+    return Column(
+      children: [
+        if (widget.sharedPostId != null)
+          StreamBuilder<CommunityPost?>(
+            stream: _sharedPostStream,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Column(
+                  children: [
+                    Text(
+                      context.tr('common_data_unavailable'),
+                      style: const TextStyle(color: AppColors.bear),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _sharedPostStream = context
+                            .read<CommunityRepository>()
+                            .watchPost(widget.sharedPostId!);
+                      }),
+                      child: Text(context.tr('community_retry')),
+                    ),
+                  ],
+                );
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(),
+                );
+              }
+              final post = snapshot.data;
+              if (post == null) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    context.tr('community_post_unavailable'),
+                    style: const TextStyle(color: Colors.white54),
+                  ),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('community_shared_post'),
+                    style: const TextStyle(color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 12),
+                  _PostCard(
+                    post: post,
+                    liked: state.likedPostIds.contains(post.id),
+                    liking: state.likingPostIds.contains(post.id),
+                  ),
+                ],
+              );
+            },
+          ),
+        _buildPosts(context, state, posts),
+      ],
+    );
+  }
+
+  Widget _buildPosts(
+    BuildContext context,
+    CommunityLoaded state,
+    List<CommunityPost> posts,
+  ) {
     if (posts.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
@@ -269,6 +380,7 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      key: ValueKey('community-post-${post.id}'),
       margin: const EdgeInsets.only(bottom: 24),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -380,37 +492,78 @@ class _PostCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             color: Colors.white.withValues(alpha: 0.02),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                Row(
-                  children: [
-                    if (post.id != null)
-                      CommunityLikeButton(
-                        postId: post.id!,
-                        count: post.likes,
-                        liked: liked,
-                        busy: liking,
-                        onLike: () => context.read<CommunityBloc>().add(
-                          LikeCommunityPost(post.id!),
-                        ),
-                      )
-                    else
-                      _buildMetric(
-                        context,
-                        Icons.thumb_up,
-                        context.tr('community_likes'),
-                        post.likes,
-                      ),
-                    const SizedBox(width: 24),
-                    _buildMetric(
-                      context,
-                      Icons.forum,
-                      context.tr('community_comments'),
-                      post.comments,
+                if (post.id != null)
+                  CommunityLikeButton(
+                    postId: post.id!,
+                    count: post.likes,
+                    liked: liked,
+                    busy: liking,
+                    onLike: () => context.read<CommunityBloc>().add(
+                      LikeCommunityPost(post.id!),
                     ),
-                  ],
-                ),
+                  )
+                else
+                  _buildMetric(
+                    context,
+                    Icons.thumb_up,
+                    context.tr('community_likes'),
+                    post.likes,
+                  ),
+                if (post.id != null)
+                  TextButton.icon(
+                    key: ValueKey('community-comments-${post.id}'),
+                    onPressed: () => showCommunityComments(context, post.id!),
+                    icon: const Icon(Icons.forum_outlined, size: 18),
+                    label: Text(
+                      '${context.tr('community_comments')} · ${post.comments}',
+                    ),
+                  )
+                else
+                  _buildMetric(
+                    context,
+                    Icons.forum,
+                    context.tr('community_comments'),
+                    post.comments,
+                  ),
+                if (post.id != null)
+                  TextButton.icon(
+                    key: ValueKey('community-share-${post.id}'),
+                    onPressed: () async {
+                      var succeeded = false;
+                      try {
+                        await Clipboard.setData(
+                          ClipboardData(
+                            text: communityPostLink(
+                              Uri.base,
+                              post.id!,
+                            ).toString(),
+                          ),
+                        );
+                        succeeded = true;
+                      } catch (_) {
+                        succeeded = false;
+                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            AppLocalizations.get(
+                              context.read<LocaleCubit>().state,
+                              succeeded
+                                  ? 'community_share_copied'
+                                  : 'community_share_failed',
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.link, size: 18),
+                    label: Text(context.tr('community_share_link')),
+                  ),
               ],
             ),
           ),

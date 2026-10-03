@@ -8,6 +8,9 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
   final CommunityRepository _communityRepository;
   StreamSubscription? _feedSubscription;
   StreamSubscription? _leaderboardSubscription;
+  StreamSubscription? _commentsSubscription;
+  int _loadGeneration = 0;
+  int _commentsGeneration = 0;
 
   CommunityBloc({required CommunityRepository communityRepository})
     : _communityRepository = communityRepository,
@@ -18,29 +21,54 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     on<CreatePost>(_onCreatePost);
     on<LikeCommunityPost>(_onLikePost);
     on<CommunityStreamFailed>(_onStreamFailed);
+    on<OpenCommunityComments>(_onOpenComments);
+    on<CloseCommunityComments>(_onCloseComments);
+    on<UpdateCommunityComments>(_onUpdateComments);
+    on<CreateCommunityComment>(_onCreateComment);
   }
 
   Future<void> _onLoadData(
     LoadCommunityData event,
     Emitter<CommunityState> emit,
   ) async {
+    final generation = ++_loadGeneration;
+    ++_commentsGeneration;
     emit(CommunityLoading());
     try {
-      _feedSubscription?.cancel();
+      await _feedSubscription?.cancel();
+      await _leaderboardSubscription?.cancel();
+      await _commentsSubscription?.cancel();
+      if (emit.isDone || generation != _loadGeneration) return;
       _feedSubscription = _communityRepository.getCommunityFeed().listen(
-        (posts) => add(UpdateCommunityFeed(posts)),
-        onError: (_) => add(const CommunityStreamFailed()),
+        (posts) {
+          if (!isClosed && generation == _loadGeneration) {
+            add(UpdateCommunityFeed(posts, generation: generation));
+          }
+        },
+        onError: (_) {
+          if (!isClosed && generation == _loadGeneration) {
+            add(CommunityStreamFailed(generation: generation));
+          }
+        },
       );
 
-      _leaderboardSubscription?.cancel();
       _leaderboardSubscription = _communityRepository.getLeaderboard().listen(
-        (leaderboard) => add(UpdateLeaderboard(leaderboard)),
-        onError: (_) => add(const CommunityStreamFailed()),
+        (leaderboard) {
+          if (!isClosed && generation == _loadGeneration) {
+            add(UpdateLeaderboard(leaderboard, generation: generation));
+          }
+        },
+        onError: (_) {
+          if (!isClosed && generation == _loadGeneration) {
+            add(CommunityStreamFailed(generation: generation));
+          }
+        },
       );
 
       // Emit initial Loaded state immediately
       emit(const CommunityLoaded(posts: [], leaderboard: []));
     } catch (_) {
+      if (emit.isDone || generation != _loadGeneration) return;
       emit(const CommunityError('common_data_unavailable'));
     }
   }
@@ -49,10 +77,12 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     CommunityStreamFailed event,
     Emitter<CommunityState> emit,
   ) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     emit(const CommunityError('common_data_unavailable'));
   }
 
   void _onUpdateFeed(UpdateCommunityFeed event, Emitter<CommunityState> emit) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     if (state is CommunityLoaded) {
       emit((state as CommunityLoaded).copyWith(posts: event.posts));
     }
@@ -62,6 +92,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     UpdateLeaderboard event,
     Emitter<CommunityState> emit,
   ) {
+    if (event.generation != null && event.generation != _loadGeneration) return;
     if (state is CommunityLoaded) {
       emit((state as CommunityLoaded).copyWith(leaderboard: event.leaderboard));
     }
@@ -73,12 +104,16 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
   ) async {
     final current = state;
     if (current is! CommunityLoaded || current.isPosting) return;
+    final generation = _loadGeneration;
     emit(current.copyWith(isPosting: true));
     try {
       await _communityRepository.createPost(event.content);
-      final latest = state is CommunityLoaded
-          ? state as CommunityLoaded
-          : current;
+      final latest = state;
+      if (emit.isDone ||
+          generation != _loadGeneration ||
+          latest is! CommunityLoaded) {
+        return;
+      }
       emit(
         latest.copyWith(
           isPosting: false,
@@ -87,9 +122,12 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
         ),
       );
     } catch (_) {
-      final latest = state is CommunityLoaded
-          ? state as CommunityLoaded
-          : current;
+      final latest = state;
+      if (emit.isDone ||
+          generation != _loadGeneration ||
+          latest is! CommunityLoaded) {
+        return;
+      }
       emit(
         latest.copyWith(
           isPosting: false,
@@ -110,13 +148,18 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
         current.likingPostIds.contains(event.postId)) {
       return;
     }
+    final generation = _loadGeneration;
     emit(
       current.copyWith(likingPostIds: {...current.likingPostIds, event.postId}),
     );
     try {
       await _communityRepository.likePost(event.postId);
       final latest = state;
-      if (latest is! CommunityLoaded) return;
+      if (emit.isDone ||
+          generation != _loadGeneration ||
+          latest is! CommunityLoaded) {
+        return;
+      }
       emit(
         latest.copyWith(
           likingPostIds: {...latest.likingPostIds}..remove(event.postId),
@@ -125,7 +168,11 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
       );
     } catch (_) {
       final latest = state;
-      if (latest is! CommunityLoaded) return;
+      if (emit.isDone ||
+          generation != _loadGeneration ||
+          latest is! CommunityLoaded) {
+        return;
+      }
       emit(
         latest.copyWith(
           likingPostIds: {...latest.likingPostIds}..remove(event.postId),
@@ -135,10 +182,141 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     }
   }
 
+  Future<void> _onOpenComments(
+    OpenCommunityComments event,
+    Emitter<CommunityState> emit,
+  ) async {
+    final generation = ++_commentsGeneration;
+    await _commentsSubscription?.cancel();
+    final current = state;
+    if (emit.isDone ||
+        generation != _commentsGeneration ||
+        current is! CommunityLoaded) {
+      return;
+    }
+    emit(
+      current.copyWith(
+        commentsPostId: event.postId,
+        comments: const [],
+        commentsLoading: true,
+        commentsError: false,
+        isCommenting: false,
+      ),
+    );
+    try {
+      _commentsSubscription = _communityRepository
+          .getComments(event.postId)
+          .listen(
+            (comments) {
+              if (!isClosed && generation == _commentsGeneration) {
+                add(
+                  UpdateCommunityComments(event.postId, generation, comments),
+                );
+              }
+            },
+            onError: (_) {
+              if (!isClosed && generation == _commentsGeneration) {
+                add(
+                  UpdateCommunityComments(
+                    event.postId,
+                    generation,
+                    const [],
+                    failed: true,
+                  ),
+                );
+              }
+            },
+          );
+    } catch (_) {
+      if (!isClosed && generation == _commentsGeneration) {
+        add(
+          UpdateCommunityComments(
+            event.postId,
+            generation,
+            const [],
+            failed: true,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _onCloseComments(
+    CloseCommunityComments event,
+    Emitter<CommunityState> emit,
+  ) async {
+    final generation = ++_commentsGeneration;
+    await _commentsSubscription?.cancel();
+    final current = state;
+    if (emit.isDone ||
+        generation != _commentsGeneration ||
+        current is! CommunityLoaded) {
+      return;
+    }
+    emit(current.copyWith(clearComments: true));
+  }
+
+  void _onUpdateComments(
+    UpdateCommunityComments event,
+    Emitter<CommunityState> emit,
+  ) {
+    final current = state;
+    if (current is! CommunityLoaded ||
+        current.commentsPostId != event.postId ||
+        event.generation != _commentsGeneration) {
+      return;
+    }
+    emit(
+      current.copyWith(
+        comments: event.comments,
+        commentsLoading: false,
+        commentsError: event.failed,
+      ),
+    );
+  }
+
+  Future<void> _onCreateComment(
+    CreateCommunityComment event,
+    Emitter<CommunityState> emit,
+  ) async {
+    final current = state;
+    if (current is! CommunityLoaded ||
+        current.commentsPostId != event.postId ||
+        current.isCommenting) {
+      return;
+    }
+    final generation = _commentsGeneration;
+    emit(current.copyWith(isCommenting: true));
+    bool succeeded;
+    try {
+      await _communityRepository.createComment(event.postId, event.content);
+      succeeded = true;
+    } catch (_) {
+      succeeded = false;
+    }
+    final latest = state;
+    if (emit.isDone ||
+        generation != _commentsGeneration ||
+        latest is! CommunityLoaded ||
+        latest.commentsPostId != event.postId) {
+      return;
+    }
+    emit(
+      latest.copyWith(
+        isCommenting: false,
+        commentSucceeded: succeeded,
+        commentResultNonce: latest.commentResultNonce + 1,
+      ),
+    );
+  }
+
   @override
-  Future<void> close() {
-    _feedSubscription?.cancel();
-    _leaderboardSubscription?.cancel();
+  Future<void> close() async {
+    ++_loadGeneration;
+    ++_commentsGeneration;
+    await _feedSubscription?.cancel();
+    await _leaderboardSubscription?.cancel();
+    await _commentsSubscription?.cancel();
     return super.close();
   }
 }

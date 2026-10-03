@@ -254,7 +254,8 @@ class FirestoreRulesTests(unittest.TestCase):
             "timestamp": datetime.now(timezone.utc) - timedelta(seconds=1),
         }
         path = f"community/post-{uuid.uuid4().hex}"
-        self.assertEqual(_request("PATCH", path, "alice", base), 200)
+        self.assertEqual(_request("PATCH", path, "alice", base), 403)
+        self.assertEqual(_request("PATCH", path, "_admin", base), 200)
         self.assertEqual(_request("GET", path, "bob"), 200)
         self.assertEqual(_request("PATCH", path, "alice", {**base, "tradeVerified": True}), 403)
         self.assertEqual(_request("PATCH", path, "alice", {**base, "likes": 10000}), 403)
@@ -342,7 +343,7 @@ class FirestoreRulesTests(unittest.TestCase):
         for changes in ({'initialBalance': 999}, {'source': 'forged'}, {'symbol': 'EURUSD'}):
             self.assertEqual(_request('PATCH', path, 'alice', {**fields, **changes}), 403)
 
-    def test_community_create_requires_matching_owner(self):
+    def test_community_creation_is_backend_owned_and_delete_is_owner_bound(self):
         path = f"community/post-{uuid.uuid4().hex}"
         valid = {
             "userId": "alice", "userName": "Alice", "avatarUrl": "",
@@ -356,16 +357,34 @@ class FirestoreRulesTests(unittest.TestCase):
         )
         self.assertEqual(
             _request("PATCH", path, "alice", valid),
-            200,
+            403,
         )
+        self.assertEqual(_request("PATCH", path, "_admin", valid), 200)
         self.assertEqual(
             _request("PATCH", path, "bob", {**valid, "likes": 1}),
             403,
         )
+        self.assertEqual(_request("DELETE", path, "bob"), 403)
+        self.assertEqual(_request("DELETE", path, "alice"), 200)
         self.assertEqual(
             _request("PATCH", path, "bob", {**valid, "userId": "bob"}),
             403,
         )
+
+    def test_community_comments_are_public_only_while_parent_exists_and_backend_owned(self):
+        path = f"community/post-{uuid.uuid4().hex}"
+        comment = path + "/comments/comment123"
+        fields = {"userId": "alice", "content": "Public reply"}
+        self.assertEqual(_request("PATCH", comment, "alice", fields), 403)
+        self.assertEqual(_request("PATCH", path, "_admin", {"userId": "alice"}), 200)
+        self.assertEqual(_request("PATCH", comment, "_admin", fields), 200)
+        for owner in (None, "alice", "bob"):
+            self.assertEqual(_request("GET", comment, owner), 200)
+        for owner in ("alice", "bob"):
+            self.assertEqual(_request("PATCH", comment, owner, {**fields, "content": "forged"}), 403)
+            self.assertEqual(_request("DELETE", comment, owner), 403)
+        self.assertEqual(_request("DELETE", path, "alice"), 200)
+        self.assertEqual(_request("GET", comment), 403)
 
     def test_admin_data_requires_verified_admin_claim(self):
         path = "admin/stats"

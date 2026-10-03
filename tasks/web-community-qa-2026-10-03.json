@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-03",
+  "scope": "W24 Community post/comment/like/share",
+  "source_commit": null,
+  "production": {"status": "pending_release", "public_qa_posts_created": 0, "llm_calls": 0},
+  "local": {
+    "firebase": "loopback Auth 9099 + Firestore 8080 Emulators",
+    "backend": "actual server.py, localhost:8088, no provider keys, workers disabled",
+    "frontend": "actual Flutter release, localhost:8787, Emulator build flag",
+    "browser": {
+      "created_posts": 1,
+      "comments": 1,
+      "likes": 1,
+      "like_replay_after_new_login_count": 1,
+      "owner_matches_real_emulator_token": true,
+      "shared_link_opens_post_after_login": true,
+      "shared_post_uses_document_lookup_not_feed_window": true,
+      "no_uid_token_private_query_in_shared_link": true,
+      "comment_draft_clears_after_confirmed_success": true
+    },
+    "proofs": [
+      "web-local-community-comments-2026-10-03.png",
+      "web-local-community-shared-post-2026-10-03.png"
+    ]
+  },
+  "verification": {
+    "python_emulator_suite": {"total": 279, "passed": 279, "skipped": 0},
+    "flutter_suite": {"total": 160, "passed": 160},
+    "analyzer": {"errors": 0, "warnings": 0, "existing_mobile_infos": 3},
+    "atomic_concurrency": {"parallel_post_replays": 20, "stored_posts": 1,
+      "parallel_comment_replays": 20, "stored_comments": 1, "parent_counter": 1},
+    "rules": "client create/update denied; delete only post owner; comments public only while parent exists",
+    "transport_retry": "same owner/content intent reuses request ID; changed content with same ID rejected",
+    "async_lifecycle": "duplicate send guarded; close/reload generations discard stale results",
+    "syntax_diff_check": "passed",
+    "build_web_local": "passed",
+    "build_web_production": "passed"
+  },
+  "limits": [
+    "No production community test message has been published to customers.",
+    "W25 verified trade/privacy/leaderboard remains a separate open gate.",
+    "Older clients that write posts directly to Firestore require the updated API client."
+  ]
+}

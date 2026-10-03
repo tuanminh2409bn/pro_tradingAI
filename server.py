@@ -12,7 +12,7 @@ from urllib.parse import urljoin
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Header, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, StrictFloat
+from pydantic import BaseModel, StrictFloat, StrictStr
 import websockets
 import httpx
 from metaapi_cloud_sdk import MetaApi
@@ -68,6 +68,7 @@ from tradingview_history import fetch_tradingview_mtf_history
 from push_preferences import push_recipient_opted_in
 from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
+from community_api import community_write_intent
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
 from backtest_api import backtest_creation, same_backtest_creation
@@ -284,6 +285,16 @@ class CutoffOwnerRequest(BaseModel):
 class CommunityLikeRequest(BaseModel):
     postId: str
     userId: str = ""
+
+
+class CommunityPostRequest(BaseModel):
+    requestId: StrictStr
+    content: StrictStr
+    userId: str = ""
+
+
+class CommunityCommentRequest(CommunityPostRequest):
+    postId: StrictStr
 
 
 async def verified_user_id(
@@ -1458,6 +1469,105 @@ async def image_proxy(url: str):
     except Exception:
         print("[ImageProxy] Fetch failed")
         return Response(status_code=502)
+
+@cloud_firestore.transactional
+def commit_community_post(transaction, post_ref, user_id: str, content: str, author: dict) -> dict:
+    post = post_ref.get(transaction=transaction)
+    if post.exists:
+        data = post.to_dict() or {}
+        if data.get("userId") != user_id or data.get("content") != content:
+            raise HTTPException(status_code=409, detail="Community request conflict")
+    else:
+        transaction.create(post_ref, {
+            "userId": user_id, **author, "content": content,
+            "likes": 0, "comments": 0, "isVerified": False, "tradeVerified": False,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        })
+    return {"postId": post_ref.id}
+
+
+@cloud_firestore.transactional
+def commit_community_comment(
+    transaction, post_ref, comment_ref, user_id: str, content: str, author: dict,
+) -> dict:
+    post = post_ref.get(transaction=transaction)
+    if not post.exists:
+        raise HTTPException(status_code=404, detail="Community post unavailable")
+    count = (post.to_dict() or {}).get("comments", 0)
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        raise HTTPException(status_code=409, detail="Community post unavailable")
+    comment = comment_ref.get(transaction=transaction)
+    if comment.exists:
+        data = comment.to_dict() or {}
+        if data.get("userId") != user_id or data.get("content") != content:
+            raise HTTPException(status_code=409, detail="Community request conflict")
+    else:
+        transaction.create(comment_ref, {
+            "userId": user_id, **author, "content": content,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        })
+        transaction.update(post_ref, {"comments": count + 1})
+    return {"commentId": comment_ref.id}
+
+
+async def community_author(user_id: str) -> dict:
+    record = await asyncio.to_thread(auth.get_user, user_id)
+    if record.disabled:
+        raise HTTPException(status_code=403, detail="Community access denied")
+    name = (record.display_name or "").strip()[:100] or "Community member"
+    avatar = record.photo_url or ""
+    if not avatar.startswith("https://") or len(avatar) > 2048:
+        avatar = ""
+    return {"userName": name, "avatarUrl": avatar}
+
+
+@app.post("/api/community/posts")
+async def create_community_post(
+    req: CommunityPostRequest,
+    authorization: str | None = Header(default=None),
+):
+    user_id = await verified_user_id(authorization, req.userId)
+    try:
+        post_id, content = community_write_intent(user_id, req.requestId, req.content)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid community post")
+    try:
+        author = await community_author(user_id)
+        post_ref = db.collection("community").document(post_id)
+        return await asyncio.to_thread(
+            commit_community_post, db.transaction(), post_ref, user_id, content, author
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Community temporarily unavailable")
+
+
+@app.post("/api/community/comments")
+async def create_community_comment(
+    req: CommunityCommentRequest,
+    authorization: str | None = Header(default=None),
+):
+    user_id = await verified_user_id(authorization, req.userId)
+    try:
+        comment_id, content = community_write_intent(
+            user_id, req.requestId, req.content, req.postId
+        )
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid community comment")
+    try:
+        author = await community_author(user_id)
+        post_ref = db.collection("community").document(req.postId)
+        comment_ref = post_ref.collection("comments").document(comment_id)
+        return await asyncio.to_thread(
+            commit_community_comment, db.transaction(), post_ref, comment_ref,
+            user_id, content, author,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Community temporarily unavailable")
+
 
 @cloud_firestore.transactional
 def commit_community_like(transaction, post_ref, user_id: str) -> dict:

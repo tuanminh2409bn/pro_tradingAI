@@ -12,7 +12,8 @@ class LoadCommunityData extends CommunityEvent {}
 
 class UpdateCommunityFeed extends CommunityEvent {
   final List<CommunityPost> posts;
-  const UpdateCommunityFeed(this.posts);
+  final int? generation;
+  const UpdateCommunityFeed(this.posts, {this.generation});
 
   @override
   List<Object?> get props => [posts];
@@ -20,7 +21,8 @@ class UpdateCommunityFeed extends CommunityEvent {
 
 class UpdateLeaderboard extends CommunityEvent {
   final List<LeaderboardEntry> leaderboard;
-  const UpdateLeaderboard(this.leaderboard);
+  final int? generation;
+  const UpdateLeaderboard(this.leaderboard, {this.generation});
 
   @override
   List<Object?> get props => [leaderboard];
@@ -43,5 +45,40 @@ class LikeCommunityPost extends CommunityEvent {
 }
 
 class CommunityStreamFailed extends CommunityEvent {
-  const CommunityStreamFailed();
+  final int? generation;
+  const CommunityStreamFailed({this.generation});
+}
+
+class OpenCommunityComments extends CommunityEvent {
+  final String postId;
+  const OpenCommunityComments(this.postId);
+  @override
+  List<Object?> get props => [postId];
+}
+
+class CloseCommunityComments extends CommunityEvent {
+  const CloseCommunityComments();
+}
+
+class UpdateCommunityComments extends CommunityEvent {
+  final String postId;
+  final int generation;
+  final List<CommunityComment> comments;
+  final bool failed;
+  const UpdateCommunityComments(
+    this.postId,
+    this.generation,
+    this.comments, {
+    this.failed = false,
+  });
+  @override
+  List<Object?> get props => [postId, generation, comments, failed];
+}
+
+class CreateCommunityComment extends CommunityEvent {
+  final String postId;
+  final String content;
+  const CreateCommunityComment(this.postId, this.content);
+  @override
+  List<Object?> get props => [postId, content];
 }

@@ -151,31 +151,14 @@ service cloud.firestore {
     // ─── 8. Community & Social ───
     match /community/{postId} {
       allow read: if true;
-      allow create: if isAuth()
-        && request.resource.data.keys().hasOnly([
-          'userId', 'userName', 'avatarUrl', 'content', 'likes',
-          'comments', 'isVerified', 'tradeVerified', 'timestamp'
-        ])
-        && request.resource.data.keys().hasAll([
-          'userId', 'userName', 'avatarUrl', 'content', 'likes',
-          'comments', 'isVerified', 'tradeVerified', 'timestamp'
-        ])
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.userName is string
-        && request.resource.data.userName.size() <= 100
-        && request.resource.data.avatarUrl is string
-        && request.resource.data.avatarUrl.size() <= 2048
-        && request.resource.data.content is string
-        && request.resource.data.content.size() > 0
-        && request.resource.data.content.size() <= 2000
-        && request.resource.data.likes == 0
-        && request.resource.data.comments == 0
-        && request.resource.data.isVerified == false
-        && request.resource.data.tradeVerified == false
-        && request.resource.data.timestamp is timestamp
-        && request.resource.data.timestamp <= request.time;
-      // Verification and engagement counters are backend-owned.
+      // Backend assigns authors, replay-safe IDs, timestamps and counters.
+      allow create: if false;
       allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+      match /comments/{commentId} {
+        allow read: if exists(/databases/$(database)/documents/community/$(postId));
+        // Public comments and their parent count are committed together by BE.
+        allow write: if false;
+      }
     }
     match /leaderboard/{document=**} {
       allow read: if true;
