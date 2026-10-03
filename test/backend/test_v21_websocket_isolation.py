@@ -33,10 +33,11 @@ class FakeSocket:
 class FakeSession:
     instances = []
 
-    def __init__(self, shared_last_prices=None):
+    def __init__(self, shared_last_prices=None, shared_price_observed_at=None):
         self.candle_map = {}
         self.last_price = 0.0
         self.last_prices = shared_last_prices
+        self.price_observed_at = shared_price_observed_at
         self.account_info = {"status": "UNAVAILABLE", "source": "unavailable"}
         self.connections = set()
         self.interval = "5"
@@ -70,7 +71,7 @@ def load_endpoint():
         "WebSocket": object,
         "WebSocketDisconnect": Disconnect,
         "TradingViewStreamer": FakeSession,
-        "streamer": SimpleNamespace(last_prices=shared_prices),
+        "streamer": SimpleNamespace(last_prices=shared_prices, price_observed_at={}),
         "LOCAL_QA_MODE": False,
         "TV_SYMBOL_MAP": {
             "XAUUSD": "OANDA:XAUUSD",
@@ -109,6 +110,7 @@ class WebSocketIsolationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((second.symbol, second.interval), ("OANDA:XAUUSD", "240"))
         self.assertIs(first.last_prices, shared_prices)
         self.assertIs(second.last_prices, shared_prices)
+        self.assertIs(first.price_observed_at, second.price_observed_at)
         self.assertTrue(first.stopped)
         self.assertTrue(second.stopped)
 

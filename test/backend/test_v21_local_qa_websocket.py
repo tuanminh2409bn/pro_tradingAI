@@ -37,13 +37,14 @@ class _Socket:
 class _Session:
     instance = None
 
-    def __init__(self, shared_last_prices):
+    def __init__(self, shared_last_prices, shared_price_observed_at):
         self.interval = '5'
         self.symbol = 'OANDA:XAUUSD'
         type(self).instance = self
         self.candle_map = {}
         self.last_price = 0.0
         self.last_prices = shared_last_prices
+        self.price_observed_at = shared_price_observed_at
         self.account_info = {"status": "UNAVAILABLE"}
         self.connections = set()
         self._pending_delta = {}
@@ -72,7 +73,7 @@ class LocalQaWebSocketTests(unittest.TestCase):
             "WebSocket": _Socket,
             "WebSocketDisconnect": _Disconnected,
             "TradingViewStreamer": _Session,
-            "streamer": SimpleNamespace(last_prices={}),
+            "streamer": SimpleNamespace(last_prices={}, price_observed_at={}),
             "LOCAL_QA_MODE": True,
             "ALLOWED_TV_INTERVALS": {"5", "15"},
             "TV_SYMBOL_MAP": {"EURUSD": "OANDA:EURUSD"},
@@ -91,6 +92,7 @@ class LocalQaWebSocketTests(unittest.TestCase):
         self.assertEqual(socket.sent[0]["interval"], "5")
         self.assertEqual(_Session.instance.start_calls, 0)
         self.assertEqual(_Session.instance.stop_calls, 1)
+        self.assertIs(_Session.instance.price_observed_at, namespace["streamer"].price_observed_at)
         self.assertFalse(_Session.instance.connections)
 
 

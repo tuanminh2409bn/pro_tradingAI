@@ -1,4 +1,5 @@
 import json
+import math
 import time
 import random
 import string
@@ -293,11 +294,13 @@ async def verified_user_id(
         raise HTTPException(status_code=error.status_code, detail=str(error)) from None
 
 class TradingViewStreamer:
-    def __init__(self, shared_last_prices: dict | None = None):
+    def __init__(self, shared_last_prices: dict | None = None,
+                 shared_price_observed_at: dict | None = None):
         self.candle_map = {}
         self.last_price = 0.0
         # Independent mark prices per clean symbol — NEVER reuse chart price for other symbols' PnL
         self.last_prices: dict = shared_last_prices if shared_last_prices is not None else {}
+        self.price_observed_at = shared_price_observed_at if shared_price_observed_at is not None else {}
         self.account_info = {
             "balance": 0.0,
             "equity": 0.0,
@@ -321,10 +324,12 @@ class TradingViewStreamer:
 
     def set_last_price(self, symbol: str, price: float):
         """Bind a mark price to a specific symbol only."""
-        if price is None or price <= 0:
+        if (isinstance(price, bool) or not isinstance(price, (int, float))
+                or not math.isfinite(price) or price <= 0):
             return
         clean = normalize_symbol(symbol)
         self.last_prices[clean] = float(price)
+        self.price_observed_at[clean] = time.monotonic()
         if clean == self.chart_symbol_clean():
             self.last_price = float(price)
 
@@ -986,35 +991,33 @@ async def service_status_loop():
         await asyncio.sleep(60)
 
 async def _check_service_status():
-    """Ping check các services và ghi kết quả vào Firestore."""
+    """Record verified readiness; HTTP reachability alone is not readiness."""
     import time as time_mod
-    results = {}
+    results = {"ai_online": False, "ai_latency": 0,
+               "mt4_online": False, "mt4_latency": 0}
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        # Check AI Analyzer (DeepSeek API)
+    if DEEPSEEK_API_KEY:
         try:
-            t0 = time_mod.time()
-            resp = await client.get("https://api.deepseek.com/", timeout=5)
-            ai_latency = int((time_mod.time() - t0) * 1000)
-            results["ai_online"] = True
-            results["ai_latency"] = ai_latency
-        except Exception:
-            results["ai_online"] = False
-            results["ai_latency"] = 0
+            t0 = time_mod.monotonic()
+            async with httpx.AsyncClient(timeout=5, follow_redirects=False) as client:
+                response = await client.get("https://api.deepseek.com/user/balance",
+                    headers={"Authorization": "Bearer " + DEEPSEEK_API_KEY})
+            results["ai_latency"] = int((time_mod.monotonic() - t0) * 1000)
+            if response.status_code == 200:
+                balance = response.json()
+                results["ai_online"] = isinstance(balance, dict) and balance.get("is_available") is True
+        except (httpx.HTTPError, ValueError):
+            pass
 
-        # Check Data Feeder (self — TradingView WebSocket is running)
-        results["data_online"] = len(streamer.connections) >= 0 and streamer.last_price > 0
-
-        # MT4 Bridge: check if MetaApi endpoint is reachable
-        try:
-            t0 = time_mod.time()
-            resp = await client.get("https://mt-client-api-v1.new-york.agiliumtrade.ai/", timeout=5)
-            mt4_latency = int((time_mod.time() - t0) * 1000)
-            results["mt4_online"] = resp.status_code < 500
-            results["mt4_latency"] = mt4_latency
-        except Exception:
-            results["mt4_online"] = False
-            results["mt4_latency"] = 0
+    # The current MetaApi integration links accounts only; it has no live bridge
+    # session to verify. A public root endpoint's 401/404 cannot prove one.
+    now = time.monotonic()
+    results["data_online"] = any(
+        isinstance(price, (int, float)) and not isinstance(price, bool)
+        and math.isfinite(price) and price > 0
+        and 0 <= now - streamer.price_observed_at.get(symbol, -math.inf) <= 180
+        for symbol, price in streamer.last_prices.items()
+    )
 
     # Day 6 — Admin verify analysis cache backend (Redis / memory)
     try:
@@ -1959,7 +1962,8 @@ async def websocket_endpoint(websocket: WebSocket):
     print("Client Connected")
     # Each browser owns its chart state. Only symbol-bound mark prices are
     # shared, so one connection cannot change another connection's candles.
-    session = TradingViewStreamer(shared_last_prices=streamer.last_prices)
+    session = TradingViewStreamer(shared_last_prices=streamer.last_prices,
+                                  shared_price_observed_at=streamer.price_observed_at)
     session.connections.add(websocket)
     # Gửi ngay dữ liệu hiện có
     candles_list = [session.candle_map[t] for t in sorted(session.candle_map.keys())]
