@@ -41,6 +41,20 @@ void main() {
         expect(stats.hasReferralLink, isTrue);
         expect(stats.isAvailable, isFalse);
         expect(stats.identity!.code, code);
+        for (final count in [null, -1, true, '3', 3.2]) {
+          expect(
+            ReferralStats.fromJson({
+              'registeredInviteCount': count,
+            }).registeredInviteCount,
+            isNull,
+          );
+        }
+        expect(
+          ReferralStats.fromJson({
+            'registeredInviteCount': 3,
+          }).registeredInviteCount,
+          3,
+        );
         expect(
           ReferralStats.fromJson({'referralLink': '/demo'}).hasReferralLink,
           isFalse,

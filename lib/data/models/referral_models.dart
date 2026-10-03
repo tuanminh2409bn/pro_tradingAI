@@ -7,6 +7,7 @@ class ReferralStats extends Equatable {
   final String referralLink;
   final String referralCode;
   final String currency;
+  final int? registeredInviteCount;
   final bool isAvailable;
 
   const ReferralStats({
@@ -16,6 +17,7 @@ class ReferralStats extends Equatable {
     required this.referralLink,
     this.referralCode = '',
     this.currency = 'USD',
+    this.registeredInviteCount,
     this.isAvailable = true,
   });
 
@@ -26,6 +28,7 @@ class ReferralStats extends Equatable {
       referralLink = '',
       referralCode = '',
       currency = '',
+      registeredInviteCount = null,
       isAvailable = false;
 
   factory ReferralStats.fromJson(Map<String, dynamic> data) {
@@ -56,6 +59,11 @@ class ReferralStats extends Equatable {
           ? data['referralLink'] as String
           : '',
       isAvailable: verified,
+      registeredInviteCount:
+          data['registeredInviteCount'] is int &&
+              (data['registeredInviteCount'] as int) >= 0
+          ? data['registeredInviteCount'] as int
+          : null,
     );
   }
 
@@ -80,6 +88,7 @@ class ReferralStats extends Equatable {
     referralLink,
     referralCode,
     currency,
+    registeredInviteCount,
     isAvailable,
   ];
 }
@@ -174,6 +183,8 @@ class ReferralIdentity extends Equatable {
 }
 
 enum MarketingAssetType { banner, video }
+
+enum ReferralRegistrationStatus { recorded, restored, notEligible }
 
 enum MarketingKitStatus { readyForRenderer, unavailable }
 

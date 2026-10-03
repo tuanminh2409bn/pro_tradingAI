@@ -16,7 +16,17 @@ import 'referral_kit_card.dart';
 class ReferralWebPage extends StatelessWidget {
   final String? userId;
   final VoidCallback? onMenuPressed;
-  const ReferralWebPage({super.key, this.userId, this.onMenuPressed});
+  final bool registrationPending;
+  final String? registrationMessageKey;
+  final VoidCallback? onRegistrationRetry;
+  const ReferralWebPage({
+    super.key,
+    this.userId,
+    this.onMenuPressed,
+    this.registrationPending = false,
+    this.registrationMessageKey,
+    this.onRegistrationRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +78,37 @@ class ReferralWebPage extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildHeader(context, isMobile),
+                              if (registrationPending ||
+                                  registrationMessageKey != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        context.tr(
+                                          registrationPending
+                                              ? 'referral_registration_pending'
+                                              : registrationMessageKey!,
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                      if (!registrationPending &&
+                                          onRegistrationRetry != null)
+                                        TextButton(
+                                          onPressed: onRegistrationRetry,
+                                          child: Text(
+                                            context.tr(
+                                              'referral_registration_retry',
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               const SizedBox(height: 32),
                               if (isMobile) ...[
                                 _buildStatsCard(context, state.stats),
@@ -79,9 +120,9 @@ class ReferralWebPage extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 24),
                                 ],
-                                _buildNetworkCard(state.network),
+                                _buildNetworkCard(context, state.network),
                                 const SizedBox(height: 24),
-                                _buildHistoryCard(state.history),
+                                _buildHistoryCard(context, state.history),
                               ] else
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,14 +142,20 @@ class ReferralWebPage extends StatelessWidget {
                                             ),
                                             const SizedBox(height: 24),
                                           ],
-                                          _buildHistoryCard(state.history),
+                                          _buildHistoryCard(
+                                            context,
+                                            state.history,
+                                          ),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 24),
                                     Expanded(
                                       flex: 1,
-                                      child: _buildNetworkCard(state.network),
+                                      child: _buildNetworkCard(
+                                        context,
+                                        state.network,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -174,6 +221,12 @@ class ReferralWebPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
+          _buildStatItem(
+            context.tr('referral_registered_invites'),
+            stats.registeredInviteCount?.toString() ?? '—',
+            Colors.white,
+          ),
+          const SizedBox(height: 24),
           Wrap(
             spacing: 28,
             runSpacing: 20,
@@ -294,7 +347,7 @@ class ReferralWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildNetworkCard(List<MemberNode> network) {
+  Widget _buildNetworkCard(BuildContext context, List<MemberNode> network) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -304,11 +357,11 @@ class ReferralWebPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(24),
+          Padding(
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'NETWORK HIERARCHY',
-              style: TextStyle(
+              context.tr('referral_network_title'),
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 color: Colors.white54,
@@ -318,12 +371,12 @@ class ReferralWebPage extends StatelessWidget {
           ),
           const Divider(color: Colors.white10, height: 1),
           if (network.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(40.0),
+            Padding(
+              padding: const EdgeInsets.all(40.0),
               child: Center(
                 child: Text(
-                  'No network members found.',
-                  style: TextStyle(color: Colors.white24, fontSize: 12),
+                  context.tr('referral_network_empty'),
+                  style: const TextStyle(color: Colors.white24, fontSize: 12),
                 ),
               ),
             )
@@ -373,7 +426,10 @@ class ReferralWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryCard(List<RewardTransaction> history) {
+  Widget _buildHistoryCard(
+    BuildContext context,
+    List<RewardTransaction> history,
+  ) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -383,11 +439,11 @@ class ReferralWebPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(24),
+          Padding(
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'REWARD TRANSACTIONS',
-              style: TextStyle(
+              context.tr('referral_history_title'),
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,
                 color: Colors.white54,
@@ -397,12 +453,12 @@ class ReferralWebPage extends StatelessWidget {
           ),
           const Divider(color: Colors.white10, height: 1),
           if (history.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(40.0),
+            Padding(
+              padding: const EdgeInsets.all(40.0),
               child: Center(
                 child: Text(
-                  'No transaction history.',
-                  style: TextStyle(color: Colors.white24, fontSize: 12),
+                  context.tr('referral_history_empty'),
+                  style: const TextStyle(color: Colors.white24, fontSize: 12),
                 ),
               ),
             )

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/referral_link.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/local_qa_mode.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -273,6 +274,13 @@ class _LoginWebPageState extends State<LoginWebPage>
               : context.tr('login_desc'),
           style: const TextStyle(color: Colors.white54, fontSize: 14),
         ),
+        if (referralCodeFromUri(Uri.base) != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            context.tr('referral_registration_note'),
+            style: const TextStyle(color: AppColors.primary, fontSize: 12),
+          ),
+        ],
         const SizedBox(height: 48),
         _buildTextField(
           controller: _emailController,

@@ -5,6 +5,11 @@ import 'package:http/http.dart' as http;
 import '../../core/constants/backend_endpoints.dart';
 import '../models/referral_models.dart';
 
+class ReferralRegistrationException implements Exception {
+  final int statusCode;
+  const ReferralRegistrationException(this.statusCode);
+}
+
 class ReferralRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -49,6 +54,51 @@ class ReferralRepository {
       code: data['code'] as String,
       link: data['link'] as String,
     );
+  }
+
+  Future<ReferralRegistrationStatus> recordRegistrationReferral(
+    String code,
+  ) async {
+    ReferralIdentity.fromServerLink(
+      code: code,
+      link: Uri.https('protrading-ai-2026.web.app', '/', {
+        'ref': code,
+      }).toString(),
+    );
+    final user = _auth.currentUser;
+    final token = await user?.getIdToken();
+    if (user == null ||
+        token == null ||
+        token.isEmpty ||
+        _auth.currentUser?.uid != user.uid) {
+      throw StateError('Authentication is required');
+    }
+    final response = await _client
+        .post(
+          Uri.parse('${BackendEndpoints.apiBaseUrl}/api/referral/registration'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'code': code}),
+        )
+        .timeout(const Duration(seconds: 15));
+    if (_auth.currentUser?.uid != user.uid) {
+      throw StateError('Identity changed');
+    }
+    if (response.statusCode != 200) {
+      throw ReferralRegistrationException(response.statusCode);
+    }
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('Invalid registration status');
+    }
+    return switch (data['status']) {
+      'recorded' => ReferralRegistrationStatus.recorded,
+      'restored' => ReferralRegistrationStatus.restored,
+      'not_eligible' => ReferralRegistrationStatus.notEligible,
+      _ => throw const FormatException('Invalid registration status'),
+    };
   }
 
   /// Stream referral stats provisioned by the authoritative backend.

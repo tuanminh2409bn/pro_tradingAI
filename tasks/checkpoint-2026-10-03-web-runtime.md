@@ -261,6 +261,28 @@
   video và W27 ledger/withdrawal. W26/W27 tiếp tục mở; không coi link đã encode
   đúng là toàn bộ chương trình giới thiệu đã hoàn tất.
 
+## Referral registration — tiếp nối ngày 04/10
+
+- Link `?ref=` chỉ nhận một code hợp lệ. Auth BLoC gọi API token sau đăng nhập,
+  chống request trùng, giữ phiên/trạng thái trang khi lỗi, có retry và loại kết
+  quả khác UID. Event Auth lặp cùng UID giữ pending và kết quả đúng; main shell
+  dùng Scaffold key ổn định và dispose dữ liệu trang khi UID đổi.
+- Backend chỉ nhận code, identity từ token. User phải hoạt động, tạo sau người
+  giới thiệu và trong 24 giờ. Ghi một attribution bất biến dưới own `meta` và
+  tăng registeredInviteCount cùng transaction; không đổi role hoặc tạo tiền.
+- Browser tạo account mới trên Emulator từ link thật, SDK đối chiếu attribution
+  chỉ có code/timestamp và inviter count 1. Hub hiện phản hồi thành công, identity
+  riêng cho account mới, đổi sang inviter hiện count 1 và chặn tự giới thiệu.
+- Concurrency phát hiện SDK transaction wrapper có trạng thái và read-phase
+  contention không được tự retry. Mỗi execution nay có wrapper riêng và tối đa
+  ba lần thử với backoff hữu hạn. Referral/Community giữ nguyên transaction,
+  20 request/sáu worker và assertions; full Emulator **293/293** đạt.
+- Flutter **181 đạt + 1 Web-only skip**, Chrome **1/1**, analyzer không error hoặc
+  warning, ba info Mobile cũ. Source cấp mã/PNG trước là `f65e1d2`; cả hai slice
+  đang chuẩn bị release. Bằng chứng: `web-referral-registration-qa-2026-10-04.json`.
+- W26 còn video cá nhân hóa gốc và production readback; W27 receipts/ledger/
+  withdrawal còn mở. Phần này không gọi DeepSeek; không chạy probe AI bị chặn.
+
 ## Tiếp tục
 
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source

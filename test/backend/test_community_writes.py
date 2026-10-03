@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
 from community_api import community_write_intent
+from google.api_core.exceptions import Aborted
 from test.backend.test_v21_community_like import HttpError, Ref as BaseRef, Transaction
 
 
@@ -27,7 +29,7 @@ class Ref(BaseRef):
 def load_functions(store):
     source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
     names = {"commit_community_post", "commit_community_comment",
-             "community_author", "create_community_post", "create_community_comment"}
+             "community_author", "create_community_post", "create_community_comment", "run_firestore_transaction"}
     nodes = [node for node in ast.parse(source).body
              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in names]
     for node in nodes:
@@ -44,13 +46,13 @@ def load_functions(store):
         "CommunityPostRequest": object, "CommunityCommentRequest": object,
         "Header": lambda default=None: default, "HTTPException": HttpError,
         "verified_user_id": verify, "community_write_intent": community_write_intent,
-        "asyncio": asyncio, "db": Ref(store),
+        "asyncio": asyncio, "db": Ref(store), "time": time, "Aborted": Aborted,
         "auth": SimpleNamespace(get_user=lambda uid: SimpleNamespace(
             disabled=False, display_name="Alice", photo_url=None)),
         "firestore": SimpleNamespace(SERVER_TIMESTAMP="server-time"),
         "cloud_firestore": SimpleNamespace(transactional=lambda fn: fn),
     }
-    namespace["db"].transaction = lambda: Transaction(store)
+    namespace["db"].transaction = lambda **kwargs: Transaction(store)
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])),
                  "server.py", "exec"), namespace)
     return namespace

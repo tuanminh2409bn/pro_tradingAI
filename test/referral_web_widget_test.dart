@@ -15,8 +15,10 @@ final _identity = ReferralIdentity.fromServerLink(
 
 class _Repository extends Fake implements ReferralRepository {
   bool fail = false;
+  int provisions = 0;
   @override
   Future<ReferralIdentity> provisionIdentity() async {
+    ++provisions;
     if (fail) throw StateError('unavailable');
     return _identity;
   }
@@ -26,6 +28,7 @@ class _Repository extends Fake implements ReferralRepository {
     ReferralStats.fromJson({
       'referralCode': _identity.code,
       'referralLink': _identity.qrPayload,
+      'registeredInviteCount': 3,
     }),
   );
   @override
@@ -35,14 +38,23 @@ class _Repository extends Fake implements ReferralRepository {
       Stream.value(const []);
 }
 
-Widget _page(_Repository repository) =>
-    RepositoryProvider<ReferralRepository>.value(
-      value: repository,
-      child: BlocProvider(
-        create: (_) => LocaleCubit()..setLanguage('vi'),
-        child: const MaterialApp(home: ReferralWebPage(userId: 'alice')),
+Widget _page(
+  _Repository repository, {
+  String? message,
+  VoidCallback? onRetry,
+}) => RepositoryProvider<ReferralRepository>.value(
+  value: repository,
+  child: BlocProvider(
+    create: (_) => LocaleCubit()..setLanguage('vi'),
+    child: MaterialApp(
+      home: ReferralWebPage(
+        userId: 'alice',
+        registrationMessageKey: message,
+        onRegistrationRetry: onRetry,
       ),
-    );
+    ),
+  ),
+);
 
 void main() {
   testWidgets(
@@ -56,8 +68,9 @@ void main() {
       tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
         SystemChannels.platform,
         (call) async {
-          if (call.method == 'Clipboard.setData')
+          if (call.method == 'Clipboard.setData') {
             copied = (call.arguments as Map)['text'] as String;
+          }
           return null;
         },
       );
@@ -70,10 +83,14 @@ void main() {
       await tester.pumpWidget(_page(_Repository()));
       await tester.pumpAndSettle();
       expect(
-        find.text('Chưa có ledger phần thưởng và số thành viên được xác minh.'),
+        find.text(
+          'Chưa có phần thưởng và số thành viên trả phí được xác minh.',
+        ),
         findsOneWidget,
       );
       expect(find.text('USD 0.00'), findsNothing);
+      expect(find.text('ĐĂNG KÝ TỪ LINK CỦA BẠN'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
       expect(find.byType(QrImageView), findsOneWidget);
       final copy = find.byTooltip('Sao chép link giới thiệu');
       await tester.ensureVisible(copy);
@@ -98,4 +115,29 @@ void main() {
     expect(find.byType(QrImageView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'registration feedback can retry without reprovisioning the page',
+    (tester) async {
+      final repository = _Repository();
+      var retries = 0;
+      await tester.pumpWidget(_page(repository));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _page(
+          repository,
+          message: 'referral_registration_unavailable',
+          onRetry: () => retries++,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final retry = find.text('Thử lại ghi nhận giới thiệu');
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      expect(retries, 1);
+      expect(repository.provisions, 1);
+      expect(find.byType(QrImageView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

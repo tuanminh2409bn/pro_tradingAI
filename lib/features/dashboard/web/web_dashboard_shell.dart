@@ -13,18 +13,25 @@ import '../../referral/web/referral_web_page.dart';
 import '../../profile/web/profile_web_page.dart';
 import '../../admin/web/admin_web_page.dart';
 import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/bloc/auth_event.dart';
 import '../../../core/security/admin_access.dart';
 import '../../../core/utils/community_post_link.dart';
 
-class WebDashboardShell extends StatelessWidget {
+class WebDashboardShell extends StatefulWidget {
   const WebDashboardShell({super.key});
 
   @override
+  State<WebDashboardShell> createState() => _WebDashboardShellState();
+}
+
+class _WebDashboardShellState extends State<WebDashboardShell> {
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
   Widget build(BuildContext context) {
-    final authState = context.read<AuthBloc>().state;
+    final authState = context.watch<AuthBloc>().state;
     final String? userId = authState.user?.uid;
     final sharedPostId = sharedCommunityPostId(Uri.base);
-    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
     return BlocProvider(
       create: (context) => NavigationCubit()
@@ -84,6 +91,16 @@ class WebDashboardShell extends StatelessWidget {
                             return ReferralWebPage(
                               userId: userId,
                               onMenuPressed: onMenuPressed,
+                              registrationPending:
+                                  authState.registrationReferralPending,
+                              registrationMessageKey:
+                                  authState.registrationReferralMessageKey,
+                              onRegistrationRetry:
+                                  authState.registrationReferralRetryable
+                                  ? () => context.read<AuthBloc>().add(
+                                      const AuthRegistrationReferralRequested(),
+                                    )
+                                  : null,
                             );
                           case NavbarItem.profile:
                             return ProfileWebPage(

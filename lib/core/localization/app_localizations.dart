@@ -189,14 +189,31 @@ class AppLocalizations {
       'referral_f1_members': 'F1 MEMBERS',
       'referral_f2_members': 'F2 MEMBERS',
       'referral_ledger_unavailable':
-          'Verified reward ledger and member counts are not available yet.',
+          'Verified rewards and paid member counts are not available yet.',
+      'referral_registered_invites': 'REGISTERED FROM YOUR LINK',
+      'referral_network_title': 'VERIFIED MEMBER NETWORK',
+      'referral_network_empty': 'No verified member network available.',
+      'referral_history_title': 'REWARD TRANSACTIONS',
+      'referral_history_empty': 'No verified reward transactions available.',
+      'referral_registration_note':
+          'This referral link can be recorded within 24 hours of creating a new account. It does not change your plan or create a reward payment.',
+      'referral_registration_pending': 'Recording your referral link…',
+      'referral_registration_recorded':
+          'Your registration referral has been recorded.',
+      'referral_registration_not_eligible':
+          'A referral requires an account created after the referrer and within the last 24 hours.',
+      'referral_registration_denied':
+          'This referral link cannot be assigned to this account.',
+      'referral_registration_unavailable':
+          'Unable to record your referral link. You can retry while the registration window is open.',
+      'referral_registration_retry': 'Retry referral registration',
       'referral_link_label': 'REFERRAL LINK',
       'referral_copy_link': 'Copy referral link',
       'referral_code_label': 'YOUR REFERRAL CODE',
       'referral_kit_title': 'QR & Marketing Kit',
       'referral_kit_description':
           'Download your QR or a personalized ProTrading banner as PNG.',
-      'referral_qr_label': 'QR for your server-issued referral link',
+      'referral_qr_label': 'QR for your referral link',
       'referral_download_qr': 'Download QR',
       'referral_download_banner': 'Download banner',
       'referral_download_ready': 'Download requested from your browser.',
@@ -654,14 +671,31 @@ class AppLocalizations {
       'referral_f1_members': 'THÀNH VIÊN F1',
       'referral_f2_members': 'THÀNH VIÊN F2',
       'referral_ledger_unavailable':
-          'Chưa có ledger phần thưởng và số thành viên được xác minh.',
+          'Chưa có phần thưởng và số thành viên trả phí được xác minh.',
+      'referral_registered_invites': 'ĐĂNG KÝ TỪ LINK CỦA BẠN',
+      'referral_network_title': 'MẠNG THÀNH VIÊN ĐÃ XÁC MINH',
+      'referral_network_empty': 'Chưa có mạng thành viên đã xác minh.',
+      'referral_history_title': 'GIAO DỊCH PHẦN THƯỞNG',
+      'referral_history_empty': 'Chưa có giao dịch phần thưởng đã xác minh.',
+      'referral_registration_note':
+          'Link giới thiệu được ghi nhận trong 24 giờ sau khi tạo tài khoản mới. Việc này không thay đổi gói tài khoản hoặc phát sinh tiền thưởng.',
+      'referral_registration_pending': 'Đang ghi nhận link giới thiệu…',
+      'referral_registration_recorded':
+          'Đã ghi nhận link giới thiệu cho đăng ký của bạn.',
+      'referral_registration_not_eligible':
+          'Link chỉ được ghi nhận cho tài khoản tạo sau người giới thiệu và trong 24 giờ gần nhất.',
+      'referral_registration_denied':
+          'Không thể gán link giới thiệu này cho tài khoản.',
+      'referral_registration_unavailable':
+          'Chưa ghi nhận được link giới thiệu. Bạn có thể thử lại trong thời hạn đăng ký.',
+      'referral_registration_retry': 'Thử lại ghi nhận giới thiệu',
       'referral_link_label': 'LINK GIỚI THIỆU',
       'referral_copy_link': 'Sao chép link giới thiệu',
       'referral_code_label': 'MÃ GIỚI THIỆU CỦA BẠN',
       'referral_kit_title': 'QR & Bộ tài liệu giới thiệu',
       'referral_kit_description':
           'Tải mã QR hoặc banner ProTrading cá nhân hóa dạng PNG.',
-      'referral_qr_label': 'QR chứa link giới thiệu do server cấp',
+      'referral_qr_label': 'QR chứa link giới thiệu của bạn',
       'referral_download_qr': 'Tải QR',
       'referral_download_banner': 'Tải banner',
       'referral_download_ready': 'Đã gửi yêu cầu tải tệp tới trình duyệt.',

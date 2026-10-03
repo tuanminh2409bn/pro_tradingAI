@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:protrading_ai/data/repositories/referral_repository.dart';
+import 'package:protrading_ai/data/models/referral_models.dart';
+import 'package:protrading_ai/core/utils/referral_link.dart';
 
 class _User extends Fake implements User {
   @override
@@ -23,6 +25,45 @@ class _Auth extends Fake implements FirebaseAuth {
 class _Firestore extends Fake implements FirebaseFirestore {}
 
 void main() {
+  test(
+    'ref query is unambiguous and registration sends only code with token',
+    () async {
+      const code = 'abcdefghijklmnopqrstuvwx';
+      expect(
+        referralCodeFromUri(Uri.parse('https://example.test/?ref=$code')),
+        code,
+      );
+      expect(
+        referralCodeFromUri(
+          Uri.parse('https://example.test/?ref=$code&ref=$code'),
+        ),
+        isNull,
+      );
+      expect(
+        referralCodeFromUri(
+          Uri.parse('https://example.test/?ref=../users/alice'),
+        ),
+        isNull,
+      );
+      final client = MockClient((request) async {
+        expect(request.url.path, '/api/referral/registration');
+        expect(request.headers['Authorization'], 'Bearer offline-token');
+        expect(jsonDecode(request.body), {'code': code});
+        return http.Response('{"status":"recorded"}', 200);
+      });
+      addTearDown(client.close);
+      final repository = ReferralRepository(
+        firestore: _Firestore(),
+        auth: _Auth(),
+        client: client,
+      );
+      expect(
+        await repository.recordRegistrationReferral(code),
+        ReferralRegistrationStatus.recorded,
+      );
+    },
+  );
+
   test(
     'provision sends only a token and verifies the returned identity',
     () async {

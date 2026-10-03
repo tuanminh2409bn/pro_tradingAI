@@ -18,7 +18,7 @@ import httpx
 from metaapi_cloud_sdk import MetaApi
 import firebase_admin
 from firebase_admin import auth, credentials, firestore, messaging
-from google.api_core.exceptions import Conflict
+from google.api_core.exceptions import Aborted, Conflict
 from google.cloud import firestore as cloud_firestore
 from google.auth.credentials import AnonymousCredentials
 from openai import OpenAI
@@ -69,7 +69,7 @@ from push_preferences import push_recipient_opted_in
 from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
 from community_api import community_write_intent
-from referral_api import canonical_referral_link, new_referral_code, ReferralCodeCollision
+from referral_api import canonical_referral_link, new_referral_code, ReferralCodeCollision, eligible_registration
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
 from backtest_api import backtest_creation, same_backtest_creation
@@ -296,6 +296,11 @@ class CommunityPostRequest(BaseModel):
 
 class CommunityCommentRequest(CommunityPostRequest):
     postId: StrictStr
+
+
+class ReferralRegistrationRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    code: StrictStr
 
 
 async def verified_user_id(
@@ -1471,7 +1476,19 @@ async def image_proxy(url: str):
         print("[ImageProxy] Fetch failed")
         return Response(status_code=502)
 
-@cloud_firestore.transactional
+def run_firestore_transaction(commit, *args):
+    """Retry read-phase contention with a fresh SDK wrapper/transaction."""
+    for attempt in range(3):
+        try:
+            return cloud_firestore.transactional(commit)(db.transaction(max_attempts=5), *args)
+        except (Aborted, ValueError) as error:
+            if not isinstance(error, Aborted) and not isinstance(error.__cause__, Aborted):
+                raise
+            if attempt == 2:
+                raise
+            time.sleep(0.2 * (2 ** attempt))
+
+
 def commit_referral_identity(transaction, user_id: str, candidate_code: str) -> dict:
     owner_ref = db.collection("referrals").document(user_id)
     owner = owner_ref.get(transaction=transaction)
@@ -1496,6 +1513,7 @@ def commit_referral_identity(transaction, user_id: str, candidate_code: str) -> 
     transaction.set(owner_ref, {
         "referralCode": code, "referralLink": link,
         "identityCreatedAt": firestore.SERVER_TIMESTAMP,
+        "registeredInviteCount": 0,
     }, merge=True)
     return {"code": code, "link": link}
 
@@ -1507,7 +1525,7 @@ async def provision_referral_identity(authorization: str | None = Header(default
         for _ in range(4):
             try:
                 return await asyncio.to_thread(
-                    commit_referral_identity, db.transaction(), user_id, new_referral_code(),
+                    run_firestore_transaction, commit_referral_identity, user_id, new_referral_code(),
                 )
             except ReferralCodeCollision:
                 continue
@@ -1518,7 +1536,70 @@ async def provision_referral_identity(authorization: str | None = Header(default
     raise HTTPException(status_code=503, detail="Referral identity unavailable")
 
 
-@cloud_firestore.transactional
+def commit_referral_registration(transaction, user_id: str, code: str, inviter_id: str) -> dict:
+    if user_id == inviter_id:
+        raise HTTPException(status_code=403, detail="Self referral is unavailable")
+    attribution_ref = db.collection("users").document(user_id).collection("meta").document("referral_attribution")
+    attribution = attribution_ref.get(transaction=transaction)
+    if attribution.exists:
+        if (attribution.to_dict() or {}).get("code") != code:
+            raise HTTPException(status_code=409, detail="Referral already recorded")
+        return {"status": "restored"}
+    registry = db.collection("referral_codes").document(code).get(transaction=transaction)
+    if not registry.exists or (registry.to_dict() or {}).get("userId") != inviter_id:
+        raise HTTPException(status_code=404, detail="Referral unavailable")
+    owner_ref = db.collection("referrals").document(inviter_id)
+    owner = owner_ref.get(transaction=transaction).to_dict() or {}
+    count = owner.get("registeredInviteCount", 0)
+    if owner.get("referralCode") != code or not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        raise HTTPException(status_code=503, detail="Referral unavailable")
+    transaction.create(attribution_ref, {"code": code, "createdAt": firestore.SERVER_TIMESTAMP})
+    transaction.update(owner_ref, {"registeredInviteCount": count + 1})
+    return {"status": "recorded"}
+
+
+@app.post("/api/referral/registration")
+async def register_referral(
+    req: ReferralRegistrationRequest,
+    authorization: str | None = Header(default=None),
+):
+    user_id = await verified_user_id(authorization)
+    try:
+        canonical_referral_link(req.code)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid referral code") from None
+    try:
+        attribution_ref = db.collection("users").document(user_id).collection("meta").document("referral_attribution")
+        previous = await asyncio.to_thread(attribution_ref.get)
+        if previous.exists:
+            if (previous.to_dict() or {}).get("code") != req.code:
+                raise HTTPException(status_code=409, detail="Referral already recorded")
+            return {"status": "restored"}
+        registry = await asyncio.to_thread(db.collection("referral_codes").document(req.code).get)
+        inviter_id = (registry.to_dict() or {}).get("userId") if registry.exists else None
+        if not isinstance(inviter_id, str) or not inviter_id or len(inviter_id) > 128:
+            raise HTTPException(status_code=404, detail="Referral unavailable")
+        if inviter_id == user_id:
+            raise HTTPException(status_code=403, detail="Self referral is unavailable")
+        user, inviter = await asyncio.wait_for(asyncio.gather(
+            asyncio.to_thread(auth.get_user, user_id),
+            asyncio.to_thread(auth.get_user, inviter_id),
+        ), timeout=10)
+        if user.disabled or inviter.disabled:
+            raise HTTPException(status_code=403, detail="Referral unavailable")
+        if not eligible_registration(user.user_metadata.creation_timestamp,
+                                     inviter.user_metadata.creation_timestamp,
+                                     int(time.time() * 1000)):
+            return {"status": "not_eligible"}
+        return await asyncio.to_thread(
+            run_firestore_transaction, commit_referral_registration, user_id, req.code, inviter_id,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Referral unavailable") from None
+
+
 def commit_community_post(transaction, post_ref, user_id: str, content: str, author: dict) -> dict:
     post = post_ref.get(transaction=transaction)
     if post.exists:
@@ -1534,7 +1615,6 @@ def commit_community_post(transaction, post_ref, user_id: str, content: str, aut
     return {"postId": post_ref.id}
 
 
-@cloud_firestore.transactional
 def commit_community_comment(
     transaction, post_ref, comment_ref, user_id: str, content: str, author: dict,
 ) -> dict:
@@ -1583,7 +1663,7 @@ async def create_community_post(
         author = await community_author(user_id)
         post_ref = db.collection("community").document(post_id)
         return await asyncio.to_thread(
-            commit_community_post, db.transaction(), post_ref, user_id, content, author
+            run_firestore_transaction, commit_community_post, post_ref, user_id, content, author
         )
     except HTTPException:
         raise
@@ -1608,7 +1688,7 @@ async def create_community_comment(
         post_ref = db.collection("community").document(req.postId)
         comment_ref = post_ref.collection("comments").document(comment_id)
         return await asyncio.to_thread(
-            commit_community_comment, db.transaction(), post_ref, comment_ref,
+            run_firestore_transaction, commit_community_comment, post_ref, comment_ref,
             user_id, content, author,
         )
     except HTTPException:
@@ -1617,7 +1697,6 @@ async def create_community_comment(
         raise HTTPException(status_code=503, detail="Community temporarily unavailable")
 
 
-@cloud_firestore.transactional
 def commit_community_like(transaction, post_ref, user_id: str) -> dict:
     """Count one like per verified UID, including concurrent/retried requests."""
     post = post_ref.get(transaction=transaction)
@@ -1648,9 +1727,14 @@ async def like_community_post(
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", req.postId):
         raise HTTPException(status_code=422, detail="Invalid community post ID")
     post_ref = db.collection("community").document(req.postId)
-    return await asyncio.to_thread(
-        commit_community_like, db.transaction(), post_ref, user_id
-    )
+    try:
+        return await asyncio.to_thread(
+            run_firestore_transaction, commit_community_like, post_ref, user_id
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="Community temporarily unavailable") from None
 
 
 @app.post("/api/account/link")

@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-04",
+  "scope": "W26 registration attribution, Auth feedback, finite transaction contention retry",
+  "source_commit": null,
+  "production": {"status": "not_released", "llm_calls": 0},
+  "local": {
+    "environment": "server.py 8088; Auth 9099/Firestore 8080 Emulators; Flutter release 8791",
+    "browser_account_created_from_ref_link": true,
+    "registration_success_feedback": true,
+    "sdk_attribution_has_only_code_and_timestamp": true,
+    "inviter_registered_count": 1,
+    "new_user_claims_unchanged": true,
+    "financial_fields_not_created": true,
+    "new_user_has_own_distinct_referral_identity": true,
+    "switch_uid_discards_previous_page_state": true,
+    "self_referral_denied_and_count_unchanged": true,
+    "proofs": [
+      "web-local-referral-registration-2026-10-04.png",
+      "web-local-referral-registration-hub-2026-10-04.png",
+      "web-local-referral-inviter-count-2026-10-04.png"
+    ],
+    "llm_calls": 0
+  },
+  "verification": {
+    "python_emulator_suite": {"total": 293, "passed": 293},
+    "final_handler_followup": {"status": "passed"},
+    "flutter_full_suite": {"passed": 181, "web_only_skip": 1},
+    "web_login_chrome": {"total": 1, "passed": 1},
+    "analyzer": {"errors": 0, "warnings": 0, "existing_mobile_infos": 3},
+    "local_web_build": "passed",
+    "parallel_registration": {"requests": 20, "workers": 6, "recorded": 1, "inviter_count": 1},
+    "rules": "owner may read own immutable attribution; no client writes or cross-user reads",
+    "auth": "same-UID auth replay retains pending feedback; duplicate delivery is deduplicated; other UID result ignored; transient HTTP failure supports retry",
+    "transactions": "fresh SDK wrapper per execution; read-phase Aborted and commit-contention exhaustion retry at most three times; other errors propagate",
+    "emulator_contention_failures_before_fix": true,
+    "assertions_and_concurrency_not_reduced": true
+  },
+  "remaining": [
+    "Production candidate/cutover and same-build browser readback are pending.",
+    "Original personalized video rendering/export remains to implement for W26.",
+    "W27 trusted receipts, financial policy, immutable reward ledger and Admin withdrawal are unfinished.",
+    "Paid Analysis/Chat production probe remains pending the specific auto-review approval."
+  ]
+}

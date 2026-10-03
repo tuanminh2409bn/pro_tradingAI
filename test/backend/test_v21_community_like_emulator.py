@@ -45,9 +45,9 @@ class CommunityLikeEmulatorTests(unittest.TestCase):
         post_ref = client.collection("community").document(f"like-{uuid.uuid4().hex}")
         post_ref.set({"userId": "owner", "content": "Market note", "likes": 0})
         try:
-            first = commit_like(client.transaction(), post_ref, "alice")
-            replay = commit_like(client.transaction(), post_ref, "alice")
-            second = commit_like(client.transaction(), post_ref, "bob")
+            first = cloud_firestore.transactional(commit_like)(client.transaction(), post_ref, "alice")
+            replay = cloud_firestore.transactional(commit_like)(client.transaction(), post_ref, "alice")
+            second = cloud_firestore.transactional(commit_like)(client.transaction(), post_ref, "bob")
             self.assertEqual((first["likes"], replay["likes"], second["likes"]), (1, 1, 2))
             self.assertTrue(replay["alreadyLiked"])
             self.assertEqual(post_ref.get().to_dict()["likes"], 2)

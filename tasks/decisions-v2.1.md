@@ -76,6 +76,21 @@ Provider contracts, account access, real licensed samples and staging credential
 
 ## Official contract references
 
+### Registration attribution and transaction contention — 2026-10-04
+
+Owner delegation selects a 24-hour attribution window for active Auth users,
+with the referrer account created strictly earlier to prevent cycles. This
+records registration only; it grants no claim or monetary entitlement.
+Private immutable owner metadata and an aggregate registration count commit
+atomically. SDK transactional wrappers are allocated per execution and bounded
+read/commit contention retries run inside the existing worker-thread boundary.
+Client identity changes discard old results; transient errors leave login intact.
+
+- Firebase Emulator transaction limitations: https://firebase.google.com/docs/emulator-suite/connect_firestore#transactions
+- Installed google-cloud-firestore transaction wrapper source confirms retry
+  state is held on the wrapper and SDK automatic Aborted retry covers commit.
+- Evidence: `web-referral-registration-qa-2026-10-04.json`.
+
 ### Referral identity / local PNG kit — 2026-10-03
 
 Owner delegation covers the technical choice: qr_flutter 4.1.0 (BSD-3) with

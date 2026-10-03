@@ -25,6 +25,8 @@ import 'data/repositories/admin_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'core/constants/colors.dart';
 import 'core/constants/local_qa_mode.dart';
+import 'core/utils/referral_link.dart';
+import 'core/localization/app_localizations.dart';
 import 'core/services/fcm_service.dart';
 
 void main() async {
@@ -85,6 +87,8 @@ void main() async {
             create: (context) => AuthBloc(
               authRepository: authRepository,
               profileRepository: profileRepository,
+              referralRepository: referralRepository,
+              signupReferralCode: kIsWeb ? referralCodeFromUri(Uri.base) : null,
             ),
           ),
           BlocProvider(create: (context) => LocaleCubit()),
@@ -116,7 +120,34 @@ class ProTradingApp extends StatelessWidget {
             fontFamily: 'Inter',
           ),
           home: BlocListener<AuthBloc, AuthState>(
+            listenWhen: (previous, current) =>
+                previous.status != current.status ||
+                previous.user?.uid != current.user?.uid ||
+                previous.errorMessage != current.errorMessage ||
+                previous.registrationReferralMessageNonce !=
+                    current.registrationReferralMessageNonce,
             listener: (context, state) {
+              if (kIsWeb && state.registrationReferralMessageKey != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!context.mounted) return;
+                  final current = context.read<AuthBloc>().state;
+                  if (current.user?.uid != state.user?.uid ||
+                      current.registrationReferralMessageNonce !=
+                          state.registrationReferralMessageNonce) {
+                    return;
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.get(
+                          context.read<LocaleCubit>().state,
+                          state.registrationReferralMessageKey!,
+                        ),
+                      ),
+                    ),
+                  );
+                });
+              }
               if (state.status == AuthStatus.authenticated) {
                 if (!kIsWeb) {
                   context.read<FCMService>().enable(state.user?.uid);
@@ -133,7 +164,7 @@ class ProTradingApp extends StatelessWidget {
               builder: (context, state) {
                 if (state.status == AuthStatus.authenticated) {
                   return kIsWeb
-                      ? const WebDashboardShell()
+                      ? WebDashboardShell(key: ValueKey(state.user?.uid))
                       : const MobileDashboardShell();
                 } else if (state.status == AuthStatus.unauthenticated) {
                   return kIsWeb

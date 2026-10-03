@@ -7,21 +7,49 @@ class AuthState extends Equatable {
   final AuthStatus status;
   final User? user;
   final String? errorMessage;
+  final bool registrationReferralPending;
+  final bool registrationReferralRetryable;
+  final String? registrationReferralMessageKey;
+  final int registrationReferralMessageNonce;
 
   const AuthState._({
     this.status = AuthStatus.loading,
     this.user,
     this.errorMessage,
+    this.registrationReferralPending = false,
+    this.registrationReferralRetryable = false,
+    this.registrationReferralMessageKey,
+    this.registrationReferralMessageNonce = 0,
   });
 
-  const AuthState.authenticated(User user)
-      : this._(status: AuthStatus.authenticated, user: user);
+  const AuthState.authenticated(
+    User user, {
+    bool registrationReferralPending = false,
+    bool registrationReferralRetryable = false,
+    String? registrationReferralMessageKey,
+    int registrationReferralMessageNonce = 0,
+  }) : this._(
+         status: AuthStatus.authenticated,
+         user: user,
+         registrationReferralPending: registrationReferralPending,
+         registrationReferralRetryable: registrationReferralRetryable,
+         registrationReferralMessageKey: registrationReferralMessageKey,
+         registrationReferralMessageNonce: registrationReferralMessageNonce,
+       );
 
   const AuthState.unauthenticated({String? errorMessage})
-      : this._(status: AuthStatus.unauthenticated, errorMessage: errorMessage);
+    : this._(status: AuthStatus.unauthenticated, errorMessage: errorMessage);
 
   const AuthState.loading() : this._(status: AuthStatus.loading);
 
   @override
-  List<Object?> get props => [status, user, errorMessage];
+  List<Object?> get props => [
+    status,
+    user,
+    errorMessage,
+    registrationReferralPending,
+    registrationReferralRetryable,
+    registrationReferralMessageKey,
+    registrationReferralMessageNonce,
+  ];
 }

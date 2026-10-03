@@ -408,6 +408,16 @@ class FirestoreRulesTests(unittest.TestCase):
         self.assertEqual(_request("GET", owner, "bob"), 403)
         self.assertEqual(_request("PATCH", owner, "alice", {"referralCode": "forged"}), 403)
 
+    def test_registration_attribution_is_owner_read_only(self):
+        path = "users/alice/meta/referral_attribution"
+        self.assertEqual(_request("PATCH", path, "_admin", {"code": "a" * 24}), 200)
+        self.assertEqual(_request("GET", path, "alice"), 200)
+        for uid in (None, "bob"):
+            self.assertEqual(_request("GET", path, uid), 403)
+        for uid in (None, "alice", "bob"):
+            self.assertEqual(_request("PATCH", path, uid, {"code": "b" * 24}), 403)
+            self.assertEqual(_request("DELETE", path, uid), 403)
+
     def test_admin_data_requires_verified_admin_claim(self):
         path = "admin/stats"
         self.assertEqual(_request("PATCH", path, "_admin", {"status": "READY"}), 200)

@@ -18,6 +18,10 @@ class AuthUserChanged extends AuthEvent {
 
 class AuthLogoutRequested extends AuthEvent {}
 
+class AuthRegistrationReferralRequested extends AuthEvent {
+  const AuthRegistrationReferralRequested();
+}
+
 class AuthGoogleSignInRequested extends AuthEvent {}
 
 class AuthLoginRequested extends AuthEvent {

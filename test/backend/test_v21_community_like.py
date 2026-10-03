@@ -5,9 +5,11 @@ from __future__ import annotations
 import ast
 import asyncio
 import re
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from google.api_core.exceptions import Aborted
 
 
 class HttpError(Exception):
@@ -58,7 +60,7 @@ def load_functions(store):
     nodes = [
         node for node in ast.parse(source).body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and node.name in {"commit_community_like", "like_community_post"}
+        and node.name in {"commit_community_like", "like_community_post", "run_firestore_transaction"}
     ]
     for node in nodes:
         node.decorator_list = []
@@ -77,11 +79,13 @@ def load_functions(store):
         "verified_user_id": verify,
         "re": re,
         "asyncio": asyncio,
+        "time": time,
+        "Aborted": Aborted,
         "db": Ref(store),
         "firestore": SimpleNamespace(SERVER_TIMESTAMP="server-time"),
         "cloud_firestore": SimpleNamespace(transactional=lambda fn: fn),
     }
-    namespace["db"].transaction = lambda: Transaction(store)
+    namespace["db"].transaction = lambda **kwargs: Transaction(store)
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])),
                  "server.py", "exec"), namespace)
     return namespace
