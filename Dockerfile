@@ -1,6 +1,6 @@
 # Current VPS Docker 18.09 requires Bullseye. Override only on a verified,
 # supported host; see tasks/python-runtime-upgrade-2026-10-04.md.
-ARG PYTHON_RUNTIME_IMAGE=python:3.10-slim-bullseye
+ARG PYTHON_RUNTIME_IMAGE=python:3.10.18-slim-bullseye@sha256:f1fb49e4d5501ac93d0ca519fb7ee6250842245aba8612926a46a0832a1ed089
 FROM ${PYTHON_RUNTIME_IMAGE}
 
 # Cài đặt các công cụ hệ thống

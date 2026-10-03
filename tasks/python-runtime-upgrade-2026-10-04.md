@@ -54,3 +54,21 @@ Giữ contract API, cổng, credential path, provider, Rules và hành vi nghi�
   https://github.com/docker-library/official-images/issues/16829
 
 Log build nằm trên VPS `/tmp/protrading-runtime-base-build-193e6a7.log`.
+
+## Default tương thích — cold build đã đạt
+
+- Pin đúng base Bullseye/Python 3.10.18 đã xác minh:
+  `python@sha256:f1fb49e4d5501ac93d0ca519fb7ee6250842245aba8612926a46a0832a1ed089`.
+  Không suy ra base này còn được hỗ trợ bảo mật; đây là đường build tạm thời
+  tương thích trong khi chuẩn bị host thay thế.
+- Cold build `protrading-ai:runtime-compat-dc8ae2c` đạt dưới seccomp mặc định,
+  `pip check` không lỗi, thread Python chạy được, **76/76 dependency pins**
+  khớp snapshot production. Image base ID:
+  `sha256:4ec990544bf1b7e82ae1c00b8e3849be8625bcb36346667a345cc6db5ba2503a`.
+- Image QA từ cold base đã chạy 293 Python tests network none: 260 đạt,
+  33 skip cần Emulator/external runtime. Không hạ assertions. Image QA ID:
+  `sha256:1b55ada1c4c7288fdee371fc18cbbdffde29354ec2b48a2efdf533d5db2f4922`.
+  Lớp QA chứa fixtures/source đọc bởi tests, không mount env/service account.
+- Log: `/tmp/protrading-runtime-compat-build-dc8ae2c.log` và
+  `/tmp/protrading-runtime-compat-python.log` trên VPS. Không cutover/restart
+  backend production từ lát này. Python 3.12 và W35 vẫn chưa hoàn tất.
