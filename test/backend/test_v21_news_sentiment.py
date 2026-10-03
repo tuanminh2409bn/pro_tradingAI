@@ -113,7 +113,7 @@ class NewsSentimentContractTests(unittest.TestCase):
         self.assertEqual(pulse["article_count"], 0)
 
     def test_unapproved_hardcoded_rss_crawler_cannot_start(self):
-        server_source = Path(__file__).with_name("server.py").read_text(
+        server_source = (Path(__file__).resolve().parents[2] / "server.py").read_text(
             encoding="utf-8"
         )
 

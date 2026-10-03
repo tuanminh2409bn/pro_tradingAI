@@ -62,6 +62,7 @@ class TrustedMtfHistory:
     htf1: tuple[dict, ...] = ()
     htf2: tuple[dict, ...] = ()
     source: str = "server_market_stream"
+    session_profile: str = "utc"
 
 
 def _wire_timeframe(value: str) -> str:

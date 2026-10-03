@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parents[2]
 REQUIREMENT_ID = re.compile(r"^(?:ARC|M|R|F|J|N|B|C|REF|ROLE|ADM)-\d{2}$")
 MATRIX_ID = re.compile(r"(ARC|M|R|F|J|N|B|C|REF|ROLE|ADM)-(\d{2})(?:\.\.(\d{2}))?")
 STATUSES = {"NOT_STARTED", "IN_PROGRESS", "BLOCKED", "PASS", "FAIL"}

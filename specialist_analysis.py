@@ -255,6 +255,7 @@ async def run_specialist_analysis(
     timeout_seconds: float = 15.0,
     audit_sink: AuditSink | None = None,
     model: str = "deepseek-chat",
+    master_prompt: str = "",
 ) -> dict[str, Any]:
     """Run the three independent specialists concurrently and fail closed."""
     if not isinstance(features, dict):
@@ -278,7 +279,7 @@ async def run_specialist_analysis(
                     agent=agent,
                     model=model,
                     messages=[
-                        {"role": "system", "content": _SYSTEM_PROMPTS[agent]},
+                        {"role": "system", "content": (master_prompt + "\n" if master_prompt else "") + _SYSTEM_PROMPTS[agent]},
                         {
                             "role": "user",
                             "content": build_specialist_prompt(agent, features),

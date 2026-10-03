@@ -25,7 +25,12 @@ COPY cutoff_state.py .
 COPY http_boundary.py .
 COPY market_history.py .
 COPY oanda_history.py .
+COPY tradingview_history.py .
+COPY market_sessions.py .
 COPY push_preferences.py .
+COPY specialist_analysis.py .
+COPY analysis_pipeline.py .
+COPY quota_store.py .
 
 # Không ép cứng cổng ở đây, Google Cloud sẽ cấp biến môi trường PORT
 CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}

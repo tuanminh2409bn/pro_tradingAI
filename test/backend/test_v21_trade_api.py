@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
-from test_v21_trade_gate import hard_signal, intent
+from test.backend.test_v21_trade_gate import hard_signal, intent
 from trade_gate import TradeDenied, trade_document_id, validate_trade_intent
 from cutoff_state import cutoff_active
 
@@ -75,7 +75,7 @@ class Request:
 
 
 def load_handler(store, *, cutoff=False):
-    source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
     nodes = [
         node for node in ast.parse(source).body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))

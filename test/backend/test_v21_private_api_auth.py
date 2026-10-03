@@ -24,7 +24,7 @@ class Request:
 
 
 def load_handlers(verified_user_id):
-    source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
     wanted = {"link_account", "ai_chat"}
     nodes = [
         node
@@ -46,6 +46,7 @@ def load_handlers(verified_user_id):
         "FailureCode": SimpleNamespace(PROVIDER_UNAVAILABLE="provider_unavailable", INTERNAL_ERROR="internal_error"),
         "BackendOperation": SimpleNamespace(ANALYSIS="analysis"),
         "DEEPSEEK_API_KEY": "",
+        "DEEPSEEK_MODEL": "deepseek-flash",
         "LOCAL_QA_MODE": False,
         "asyncio": asyncio,
         "re": re,
@@ -151,6 +152,8 @@ class PrivateApiAuthTests(unittest.IsolatedAsyncioTestCase):
         prompts = []
 
         def create(**kwargs):
+            self.assertEqual(kwargs['model'], 'deepseek-flash')
+            self.assertEqual(kwargs['temperature'], 0.0)
             prompts.append(kwargs["messages"][0]["content"])
             return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="General answer"))])
 

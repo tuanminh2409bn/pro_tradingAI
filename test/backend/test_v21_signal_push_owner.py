@@ -40,7 +40,7 @@ class FakeCollection:
 
 
 def load_sender(users, sent):
-    source = (Path(__file__).parent / 'server.py').read_text(encoding='utf-8')
+    source = (Path(__file__).resolve().parents[2] / 'server.py').read_text(encoding='utf-8')
     node = next(
         node for node in ast.parse(source).body
         if isinstance(node, ast.FunctionDef) and node.name == 'send_signal_push_to_owner'

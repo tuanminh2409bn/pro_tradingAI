@@ -15,7 +15,7 @@ from analysis_contract import (
 from feature_engine import build_signal_from_features, build_unavailable_signal
 
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parents[2]
 HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 

@@ -54,7 +54,7 @@ class Transaction:
 
 
 def load_functions(store):
-    source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
     nodes = [
         node for node in ast.parse(source).body
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))

@@ -33,7 +33,7 @@ class FakeCollection:
 
 
 def load_handler(writes):
-    source = (Path(__file__).parent / 'server.py').read_text(encoding='utf-8')
+    source = (Path(__file__).resolve().parents[2] / 'server.py').read_text(encoding='utf-8')
     node = next(
         node for node in ast.parse(source).body
         if isinstance(node, ast.AsyncFunctionDef) and node.name == 'process_ai_analysis'
@@ -90,6 +90,11 @@ class UnavailableAnalysisCacheTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(signals[0]['cache_hit'])
         self.assertEqual(signals[0]['userId'], 'alice')
         self.assertEqual(signals[0]['market_source'], 'oanda_practice_tick_volume')
+        signal_write = next(i for i, (name, _) in enumerate(writes) if name == 'signals')
+        completed_write = next(i for i, (name, data) in enumerate(writes)
+                               if name == 'analysis_requests' and data.get('status') == 'COMPLETED')
+        self.assertLess(signal_write, completed_write,
+                        'COMPLETED must mean the signal was successfully persisted')
 
 
 if __name__ == '__main__':

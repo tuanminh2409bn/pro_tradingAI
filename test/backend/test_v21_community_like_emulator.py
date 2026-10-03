@@ -24,7 +24,7 @@ class CommunityLikeEmulatorTests(unittest.TestCase):
         from google.auth.credentials import AnonymousCredentials
         from google.cloud import firestore as cloud_firestore
 
-        source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+        source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
         node = next(
             node for node in ast.parse(source).body
             if isinstance(node, ast.FunctionDef)

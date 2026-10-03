@@ -63,7 +63,12 @@ from market_history import (
     TrustedMtfHistory, symbol_bound_chat_context, symbol_bound_price,
 )
 from oanda_history import fetch_oanda_mtf_history
+from tradingview_history import fetch_tradingview_mtf_history
 from push_preferences import push_recipient_opted_in
+from analysis_pipeline import run_market_pipeline
+from specialist_analysis import SpecialistProviderError
+from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
+from quota_store import FirestoreQuotaStore
 
 LOCAL_QA_MODE = os.environ.get("PROTRADING_LOCAL_QA", "") == "1"
 if LOCAL_QA_MODE:
@@ -118,6 +123,7 @@ DEEPSEEK_API_KEY = "" if LOCAL_QA_MODE else os.environ.get("DEEPSEEK_API_KEY", "
 if not DEEPSEEK_API_KEY:
     print("⚠️ DEEPSEEK_API_KEY not set — AI calls will use rule-based fallback")
 ai_client = OpenAI(api_key=DEEPSEEK_API_KEY or "sk-missing", base_url="https://api.deepseek.com")
+DEEPSEEK_MODEL = os.environ.get('DEEPSEEK_MODEL', 'deepseek-flash')
 
 # ─── Per-symbol price book & PnL helpers (V2.1 P0#1) ───
 YAHOO_TICKER_MAP = {
@@ -497,6 +503,7 @@ class TradingViewStreamer:
         msg = json.dumps({
             "type": "tick",
             "symbol": self.chart_symbol_clean(),
+            "interval": self.interval,
             "price": self.last_price,
             "prices": self.last_prices,
             "delta": delta,  # Only changed candles (1–5 typically)
@@ -515,6 +522,7 @@ class TradingViewStreamer:
         msg = json.dumps({
             "type": msg_type,
             "symbol": self.chart_symbol_clean(),
+            "interval": self.interval,
             "price": self.last_price,
             "prices": self.last_prices,
             "candles": candles_list,
@@ -619,54 +627,29 @@ async def _run_analysis_pipeline(symbol: str, timeframe: str, features: dict) ->
         print("AI master prompt unavailable; using deterministic fallback")
         return build_signal_from_features(features)
 
-    gate = {
-        "setup_ready": bool(features.get("setup_ready")),
-        "veto": bool(features.get("veto")),
-        "veto_data": features.get("veto_data"),
-    }
+    async def provider(**kwargs):
+        payload = {key: kwargs[key] for key in ('model', 'messages', 'response_format', 'temperature')}
+        payload.update(max_tokens=1500, thinking={'type': 'disabled'})
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(
+                'https://api.deepseek.com/chat/completions', json=payload,
+                headers={'Authorization': 'Bearer ' + DEEPSEEK_API_KEY},
+            )
+        if response.status_code != 200:
+            code = {402: 'payment_required', 429: 'rate_limited'}.get(response.status_code, 'unavailable')
+            raise SpecialistProviderError(code)
+        envelope = response.json()
+        return json.loads(envelope['choices'][0]['message']['content'])
 
-    if not DEEPSEEK_API_KEY:
-        print("[AI Engine] No DEEPSEEK_API_KEY — rule-based fallback")
-        return build_signal_from_features(features)
-
-    interval = int(features.get("candle_interval_sec") or candle_interval_sec(timeframe))
-    prompt_content = f"""Multi-Agent Aggregator — use ONLY this feature pack:
-
-{features_prompt_block(features)}
-
-CANDLE INTERVAL: {interval} seconds
-
-Generate COMPLETE analysis JSON.
-- If SETUP_READY is false OR VETO is true: do NOT include layer 4.
-- entryPrice near {features.get('current_price')} when hard setup
-- Map Layer 1 to ORDER_BLOCKS / structure; Layer 5 HTF from HTF1/HTF2 summaries
-"""
-    try:
-        print("Calling DeepSeek API (temperature=0, MTF feature summary)...")
-        create_kwargs = dict(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": master_prompt},
-                {"role": "user", "content": prompt_content},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.0,
+    if DEEPSEEK_API_KEY:
+        correlation = hashlib.sha256(analysis_cache_key(symbol, timeframe, int(features.get('last_closed_candle_timestamp') or 0)).encode()).hexdigest()[:24]
+        return await run_market_pipeline(
+            features, provider=provider, master_prompt=master_prompt,
+            model=DEEPSEEK_MODEL, correlation_id=correlation,
         )
-        response = await asyncio.to_thread(
-            _create_seeded_analysis_completion,
-            create_kwargs,
-        )
-        ai_result = json.loads(response.choices[0].message.content)
-        ai_result["fallback"] = False
-        ai_result = apply_stage_gates(ai_result, gate)
-        print(
-            f"✅ DeepSeek analysis layers={len(ai_result.get('layers', []))} "
-            f"setup_ready={ai_result.get('setup_ready')} veto={ai_result.get('veto')}"
-        )
-        return ai_result
-    except Exception:
-        print("DeepSeek API failed; using deterministic FeatureEngine fallback")
-        return build_signal_from_features(features)
+
+    print("[AI Engine] No DEEPSEEK_API_KEY — rule-based fallback")
+    return build_signal_from_features(features)
 
 
 async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload: dict | None = None):
@@ -685,7 +668,13 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
         clean_symbol = normalize_symbol(symbol)
         oanda_account = "" if LOCAL_QA_MODE else os.environ.get("OANDA_PRACTICE_ACCOUNT_ID", "").strip()
         oanda_token = "" if LOCAL_QA_MODE else os.environ.get("OANDA_PRACTICE_TOKEN", "").strip()
-        if oanda_account and oanda_token:
+        market_provider = os.environ.get("MARKET_HISTORY_PROVIDER", "oanda_practice").strip()
+        if market_provider == "tradingview" and not LOCAL_QA_MODE:
+            trusted_history = await fetch_tradingview_mtf_history(
+                symbol=clean_symbol, execution_timeframe=timeframe,
+                now_ts=int(time.time()),
+            )
+        elif market_provider == "oanda_practice" and oanda_account and oanda_token:
             async with httpx.AsyncClient() as provider_client:
                 trusted_history = await fetch_oanda_mtf_history(
                     symbol=clean_symbol,
@@ -697,8 +686,8 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
                 )
         else:
             trusted_history = TrustedMtfHistory(
-                False, "oanda_practice_not_configured",
-                source="oanda_practice_tick_volume",
+                False, "oanda_practice_not_configured" if market_provider == "oanda_practice" else "unsupported_market_history_provider",
+                source="oanda_practice_tick_volume" if market_provider == "oanda_practice" else market_provider,
             )
         candles_exec = list(trusted_history.execution)
         candles_htf1 = list(trusted_history.htf1)
@@ -715,7 +704,12 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
             current_price=float(current_price or 0),
             candles_htf_1=candles_htf1 or None,
             candles_htf_2=candles_htf2 or None,
+            session_profile=trusted_history.session_profile,
         )
+        if not trusted_history.available:
+            features.setdefault("data_quality", {})["provider"] = {
+                "valid": False, "issues": [trusted_history.reason],
+            }
         features["history_source"] = trusted_history.source
         features["history_unavailable_reason"] = trusted_history.reason or None
         features = market_analysis_features(features)
@@ -728,6 +722,7 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
             ai_result = build_unavailable_signal(features)
             cache_hit = False
         else:
+            await consume_analysis_quota(user_id, doc_id)
             ttl = ttl_for_timeframe(timeframe)
 
             async def produce_market_artifact() -> dict:
@@ -759,17 +754,6 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
         ai_result["createdAt"] = firestore.SERVER_TIMESTAMP
         ai_result["userId"] = user_id
 
-        await asyncio.to_thread(
-            doc_ref.update,
-            {
-                "status": "COMPLETED",
-                "cache_hit": cache_hit,
-                "cache_key": cache_key,
-                "setup_ready": bool(ai_result.get("setup_ready")),
-                "veto": bool(ai_result.get("veto")),
-            },
-        )
-
         old_signals_query = db.collection("signals").where("symbol", "==", clean_symbol)
         if user_id:
             old_signals_query = old_signals_query.where("userId", "==", user_id)
@@ -783,6 +767,16 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
 
         signals_ref = db.collection("signals")
         await asyncio.to_thread(signals_ref.add, ai_result)
+        await asyncio.to_thread(
+            doc_ref.update,
+            {
+                "status": "COMPLETED",
+                "cache_hit": cache_hit,
+                "cache_key": cache_key,
+                "setup_ready": bool(ai_result.get("setup_ready")),
+                "veto": bool(ai_result.get("veto")),
+            },
+        )
         print(
             f"✅ AI Signal for {clean_symbol} (cache_hit={cache_hit}, "
             f"setup_ready={ai_result.get('setup_ready')}, veto={ai_result.get('veto')}) → Firebase"
@@ -813,6 +807,11 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
                 outcome=OperationOutcome.SUCCESS,
                 fallback=False,
             )
+    except HTTPException as error:
+        metric_timer.finish(outcome=OperationOutcome.FAILURE, fallback=False,
+                            error_code=FailureCode.INTERNAL_ERROR)
+        await asyncio.to_thread(db.collection('analysis_requests').document(doc_id).update,
+                                {'status': 'ERROR', 'error': error.detail})
     except Exception:
         metric_timer.finish(
             outcome=OperationOutcome.FAILURE,
@@ -828,6 +827,23 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
             )
         except Exception:
             pass
+
+
+async def consume_analysis_quota(user_id, request_id):
+    user = await asyncio.to_thread(auth.get_user, user_id)
+    if user.disabled:
+        raise HTTPException(status_code=403, detail='account_disabled')
+    try:
+        identity = VerifiedQuotaIdentity.from_decoded_token({**(user.custom_claims or {}), 'uid': user.uid})
+    except EntitlementDenied:
+        raise HTTPException(status_code=403, detail='account_role_required') from None
+    decision = await asyncio.to_thread(
+        QuotaEnforcer(store=FirestoreQuotaStore(db, operation_id=request_id), timezone_name='UTC').consume,
+        identity=identity, capability=Capability.ANALYSIS, now=datetime.now(timezone.utc),
+    )
+    if not decision.allowed:
+        raise HTTPException(status_code=429 if decision.reason == 'quota_exhausted' else 403, detail=decision.reason)
+    return decision
 
 def on_analysis_request_snapshot(col_snapshot, changes, read_time):
     for change in changes:
@@ -857,6 +873,9 @@ async def startup_event():
     main_loop = asyncio.get_running_loop()
     print("SERVER: Data Engine Starting Up...")
     await analysis_cache.connect()
+    if os.environ.get("PROTRADING_BACKGROUND_WORKERS", "1") == "0":
+        print("SERVER: Candidate verification; background workers disabled")
+        return
     if not LOCAL_QA_MODE:
         await streamer.start()
     else:
@@ -1824,13 +1843,15 @@ async def ai_chat(
 
         response = await asyncio.to_thread(
             ai_client.chat.completions.create,
-            model="deepseek-chat",
+            model=DEEPSEEK_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": req.message}
             ],
             max_tokens=600,
             temperature=0.0,
+            timeout=20,
+            extra_body={'thinking': {'type': 'disabled'}},
         )
 
         ai_response = response.choices[0].message.content
@@ -1939,6 +1960,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.send_text(json.dumps({
         "type": "init",
         "symbol": session.chart_symbol_clean(),
+        "interval": session.interval,
         "price": session.last_price,
         "prices": session.last_prices,
         "candles": candles_list,
@@ -1957,6 +1979,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         "type": "error", "message": "Unsupported interval",
                     }))
                     continue
+                if session.interval == interval:
+                    continue
                 session.interval = interval
                 session.candle_map = {}
                 session._pending_delta = {}
@@ -1969,6 +1993,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_text(json.dumps({
                         "type": "error", "message": "Unsupported symbol",
                     }))
+                    continue
+                if session.symbol == tv_symbol:
                     continue
                 session.symbol = tv_symbol
                 session.candle_map = {}

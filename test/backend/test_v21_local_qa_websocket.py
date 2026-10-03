@@ -38,6 +38,8 @@ class _Session:
     instance = None
 
     def __init__(self, shared_last_prices):
+        self.interval = '5'
+        self.symbol = 'OANDA:XAUUSD'
         type(self).instance = self
         self.candle_map = {}
         self.last_price = 0.0
@@ -60,7 +62,7 @@ class _Session:
 
 class LocalQaWebSocketTests(unittest.TestCase):
     def test_interval_and_symbol_changes_do_not_start_provider(self):
-        source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+        source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
         endpoint = next(
             node for node in ast.parse(source).body
             if isinstance(node, ast.AsyncFunctionDef) and node.name == "websocket_endpoint"
@@ -86,6 +88,7 @@ class LocalQaWebSocketTests(unittest.TestCase):
 
         self.assertTrue(socket.accepted)
         self.assertEqual(socket.sent[0]["type"], "init")
+        self.assertEqual(socket.sent[0]["interval"], "5")
         self.assertEqual(_Session.instance.start_calls, 0)
         self.assertEqual(_Session.instance.stop_calls, 1)
         self.assertFalse(_Session.instance.connections)

@@ -7,7 +7,7 @@ import re
 import unittest
 
 
-SERVER_SOURCE = (Path(__file__).parent / "server.py").read_text()
+SERVER_SOURCE = (Path(__file__).resolve().parents[2] / "server.py").read_text()
 
 
 class SafeErrorTests(unittest.TestCase):

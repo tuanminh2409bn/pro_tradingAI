@@ -9,6 +9,8 @@ from copy import deepcopy
 from math import isfinite
 from typing import Any
 
+from market_sessions import aligned, expected_closure, next_bar
+
 MACRO_WINDOW_BEFORE_SEC = 1800
 MACRO_WINDOW_AFTER_SEC = 900
 
@@ -191,6 +193,7 @@ def validate_candle_history(
     expected_count: int,
     *,
     now_ts: float | None = None,
+    session_profile: str = "utc",
 ) -> dict[str, Any]:
     """Validate exact, closed, ordered OHLCV history before analysis."""
     import time as _time
@@ -233,20 +236,25 @@ def validate_candle_history(
             or volume < 0
         ):
             issue("invalid_ohlcv")
-        if timestamp % interval != 0:
+        if not aligned(timestamp, interval, session_profile):
             issue("timestamp_not_aligned")
 
     if timestamps != sorted(set(timestamps)):
         issue("timestamps_not_strictly_increasing")
     else:
         for previous, current in zip(timestamps, timestamps[1:]):
-            if current - previous != interval and not _expected_market_closure(previous, current):
+            valid_gap = (
+                _expected_market_closure(previous, current)
+                if session_profile == "utc"
+                else expected_closure(previous, current, interval, session_profile)
+            )
+            if current != next_bar(previous, interval, session_profile) and not valid_gap:
                 issue("unexpected_gap")
                 break
     now = float(now_ts if now_ts is not None else _time.time())
     if volumes and all(volume == 0 for volume in volumes):
         issue("volume_unavailable")
-    if timestamps and timestamps[-1] + interval > now:
+    if timestamps and next_bar(timestamps[-1], interval, session_profile) > now:
         issue("forming_candle_present")
     return {"valid": not issues, "issues": issues, "count": len(candles)}
 
@@ -255,6 +263,7 @@ def last_closed_candle_timestamp(
     candles: list[dict],
     timeframe: str,
     now_ts: float | None = None,
+    session_profile: str = "utc",
 ) -> int:
     """Open-time of the last *closed* candle (excludes the forming bar when possible)."""
     import time as _time
@@ -267,7 +276,7 @@ def last_closed_candle_timestamp(
     ordered = sorted(candles, key=lambda c: int(c.get("t", 0)))
     last = ordered[-1]
     last_t = int(last.get("t", 0))
-    if last_t + interval <= now + 1:
+    if next_bar(last_t, interval, session_profile) <= now + 1:
         return last_t
     if len(ordered) >= 2:
         return int(ordered[-2].get("t", last_t))
@@ -622,6 +631,7 @@ def compute_features(
     candles: list[dict],
     current_price: float,
     now_ts: float | None = None,
+    session_profile: str = "utc",
 ) -> dict[str, Any]:
     """Build compact technical summary for LLM / rule-based fallback."""
     ordered = sorted(candles, key=lambda c: int(c.get("t", 0))) if candles else []
@@ -629,7 +639,7 @@ def compute_features(
     interval = candle_interval_sec(timeframe)
     import time as _time
     now = float(now_ts if now_ts is not None else _time.time())
-    closed = [c for c in ordered if int(c.get("t", 0)) + interval <= now + 1]
+    closed = [c for c in ordered if next_bar(int(c.get("t", 0)), interval, session_profile) <= now + 1]
     if len(closed) < 5:
         closed = ordered
 
@@ -658,7 +668,7 @@ def compute_features(
     elif structure.get("last_choch") == "bearish":
         bias = "SELL"
 
-    last_closed_ts = last_closed_candle_timestamp(ordered, timeframe, now_ts=now)
+    last_closed_ts = last_closed_candle_timestamp(ordered, timeframe, now_ts=now, session_profile=session_profile)
     price = float(current_price) if current_price and current_price > 0 else (
         float(closed[-1]["c"]) if closed else 0.0
     )
@@ -1064,19 +1074,20 @@ def build_mtf_feature_pack(
     candles_htf_1: list[dict] | None = None,
     candles_htf_2: list[dict] | None = None,
     now_ts: float | None = None,
+    session_profile: str = "utc",
 ) -> dict[str, Any]:
     """Execution + HTF1/HTF2 features; HTF candles resampled if not provided."""
     htf1_tf, htf2_tf = htf_pair_for_execution(timeframe)
-    exec_f = compute_features(symbol, timeframe, candles_execution, current_price, now_ts=now_ts)
+    exec_f = compute_features(symbol, timeframe, candles_execution, current_price, now_ts=now_ts, session_profile=session_profile)
 
     c1 = candles_htf_1 if candles_htf_1 else aggregate_candles(candles_execution, timeframe, htf1_tf)
     c2 = candles_htf_2 if candles_htf_2 else aggregate_candles(candles_execution, timeframe, htf2_tf)
-    htf1_f = compute_features(symbol, htf1_tf, c1, current_price, now_ts=now_ts) if c1 else None
-    htf2_f = compute_features(symbol, htf2_tf, c2, current_price, now_ts=now_ts) if c2 else None
+    htf1_f = compute_features(symbol, htf1_tf, c1, current_price, now_ts=now_ts, session_profile=session_profile) if c1 else None
+    htf2_f = compute_features(symbol, htf2_tf, c2, current_price, now_ts=now_ts, session_profile=session_profile) if c2 else None
 
-    exec_validation = validate_candle_history(candles_execution, timeframe, 120, now_ts=now_ts)
-    htf1_validation = validate_candle_history(c1, htf1_tf, 120, now_ts=now_ts)
-    htf2_validation = validate_candle_history(c2, htf2_tf, 150, now_ts=now_ts)
+    exec_validation = validate_candle_history(candles_execution, timeframe, 120, now_ts=now_ts, session_profile=session_profile)
+    htf1_validation = validate_candle_history(c1, htf1_tf, 120, now_ts=now_ts, session_profile=session_profile)
+    htf2_validation = validate_candle_history(c2, htf2_tf, 150, now_ts=now_ts, session_profile=session_profile)
     exec_f["history_valid"] = exec_validation["valid"]
 
     if htf1_f is not None:

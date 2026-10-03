@@ -41,7 +41,7 @@ class AnalysisRequestBoundaryTests(unittest.TestCase):
                 self.assertTrue(validate_client_analysis_request(payload))
 
     def test_listener_refuses_invalid_request_before_scheduling(self):
-        source = (Path(__file__).parent / "server.py").read_text(encoding="utf-8")
+        source = (Path(__file__).resolve().parents[2] / "server.py").read_text(encoding="utf-8")
         node = next(node for node in ast.parse(source).body
                     if isinstance(node, ast.FunctionDef)
                     and node.name == "on_analysis_request_snapshot")
