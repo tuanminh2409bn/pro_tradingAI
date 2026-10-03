@@ -346,7 +346,25 @@
   qua key đúng. Xem `deepseek-readonly-auth-check-2026-10-04.json`.
 - Web heatmap bỏ weekday 6/7 và dùng giờ local trong khi insight dùng UTC;
   bảng giá làm tròn hai chữ số và equity một điểm có phép chia cho zero.
-  Các lỗi Journal này cần sửa riêng trước khi nghiệm thu W19/W34.
+  Các lỗi này đã sửa trong FE `7c9e938` bên dưới; chưa đủ nghiệm thu W19/W34.
+
+### Journal visual — release 04/10
+
+- FE `7c9e938` đã lên main/Firebase. Public bundle 3,785,939 bytes, SHA
+  `bf82ac4bd22e0a92224ac53c1b62f8b20d53435749c3012114fab2337338606c`
+  khớp local production build. BE `7ef3ab6`, Rules `43fd970` giữ nguyên.
+- Giá entry/exit giữ precision, heatmap có bảy ngày theo UTC với count là lệnh;
+  single/flat P&L curve có hình học hữu hạn và nhãn đúng cumulative closed P&L.
+  Full Flutter 203 đạt + 2 skip Web-only; target 20/20; analyzer không error/
+  warning, 3 info Mobile cũ. Native Emulator VI/EN xác nhận Sunday bucket và
+  giá forex đầy đủ; không gọi AI.
+- Production QA Standard vẫn broker gate; rendered tree xác nhận source UI
+  mới nhưng còn descendant semantics của preview bị blur. Chưa thử keyboard
+  gate; sẽ có test riêng. Không bypass để export hoặc playback production.
+  Xem `journal-visual-correctness-spec-2026-10-04.md` và
+  `web-production-journal-visual-qa-2026-10-04.json`.
+- Toàn kế hoạch vẫn 7 mục đóng / 29 mục mở. W18/W19 còn broker sample và
+  positive entitled runtime; DeepSeek live vẫn 401 và chờ nơi lưu key hợp lệ.
 
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.

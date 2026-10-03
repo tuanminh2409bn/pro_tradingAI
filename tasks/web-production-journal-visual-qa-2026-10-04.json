@@ -1,0 +1,47 @@
+{
+  "observed_at_utc": "2026-10-03T20:41:55Z",
+  "local_date": "2026-10-04",
+  "web_url": "https://protrading-ai-2026.web.app/",
+  "frontend_source_commit": "7c9e9381c4d1fdbc7293487d8bf175bb199c9306",
+  "public_bundle_sha256": "bf82ac4bd22e0a92224ac53c1b62f8b20d53435749c3012114fab2337338606c",
+  "public_bundle_bytes": 3785939,
+  "public_bundle_matches_local_production_build": true,
+  "emulator_urls_in_production_bundle": false,
+  "backend_source_commit": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+  "rules_source_commit": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c",
+  "browser": "Codex In-app Browser",
+  "qa_role": "standard",
+  "broker_linked": false,
+  "observations": {
+    "journal_gate_retained": true,
+    "closed_trade_pnl_title_in_rendered_tree": true,
+    "heatmap_utc_header_in_rendered_tree": true,
+    "heatmap_weekend_rows_in_rendered_tree": true,
+    "entry_exit_full_precision_in_rendered_tree": true,
+    "legacy_trade_execution_mode": "unverified",
+    "positive_export_production": false,
+    "positive_audio_production": false
+  },
+  "verification": {
+    "target_flutter_tests_passed": 20,
+    "full_flutter_tests_passed": 203,
+    "web_only_tests_skipped_on_vm": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "pre_existing_mobile_info": 3,
+    "emulator_browser_evidence": "web-local-journal-visual-qa-2026-10-04.json"
+  },
+  "screenshot": "web-production-journal-visual-2026-10-04.png",
+  "screenshot_sha256": "b4a158affe5d22ed604018922e7a6b2566c32b0292cc22436cd162743057c769",
+  "impact": {
+    "model_calls": 0,
+    "production_user_data_writes": 0,
+    "broker_credentials_or_claim_changes": false,
+    "backend_or_rules_deploy": false
+  },
+  "limitations": [
+    "The locked preview exposes descendant semantics in this build; the screenshot proves the visible gate, not keyboard or assistive-technology isolation.",
+    "No gate bypass or positive broker, CSV download, or TTS playback on production was attempted.",
+    "W18 and W19 remain open pending valid broker data and entitled production acceptance."
+  ]
+}

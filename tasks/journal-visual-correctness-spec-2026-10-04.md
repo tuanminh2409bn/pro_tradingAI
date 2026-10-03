@@ -43,3 +43,18 @@ không đóng cả Journal từ kiểm thử fixture.
   Chỉ dùng paper fixture; cờ broker link trong Emulator không nghiệm thu provider.
 - Bằng chứng: `web-local-journal-visual-qa-2026-10-04.json` và
   `web-local-journal-visual-2026-10-04.png`; không gọi model/sửa production.
+
+## Release production đã đọc lại
+
+- Source `7c9e938` đã lên GitHub main/Firebase Hosting. Public `main.dart.js`
+  3,785,939 bytes, SHA
+  `bf82ac4bd22e0a92224ac53c1b62f8b20d53435749c3012114fab2337338606c`
+  khớp build production; không lẫn URL Emulator. BE `7ef3ab6` và Rules
+  `43fd970` không đổi trong lát sửa FE này.
+- Reload QA Standard xác nhận title P&L lệnh đóng, UTC, đủ bảy ngày và giá
+  4525.055/4525.81 qua rendered tree. Screenshot vẫn JOURNAL LOCKED vì QA
+  chưa liên kết broker; không bấm xuyên gate để tải CSV hoặc phát TTS.
+- Rendered tree còn đọc được descendant của preview bị blur; kiểm tra này
+  chưa chứng minh gate chặn keyboard/accessibility. Cần test và sửa riêng.
+- Bằng chứng: `web-production-journal-visual-qa-2026-10-04.json` và PNG cùng tên.
+  Không gọi model, sửa user/claim/quota/provider. W18/W19 tiếp tục mở.
