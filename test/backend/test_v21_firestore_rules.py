@@ -324,13 +324,23 @@ class FirestoreRulesTests(unittest.TestCase):
     def test_backtest_owner_cannot_reassign_session(self):
         session_path = f"backtest_sessions/session-{uuid.uuid4().hex}"
         self.assertEqual(
-            _request("PATCH", session_path, "alice", {"userId": "alice"}),
+            _request("PATCH", session_path, "_admin", {"userId": "alice"}),
             200,
         )
         self.assertEqual(
             _request("PATCH", session_path, "alice", {"userId": "bob"}),
             403,
         )
+
+    def test_backtest_creation_requires_backend_and_preserves_allocation(self):
+        path = 'backtest_sessions/quota-' + uuid.uuid4().hex
+        self.assertEqual(_request('PATCH', path, 'alice', {'userId': 'alice'}), 403)
+        fields = {'userId': 'alice', 'initialBalance': 1000, 'symbol': 'BTCUSD',
+                  'source': 'server_enforced', 'currentBalance': 1000}
+        self.assertEqual(_request('PATCH', path, '_admin', fields), 200)
+        self.assertEqual(_request('PATCH', path, 'alice', {**fields, 'currentBalance': 900}), 200)
+        for changes in ({'initialBalance': 999}, {'source': 'forged'}, {'symbol': 'EURUSD'}):
+            self.assertEqual(_request('PATCH', path, 'alice', {**fields, **changes}), 403)
 
     def test_community_create_requires_matching_owner(self):
         path = f"community/post-{uuid.uuid4().hex}"

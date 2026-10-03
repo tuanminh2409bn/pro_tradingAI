@@ -11,6 +11,7 @@ import 'package:protrading_ai/features/backtest/bloc/backtest_state.dart';
 class _Repository extends Fake implements BacktestRepository {
   BacktestRecording? saved;
   int failedSaves = 0;
+  bool quotaExhausted = false;
   @override
   Future<BacktestRecording?> loadRecording({
     required String userId,
@@ -38,18 +39,23 @@ class _Repository extends Fake implements BacktestRepository {
     required DateTime endTime,
     required double balance,
     required String userId,
-  }) async => BacktestSession(
-    id: 'session-1',
-    symbol: symbol,
-    startTime: startTime,
-    endTime: endTime,
-    initialBalance: balance,
-    currentBalance: balance,
-    equity: balance,
-    openPL: 0,
-    speed: 1,
-    isPlaying: false,
-  );
+  }) async {
+    if (quotaExhausted) {
+      throw const BacktestRequestException('backtest_quota_exhausted');
+    }
+    return BacktestSession(
+      id: 'session-1',
+      symbol: symbol,
+      startTime: startTime,
+      endTime: endTime,
+      initialBalance: balance,
+      currentBalance: balance,
+      equity: balance,
+      openPL: 0,
+      speed: 1,
+      isPlaying: false,
+    );
+  }
 
   @override
   Stream<List<BacktestTrade>> getActiveTrades(String sessionId) =>
@@ -71,6 +77,23 @@ List<Candle> _candles() => [
 ];
 
 void main() {
+  test(
+    'Backtest quota denial ends loading with a localized error and no recording',
+    () async {
+      final repository = _Repository()..quotaExhausted = true;
+      final bloc = BacktestBloc(
+        backtestRepository: repository,
+        historyStream: (_) => Stream.value(_candles()),
+      );
+      addTearDown(bloc.close);
+      bloc.add(const StartBacktestSession('BTCUSD', 1000, userId: 'qa-user'));
+      final state = await bloc.stream.firstWhere(
+        (state) => state is BacktestError,
+      );
+      expect((state as BacktestError).message, 'backtest_quota_exhausted');
+      expect(repository.saved, isNull);
+    },
+  );
   test(
     'Backtest BUY is executed at the current closed bar, not future history',
     () async {

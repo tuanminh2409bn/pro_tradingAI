@@ -67,6 +67,13 @@ class AppLocalizations {
           'Data is temporarily unavailable. Please try again.',
       'common_access_denied': 'You do not have access to this page.',
       'backtest_auth_required': 'Sign in to start a backtest session.',
+      'backtest_quota_exhausted':
+          'Your new-session backtest allowance is exhausted. You can restore an existing session or wait for the next quota window.',
+      'backtest_access_denied':
+          'Your account does not have access to create backtest sessions.',
+      'backtest_creation_failed':
+          'Unable to create the session. Retry to recover the same request.',
+      'profile_backtest_reset': 'Backtest allowance resets: {time}',
       'backtest_first_candle': 'Go to first candle',
       'backtest_previous_candle': 'Previous candle',
       'backtest_play': 'Play replay',
@@ -487,6 +494,12 @@ class AppLocalizations {
           'Dữ liệu tạm thời chưa khả dụng. Vui lòng thử lại.',
       'common_access_denied': 'Bạn không có quyền truy cập trang này.',
       'backtest_auth_required': 'Hãy đăng nhập để bắt đầu phiên backtest.',
+      'backtest_quota_exhausted':
+          'Bạn đã hết lượt tạo phiên backtest mới. Hãy khôi phục phiên đã có hoặc chờ kỳ hạn mức tiếp theo.',
+      'backtest_access_denied': 'Tài khoản chưa có quyền tạo phiên backtest.',
+      'backtest_creation_failed':
+          'Chưa tạo được phiên. Hãy thử lại để khôi phục cùng yêu cầu.',
+      'profile_backtest_reset': 'Hạn mức Backtest đặt lại: {time}',
       'backtest_first_candle': 'Về nến đầu tiên',
       'backtest_previous_candle': 'Nến trước',
       'backtest_play': 'Phát mô phỏng',

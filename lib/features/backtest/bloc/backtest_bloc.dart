@@ -211,6 +211,8 @@ class BacktestBloc extends Bloc<BacktestEvent, BacktestState> {
         );
       }
       await _persist(emit);
+    } on BacktestRequestException catch (error) {
+      emit(BacktestError(error.errorKey));
     } catch (_) {
       emit(const BacktestError('common_data_unavailable'));
     }

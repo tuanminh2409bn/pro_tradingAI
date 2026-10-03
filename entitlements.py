@@ -238,6 +238,8 @@ ROLE_ANALYSIS_QUOTAS: Mapping[AccountRole, QuotaPolicy] = {
 }
 
 
+# Web Backtest uses these same tier limits with a distinct capability counter.
+# Restoring an existing session is not a consumption operation.
 class AtomicQuotaStore(Protocol):
     def consume_if_below(
         self,
@@ -297,7 +299,7 @@ class QuotaEnforcer:
 
         policy = (
             ROLE_ANALYSIS_QUOTAS.get(identity.role)
-            if capability == Capability.ANALYSIS
+            if capability in {Capability.ANALYSIS, Capability.BACKTEST}
             else None
         )
         if policy is None:

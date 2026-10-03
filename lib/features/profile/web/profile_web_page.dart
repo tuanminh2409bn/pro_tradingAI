@@ -746,6 +746,23 @@ class ProfileWebPage extends StatelessWidget {
             ),
           ],
         ),
+        if (quota.hasBacktestQuota && quota.backtestResetAt != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              context
+                  .tr('profile_backtest_reset')
+                  .replaceAll(
+                    '{time}',
+                    quota.backtestResetAt!
+                        .toLocal()
+                        .toIso8601String()
+                        .substring(0, 16)
+                        .replaceAll('T', ' '),
+                  ),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+          ),
         if (quota.hasApiQuota && quota.resetAt != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),

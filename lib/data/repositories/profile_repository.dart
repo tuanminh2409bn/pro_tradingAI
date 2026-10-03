@@ -156,6 +156,7 @@ class ProfileRepository {
             return const AccessQuota.unavailable();
           }
           final resetAt = data['resetAt'];
+          final backtestResetAt = data['backtestResetAt'];
           return AccessQuota(
             apiUsed: (data['apiUsed'] ?? 0).toInt(),
             apiLimit: (data['apiLimit'] ?? 0).toInt(),
@@ -165,6 +166,9 @@ class ProfileRepository {
             storageLimit: (data['storageLimit'] ?? 0).toDouble(),
             source: data['source'] is String ? data['source'] as String : null,
             resetAt: resetAt is Timestamp ? resetAt.toDate().toUtc() : null,
+            backtestResetAt: backtestResetAt is Timestamp
+                ? backtestResetAt.toDate().toUtc()
+                : null,
           );
         });
   }

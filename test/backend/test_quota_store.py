@@ -12,7 +12,11 @@ class StoreDatabase:
         self.lock = threading.Lock()
     def collection(self, path): return Reference(self, path)
     def transaction(self, **options): return self
-    def set(self, reference, value, **kwargs): self.values[reference.path] = dict(value)
+    def set(self, reference, value, **kwargs):
+        if kwargs.get('merge'):
+            self.values.setdefault(reference.path, {}).update(value)
+        else:
+            self.values[reference.path] = dict(value)
     def transactional(self, function):
         def commit(*args, **kwargs):
             with self.lock: return function(*args, **kwargs)

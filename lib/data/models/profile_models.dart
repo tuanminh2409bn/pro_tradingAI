@@ -51,6 +51,7 @@ class AccessQuota extends Equatable {
   final double storageLimit;
   final String? source;
   final DateTime? resetAt;
+  final DateTime? backtestResetAt;
 
   const AccessQuota({
     required this.apiUsed,
@@ -61,6 +62,7 @@ class AccessQuota extends Equatable {
     required this.storageLimit,
     this.source,
     this.resetAt,
+    this.backtestResetAt,
   });
 
   const AccessQuota.unavailable()
@@ -71,11 +73,12 @@ class AccessQuota extends Equatable {
       storageUsed = 0,
       storageLimit = 0,
       source = null,
-      resetAt = null;
+      resetAt = null,
+      backtestResetAt = null;
 
   bool get isAuthoritative =>
       source == 'server_enforced' &&
-      resetAt != null &&
+      (resetAt != null || backtestResetAt != null) &&
       apiUsed >= 0 &&
       apiLimit >= 0 &&
       backtestUsed >= 0 &&
@@ -83,8 +86,9 @@ class AccessQuota extends Equatable {
       storageUsed >= 0 &&
       storageLimit >= 0;
 
-  bool get hasApiQuota => isAuthoritative && apiLimit > 0;
-  bool get hasBacktestQuota => isAuthoritative && backtestLimit > 0;
+  bool get hasApiQuota => isAuthoritative && resetAt != null && apiLimit > 0;
+  bool get hasBacktestQuota =>
+      isAuthoritative && backtestResetAt != null && backtestLimit > 0;
   bool get hasStorageQuota => isAuthoritative && storageLimit > 0;
   int? get apiRemaining =>
       hasApiQuota ? (apiLimit - apiUsed < 0 ? 0 : apiLimit - apiUsed) : null;
@@ -99,5 +103,6 @@ class AccessQuota extends Equatable {
     storageLimit,
     source,
     resetAt,
+    backtestResetAt,
   ];
 }

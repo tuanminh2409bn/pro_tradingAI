@@ -31,6 +31,7 @@ COPY push_preferences.py .
 COPY specialist_analysis.py .
 COPY analysis_pipeline.py .
 COPY quota_store.py .
+COPY backtest_api.py .
 COPY official_news.py .
 
 # Không ép cứng cổng ở đây, Google Cloud sẽ cấp biến môi trường PORT

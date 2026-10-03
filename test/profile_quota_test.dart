@@ -3,6 +3,33 @@ import 'package:protrading_ai/data/models/profile_models.dart';
 import 'package:protrading_ai/features/profile/bloc/profile_state.dart';
 
 void main() {
+  test('Backtest-only authoritative quota has its own reset metadata', () {
+    final quota = AccessQuota(
+      apiUsed: 0,
+      apiLimit: 0,
+      backtestUsed: 1,
+      backtestLimit: 2,
+      storageUsed: 0,
+      storageLimit: 0,
+      source: 'server_enforced',
+      backtestResetAt: DateTime.utc(2026, 10, 5),
+    );
+    expect(quota.hasBacktestQuota, isTrue);
+    expect(quota.hasApiQuota, isFalse);
+    expect(quota.resetAt, isNull);
+    final incomplete = AccessQuota(
+      apiUsed: 1,
+      apiLimit: 2,
+      backtestUsed: 1,
+      backtestLimit: 2,
+      storageUsed: 0,
+      storageLimit: 0,
+      source: 'server_enforced',
+      resetAt: DateTime.utc(2026, 10, 5),
+    );
+    expect(incomplete.hasApiQuota, isTrue);
+    expect(incomplete.hasBacktestQuota, isFalse);
+  });
   test('Web privacy preferences default to explicit opt-in', () {
     const state = ProfileLoaded(
       profile: UserProfile(

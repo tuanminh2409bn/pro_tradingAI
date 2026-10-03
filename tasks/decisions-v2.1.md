@@ -20,6 +20,22 @@ Status values: `PENDING`, `APPROVED`, `REJECTED`, `SUPERSEDED`.
 | G6 | Staging/production deploy, Rules deploy, migration, push, mobile release | Local build and tests now; later staging with immutable build ID and rollback plan | PENDING; no push or deploy requested yet | Release owner |
 | G7 | Data Lake consent, retention, deletion, PII, country/device segments | Data export and sensitive push segments disabled until policy and deletion workflow exist | LOCAL DEFAULT SET; export disabled | Privacy/security owner |
 
+## Web quota — delegation tiếp tục ngày 2026-10-03
+
+- Chủ dự án yêu cầu tiếp tục production và tự chọn phương án khi cần quyết
+  định. Backtest đếm phiên mới riêng với Analysis: Standard 2/tuần UTC,
+  Professional 50/ngày UTC, Enterprise 300/ngày UTC. Restore và delivery retry
+  không trừ lượt. Partner giữ các realtime/MTF capability đã chốt; không tự
+  nhận Analysis/Backtest vô hạn. `reserved_fifth` tiếp tục fail closed.
+- Backend cấp session và quota trong một Firestore transaction, client không
+  tạo parent session trực tiếp. API `POST /api/backtest/sessions` nhận token
+  và requestId; trường cấp phiên bất biến, recording vẫn là mô phỏng riêng tư.
+- Profile dùng riêng backtestResetAt và resetAt, không đánh đồng hai counters.
+  Không biến P&L Backtest do client tính thành số liệu broker/leaderboard.
+- Chủ tài khoản xác nhận đã nạp DeepSeek. Chưa coi provider runtime PASS trước
+  khi có bằng chứng specialist/aggregator/chat thật; giữ giới hạn token và
+  kiểm thử offline trước khi gọi provider.
+
 ## Local provider choices, chosen by project owner delegation on 2026-09-24
 
 - Market history: OANDA v20 Practice is the target for supported forex/gold instruments. Its candle contract includes `complete`, granularities M5/M15/H1/H4/D and tick-count `volume`; label this **tick volume**, never exchange-traded volume. Keep analysis unavailable until a licensed account supplies enough closed bars for each timeframe and the symbol is actually supported. Existing TradingView stream may display prices but does not substitute for an independently verified MTF history.

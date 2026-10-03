@@ -1,12 +1,35 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import '../../core/constants/backend_endpoints.dart';
 import '../models/backtest_models.dart';
+
+class BacktestRequestException implements Exception {
+  final String errorKey;
+  const BacktestRequestException(this.errorKey);
+}
 
 class BacktestRepository {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final http.Client _client;
+  late final String Function() _operationIdFactory;
+  String? _pendingCreationId;
+  String? _pendingCreationFingerprint;
 
-  BacktestRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  BacktestRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    http.Client? client,
+    String Function()? operationIdFactory,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _client = client ?? http.Client() {
+    _operationIdFactory =
+        operationIdFactory ??
+        () => _firestore.collection('backtest_sessions').doc().id;
+  }
 
   Future<BacktestRecording?> loadRecording({
     required String userId,
@@ -83,23 +106,63 @@ class BacktestRepository {
     required double balance,
     required String userId,
   }) async {
-    final docRef = await _firestore.collection('backtest_sessions').add({
+    final currentUser = _auth.currentUser;
+    if (currentUser == null || currentUser.uid != userId) {
+      throw const BacktestRequestException('backtest_auth_required');
+    }
+    final token = await currentUser.getIdToken();
+    if (token == null || token.isEmpty) {
+      throw const BacktestRequestException('backtest_auth_required');
+    }
+    final intent = <String, Object>{
       'userId': userId,
       'symbol': symbol,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'initialBalance': balance,
-      'currentBalance': balance,
-      'equity': balance,
-      'openPL': 0.0,
-      'speed': 1,
-      'isPlaying': false,
-      'status': 'CREATED',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      'startTime': startTime.toUtc().toIso8601String(),
+      'endTime': endTime.toUtc().toIso8601String(),
+      'balance': balance,
+    };
+    final fingerprint = jsonEncode(intent);
+    if (_pendingCreationFingerprint != fingerprint) {
+      _pendingCreationFingerprint = fingerprint;
+      _pendingCreationId = _operationIdFactory();
+    }
+    final response = await _client
+        .post(
+          Uri.parse('${BackendEndpoints.apiBaseUrl}/api/backtest/sessions'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({...intent, 'requestId': _pendingCreationId}),
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200) {
+      if (response.statusCode >= 400 && response.statusCode < 500) {
+        _pendingCreationFingerprint = null;
+        _pendingCreationId = null;
+      }
+      throw BacktestRequestException(
+        response.statusCode == 429
+            ? 'backtest_quota_exhausted'
+            : response.statusCode == 401
+            ? 'backtest_auth_required'
+            : response.statusCode == 403
+            ? 'backtest_access_denied'
+            : 'backtest_creation_failed',
+      );
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map ||
+        decoded['status'] != 'success' ||
+        decoded['sessionId'] is! String ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(decoded['sessionId'] as String)) {
+      throw const BacktestRequestException('backtest_creation_failed');
+    }
+    _pendingCreationFingerprint = null;
+    _pendingCreationId = null;
 
     return BacktestSession(
-      id: docRef.id,
+      id: decoded['sessionId'] as String,
       symbol: symbol,
       startTime: startTime,
       endTime: endTime,

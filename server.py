@@ -12,7 +12,7 @@ from urllib.parse import urljoin
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Header, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictFloat
 import websockets
 import httpx
 from metaapi_cloud_sdk import MetaApi
@@ -70,6 +70,7 @@ from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
+from backtest_api import backtest_creation, same_backtest_creation
 from official_news import APPROVED_NEWS_FEEDS, MAX_BYTES as NEWS_MAX_BYTES, parse_official_feed
 
 LOCAL_QA_MODE = os.environ.get("PROTRADING_LOCAL_QA", "") == "1"
@@ -256,6 +257,14 @@ class AIChatRequest(BaseModel):
     message: str
     symbol: str = "XAUUSD"
     timeframe: str = "5"
+
+class BacktestCreateRequest(BaseModel):
+    userId: str = ""
+    requestId: str
+    symbol: str
+    startTime: str
+    endTime: str
+    balance: StrictFloat
 
 class CloseTradeRequest(BaseModel):
     userId: str = ""
@@ -874,6 +883,10 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
 
 
 async def consume_analysis_quota(user_id, request_id):
+    return await consume_operation_quota(user_id, request_id, Capability.ANALYSIS)
+
+
+async def consume_operation_quota(user_id, request_id, capability, *, session_ref=None, session_data=None):
     user = await asyncio.to_thread(auth.get_user, user_id)
     if user.disabled:
         raise HTTPException(status_code=403, detail='account_disabled')
@@ -882,12 +895,41 @@ async def consume_analysis_quota(user_id, request_id):
     except EntitlementDenied:
         raise HTTPException(status_code=403, detail='account_role_required') from None
     decision = await asyncio.to_thread(
-        QuotaEnforcer(store=FirestoreQuotaStore(db, operation_id=request_id), timezone_name='UTC').consume,
-        identity=identity, capability=Capability.ANALYSIS, now=datetime.now(timezone.utc),
+        QuotaEnforcer(store=FirestoreQuotaStore(db, operation_id=request_id,
+                      session_ref=session_ref, session_data=session_data), timezone_name='UTC').consume,
+        identity=identity, capability=capability, now=datetime.now(timezone.utc),
     )
     if not decision.allowed:
         raise HTTPException(status_code=429 if decision.reason == 'quota_exhausted' else 403, detail=decision.reason)
     return decision
+
+
+@app.post('/api/backtest/sessions')
+async def create_backtest_session(req: BacktestCreateRequest, authorization: str | None = Header(default=None)):
+    user_id = await verified_user_id(authorization, req.userId)
+    try:
+        session_id, data = backtest_creation(user_id, req.model_dump(), allowed_symbols=TV_SYMBOL_MAP,
+                                            now=datetime.now(timezone.utc))
+    except ValueError:
+        raise HTTPException(status_code=422, detail='invalid_backtest_request') from None
+    reference = db.collection('backtest_sessions').document(session_id)
+    try:
+        existing = await asyncio.to_thread(reference.get)
+        if existing.exists:
+            saved = existing.to_dict() or {}
+            if not same_backtest_creation(saved, data):
+                raise HTTPException(status_code=409, detail='backtest_request_conflict')
+            # Retrying creation or restoring an old allocation never charges twice.
+            return {'status': 'success', 'sessionId': session_id}
+        await consume_operation_quota(user_id, 'backtest:' + req.requestId, Capability.BACKTEST,
+                                      session_ref=reference, session_data=data)
+        return {'status': 'success', 'sessionId': session_id}
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(status_code=409, detail='backtest_request_conflict') from None
+    except Exception:
+        raise HTTPException(status_code=503, detail='backtest_unavailable') from None
 
 def on_analysis_request_snapshot(col_snapshot, changes, read_time):
     for change in changes:

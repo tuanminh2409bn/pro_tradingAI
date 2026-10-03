@@ -114,13 +114,17 @@ service cloud.firestore {
 
     // ─── 6. Backtest Sessions ───
     match /backtest_sessions/{sessionId} {
-      allow create: if isAuth()
-        && request.resource.data.userId == request.auth.uid;
+      // Backend allocates the session and quota in the same transaction.
+      allow create: if false;
       allow read, delete: if isAuth()
         && resource.data.userId == request.auth.uid;
       allow update: if isAuth()
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'recording', 'currentBalance', 'equity', 'openPL', 'speed',
+          'isPlaying', 'isLocked', 'status', 'updatedAt'
+        ]);
     }
     match /backtest_sessions/{sessionId}/trades/{tradeId} {
       allow read, write: if isBacktestOwner(sessionId);
