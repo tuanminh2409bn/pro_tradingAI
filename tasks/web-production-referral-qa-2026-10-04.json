@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-04",
+  "source_commit": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+  "github_main_source_verified": true,
+  "backend": {
+    "container": "protrading-ai-referral-live-7ef3ab6",
+    "image": "protrading-ai:referral-7ef3ab6",
+    "image_id": "sha256:b2a9518698b73579018e65504c65b17d52a8130a614c41b816c71bc36f86ba94",
+    "health": "ok",
+    "redis_cache": true,
+    "anonymous_identity_status": 401,
+    "anonymous_registration_status": 401,
+    "image_unit_suite": {"total": 293, "passed": 260, "emulator_or_external_skipped": 33},
+    "rollback_container": "protrading-ai-community-live-f11707a",
+    "candidate_stopped_after_readback": true,
+    "rules_source_unchanged": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c"
+  },
+  "frontend": {
+    "hosting": "https://protrading-ai-2026.web.app/",
+    "bundle_sha256": "4db48be3be3a0f4fdfa1b83fcdb3e4e1bf50fbf3cea56252bb8c535b85d8a964",
+    "public_bundle_matches_local": true,
+    "emulator_endpoints_not_present": true,
+    "existing_qa_session_retained": true,
+    "referral_labels_vietnamese": true,
+    "clipboard_matches_server_link": true,
+    "proof": "web-production-referral-2026-10-04.png"
+  },
+  "sdk_readback": {
+    "qa_role_standard_unchanged": true,
+    "token_bound_owner_matches_registry": true,
+    "canonical_link_matches_browser": true,
+    "registered_invite_count": 0,
+    "financial_fields_not_created": true
+  },
+  "downloads": [
+    {"type": "qr", "size": [600, 600], "decoder": "zxing-cpp", "payload_matches": true,
+     "sha256": "d2908211b492988974ee55bb1d778015fa1216a3ae83b3b31bd1913ba7dc5986",
+     "proof": "web-production-referral-qr-2026-10-04.png"},
+    {"type": "banner", "size": [1200, 630], "decoder": "zxing-cpp", "payload_matches": true,
+     "sha256": "5be4c7f5562d965f2505c0a1a4a8221f72d916851b64340008370e655db81fa0",
+     "proof": "web-production-referral-banner-2026-10-04.png"}
+  ],
+  "llm_calls_from_probe": 0,
+  "remaining": [
+    "Original personalized video export and positive new-account registration production probe remain open for W26.",
+    "W27 monetary receipts/ledger/withdrawal remain unfinished; no balance or payment was invented.",
+    "Runtime Python 3.10.18 warns that new Google SDK releases end support on 2026-10-04; migration to a supported runtime is next.",
+    "No new production QA identity or paid AI probe was created/executed while the precise auto-review approval is pending."
+  ]
+}

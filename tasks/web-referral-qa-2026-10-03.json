@@ -1,7 +1,8 @@
 {
   "date": "2026-10-03",
   "scope": "W26 server-issued code, canonical link, PNG QR and original banner",
-  "source_commit": null,
+  "source_commit": "f65e1d242825c24048439aa9e1911962ae9e8f2b",
+  "followup_production_evidence": "web-production-referral-qa-2026-10-04.json",
   "production": {"status": "not_released", "llm_calls": 0},
   "local": {
     "environment": "actual server.py 8088; Auth 9099/Firestore 8080 Emulators; Flutter release 8789",

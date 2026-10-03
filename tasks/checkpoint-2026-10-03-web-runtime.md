@@ -283,6 +283,28 @@
 - W26 còn video cá nhân hóa gốc và production readback; W27 receipts/ledger/
   withdrawal còn mở. Phần này không gọi DeepSeek; không chạy probe AI bị chặn.
 
+### Release và readback Referral — 04/10
+
+- Main, FE và BE đã nhận source `7ef3ab6`. Live container
+  `protrading-ai-referral-live-7ef3ab6`, image ID
+  `b2a9518698b73579018e65504c65b17d52a8130a614c41b816c71bc36f86ba94`;
+  giữ `protrading-ai-community-live-f11707a` để rollback. Candidate 8022 đã
+  dừng sau readback; không đổi Rules/index (source Rules vẫn `43fd970`).
+- Image chạy network none: 260 đạt + 33 skip cần Emulator/nguồn ngoài, tổng
+  293. Các ca Emulator đã có bằng chứng local đầy đủ 293/293. Public health
+  ok/Redis, hai API Referral anonymous trả 401. FE public SHA khớp build:
+  `4db48be3be3a0f4fdfa1b83fcdb3e4e1bf50fbf3cea56252bb8c535b85d8a964`.
+- Browser production giữ phiên QA, Hub VI hiện code/link riêng thật, count
+  đăng ký 0 và tiền chưa xác minh “—”. Clipboard đúng, QR/banner tải thực tế
+  giải mã độc lập khớp link server. SDK read-only xác nhận registry đúng owner,
+  QA vẫn Standard, không tạo financial fields. Không gọi DeepSeek ở probe.
+- W26 còn video và positive new-account registration production. Không tạo
+  thêm QA production hoặc vượt qua bước auto-review đang chờ phê duyệt.
+  Bằng chứng: `web-production-referral-qa-2026-10-04.json` và ba PNG production.
+- Python 3.10.18 trong image báo kết thúc hỗ trợ ở các bản Google SDK mới từ
+  hôm nay 04/10. Lát tiếp theo nâng runtime được hỗ trợ, giữ nguyên các version
+  dependency production đang dùng và kiểm tra candidate trước cutover.
+
 ## Tiếp tục
 
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source

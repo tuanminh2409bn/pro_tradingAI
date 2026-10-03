@@ -1,8 +1,8 @@
 {
   "date": "2026-10-04",
   "scope": "W26 registration attribution, Auth feedback, finite transaction contention retry",
-  "source_commit": null,
-  "production": {"status": "not_released", "llm_calls": 0},
+  "source_commit": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+  "production": {"status": "released", "llm_calls_from_probe": 0, "evidence": "web-production-referral-qa-2026-10-04.json"},
   "local": {
     "environment": "server.py 8088; Auth 9099/Firestore 8080 Emulators; Flutter release 8791",
     "browser_account_created_from_ref_link": true,
@@ -36,7 +36,7 @@
     "assertions_and_concurrency_not_reduced": true
   },
   "remaining": [
-    "Production candidate/cutover and same-build browser readback are pending.",
+    "A positive new-account production registration probe has not run; the positive write was verified on Emulator.",
     "Original personalized video rendering/export remains to implement for W26.",
     "W27 trusted receipts, financial policy, immutable reward ledger and Admin withdrawal are unfinished.",
     "Paid Analysis/Chat production probe remains pending the specific auto-review approval."
