@@ -1,0 +1,39 @@
+{
+  "checked_at_utc": "2026-10-03T22:08:40Z",
+  "environment": "Firebase Hosting production, existing Standard QA session",
+  "url": "https://protrading-ai-2026.web.app/",
+  "source_commit": "c63467ea3e7cb5c98f234889e547f99f2dbad412",
+  "github_main_matches_source": true,
+  "public_bundle": {
+    "http_status": 200,
+    "bytes": 3788516,
+    "sha256": "85dfd088431e12d63fc0f391286484b59b5a919841d0277849179b63455bb278",
+    "matches_local_production_build": true,
+    "production_endpoints_present": true,
+    "qa_endpoints_and_emulator_warning_absent": true
+  },
+  "native_browser": {
+    "production_session_restored_after_reload": true,
+    "journal_gate_english": "JOURNAL LOCKED",
+    "journal_gate_vietnamese": "JOURNAL ĐÃ KHÓA",
+    "broker_connect_action_present_en_vi": true,
+    "private_stats_table_filter_export_audio_in_locked_accessibility_tree": false,
+    "positive_entitled_csv_verified": false,
+    "positive_entitled_audio_verified": false
+  },
+  "screenshot": {
+    "path": "tasks/web-production-journal-performance-gate-2026-10-04.png",
+    "sha256": "77d5cc4afd6557c7a29ca71cc497ca2aca778b071bfde8356407a9a6ad315d3e"
+  },
+  "unchanged_runtime": {
+    "backend_source": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+    "firestore_rules_source": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c"
+  },
+  "impact": {"deepseek_requests": 0, "production_qa_created": 0, "claim_or_quota_or_broker_flag_writes": 0},
+  "limitations": [
+    "Production QA has no linked broker; gate was preserved and not bypassed",
+    "Measured arithmetic/localized summary are verified with local Emulator fixtures, not a production broker sample",
+    "Native audio button transitions are local proof, not audible device or entitled production playback",
+    "W18/W19 and the complete Web plan remain open"
+  ]
+}

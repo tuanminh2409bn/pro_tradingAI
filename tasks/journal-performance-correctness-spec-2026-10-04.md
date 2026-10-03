@@ -62,7 +62,20 @@ không phải expected payoff (average net result per trade) hoặc planned R:R.
   này unavailable theo thiết kế; không dùng kết quả Journal để nghiệm thu
   các API đó. Không gọi DeepSeek, tạo QA production hoặc sửa quota/claim.
 
-## Giới hạn nghiệm thu
+## Release production — 04/10
+
+- Source `c63467ea3e7cb5c98f234889e547f99f2dbad412` đã lên GitHub main và
+  Firebase Hosting. Bundle public khớp toàn bộ byte với build production:
+  3,788,516 bytes, SHA
+  `85dfd088431e12d63fc0f391286484b59b5a919841d0277849179b63455bb278`.
+  Endpoint VPS đúng, không lẫn QA/Emulator. BE/Rules giữ nguyên.
+- Native QA Standard sau reload xác nhận gate EN/VI chỉ có thông báo/nút
+  kết nối và sidebar, không có descendant dữ liệu/CSV/filter/audio riêng tư.
+  Xem `web-production-journal-performance-2026-10-04.json` và ảnh gate.
+- Source review/diff check đạt. Không thêm dependency, gọi AI, tạo QA hoặc
+  ghi claim/quota/broker flag production.
+
+## Giới hạn nghiệm thu còn lại
 
 W18/W19 vẫn cần nguồn broker có tiền tệ, initial-risk snapshot và playback/
 CSV production bằng danh tính đúng quyền. Production QA hiện không có

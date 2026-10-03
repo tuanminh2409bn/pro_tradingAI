@@ -400,6 +400,17 @@
   lưu an toàn. Không thử qua đường khác. Paid/production-QA probe vẫn chờ
   duyệt trước đó; BE live auth 401 là bằng chứng cuối cùng đã được phép đọc.
 
+### Journal performance — production release 04/10
+
+- `c63467e` đã lên main/Firebase; public bundle 3,788,516 bytes SHA
+  `85dfd088431e12d63fc0f391286484b59b5a919841d0277849179b63455bb278`
+  khớp local production build, không lẫn QA/Emulator. BE `7ef3ab6`, Rules
+  `43fd970` không đổi. QA Standard reload/EN/VI gate đạt; không bypass để
+  export/audio. Không gọi AI hoặc ghi auth/quota/broker flag.
+- W18/W19 còn sample broker/currency/initial risk và playback/CSV production
+  đúng quyền. Tổng kế hoạch vẫn 7 đóng/29 mở; không quy số test thành % hoàn
+  thành. Xem `web-production-journal-performance-2026-10-04.json`.
+
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
 2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục
