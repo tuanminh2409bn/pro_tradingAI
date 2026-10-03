@@ -18,10 +18,13 @@ Rà soát điều kiện nghiệm thu hiện tại ngày 2026-10-03:
 Tài khoản QA và vị trí lưu credential an toàn: [QA access](qa-access.md).
 
 Cập nhật triển khai và nghiệm thu runtime 2026-10-03:
-[Analysis/quota, Backtest, Profile và cache release](checkpoint-2026-10-03-web-runtime.md).
+[Analysis/quota, Backtest, Profile, News và cache release](checkpoint-2026-10-03-web-runtime.md).
 BE/FE đã phát hành cùng phần source kiểm thử; Backtest BUY/SELL/close, risk lock,
 refresh/ack và số dư đã đối soát trên production. Standard Analysis 2/2 và reset
 UTC đã được kiểm tra. Các hàng còn thiếu nguồn/chính sách/bằng chứng vẫn mở.
+News có thêm 13 bản tin Fed thật và chat được bảo vệ khỏi request trùng/late
+response, với [bằng chứng production](web-production-news-qa-2026-10-03.json).
+Nguồn social/calendar và AI có số dư vẫn chưa đủ để đóng W20/W21.
 
 - Checklist tổng ghi 4/50 việc hoàn tất (T13, T14, T18, T20), 41 việc dở, 5 chưa bắt đầu; số này không phải số riêng của Web.
 - Baseline mới nhất ngày 2026-09-17: Python discovery 178 test, 166 đạt và 12 ca Emulator được skip khi không có tiến trình local; Firestore Emulator chạy đủ 12 ca Rules, trong đó 3 ca nền đạt và 9 ca bảo mật/chức năng đang đỏ; Flutter 103/103 đạt; `git diff --check` đạt. `flutter analyze --no-fatal-infos --no-fatal-warnings` không có error/warning và còn 5 `info` API cũ (2 Web, 3 Mobile). `flutter build web --release` đạt trên source hiện tại; manifest SHA-256 `04a1c8cbe14b8338c97be3ebab1d4c28c75b85e35571335ee2ba935f9b50719e`, dung lượng 41 MB.

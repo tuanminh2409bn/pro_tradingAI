@@ -98,10 +98,49 @@
   W22/W23 còn mở cho quyền sử dụng history, quota và phần nghiệm thu liên quan
   của toàn kế hoạch; không biến bằng chứng phiên riêng thành Web 100%.
 
+## News — bản tin có nguồn và chat an toàn
+
+- Source BE `5421586`, FE `e5f535c`; build hash và readback được ghi bên dưới.
+- Nguồn text-only được chọn theo quyền lựa chọn provider chủ dự án đã giao:
+  RSS chính thức Fed `press_all` và `press_monetary`. Disclaimer của Fed cho
+  phép sao chép/phân phối thông tin public domain với dẫn nguồn; không lấy
+  ảnh/logo hoặc nội dung bên thứ ba có quyền riêng. Không dùng RSS làm lịch
+  HIGH-impact hoặc tự suy ra sentiment/social mentions.
+- Parser thuần trong `official_news.py` giới hạn kích thước, từ chối XML
+  DTD/entity, URL ngoài nguồn, thiếu/future publication date và bài quá 30 ngày.
+  ID ổn định theo URL, timestamp là ngày xuất bản thật; freshness được ghi riêng.
+- Worker có timeout, chỉ chạy registry được duyệt và dedupe giữa hai feed.
+  Production có 13 bài Fed duy nhất, tất cả publication timestamp khớp,
+  `impact=UNRATED`, không có sentiment score. Query FE chỉ nhận record có
+  provenance license approved; dữ liệu cũ chưa duyệt được giữ trong DB và không
+  hiển thị. Không deploy Rules/indexes hoặc thêm dependency.
+- Sentiment cũ thiếu provenance/freshness được hiển thị unavailable; không dùng
+  các số legacy làm chỉ số thị trường hiện tại. AI error/fallback hiển thị lỗi
+  dịch EN/VI, kết thúc spinner; không biến lỗi thành câu trả lời phân tích.
+- News BLoC chặn request trùng, dùng state mới khi response tới, gắn request và
+  history với generation/UID để không ghi đè phiên khác. Input/send/clear khóa
+  trong lúc xử lý. Clear đợi những write đã nhận trước khi xóa; lỗi giữ lịch sử
+  và cho retry. Provider được tạo lại khi UID đổi, dispose bỏ late response.
+- BE live `protrading-ai:news-6271bd6007ae`, image SHA
+  `8692dbb180407f79ce583bcfa0f9d1703cf34146d47cc6921017866ab53d16f0`;
+  localhost/public health đạt, image BE cũ giữ để rollback. FE hiện tại SHA
+  `9bc7893891862976c3f1633aa76e51e88dd900502a776c7900d424c5325414c9`
+  khớp file public sau deploy.
+- Full Python 250/250 với Auth/Firestore Emulator; image cô lập 250 ca gồm
+  226 đạt và 24 skip cần Emulator. Full Flutter 147/147, trong đó tám regression
+  chat mới; analyzer 0 error/warning và ba Mobile info có sẵn. Web release đạt.
+- Browser cùng FE cuối: 13 bài, mở chi tiết và Read Full Article tới đúng URL
+  Fed; width 600 px không có overflow log. Gửi câu hỏi nguồn công khai: controls
+  bị khóa khi pending, sau đó AI unavailable/spinner dừng/controls mở lại.
+  DeepSeek thiếu số dư vẫn chặn phản hồi AI thành công.
+- Bằng chứng: `web-production-news-qa-2026-10-03.json` và ba ảnh Fed,
+  AI-unavailable, responsive cùng thư mục. W20/W21 vẫn mở cho nguồn social,
+  calendar và bằng chứng What-If/Red Zone; không đánh dấu toàn trang News 100%.
+
 ## Tiếp tục
 
-1. Lưu source và bằng chứng release vào GitHub main theo phê duyệt đã có,
-   xác nhận SHA remote sau push.
+1. Lưu source News và bằng chứng release vào GitHub main theo phê duyệt đã có,
+   xác nhận SHA remote sau push. Foundation/Backtest đã có trên main `5ed71ac`.
 2. Tiếp tục quota Backtest và kiểm thử các role khác bằng danh tính đúng quyền.
 3. Tiếp tục các hàng News, Community, Referral, Admin, Radar, Push, Data Lake
    và role matrix còn mở trong `web-completion-plan.md`.

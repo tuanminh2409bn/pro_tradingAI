@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-03",
+  "environment": "production",
+  "firebase_project": "protrading-ai-2026",
+  "qa_role": "standard",
+  "source_commits": {"backend": "5421586", "frontend": "e5f535c"},
+  "qa_identity": "owner QA (credentials stored in Keychain; no tokens in artifact)",
+  "backend": {
+    "release_id": "6271bd6007ae",
+    "image": "protrading-ai:news-6271bd6007ae",
+    "image_sha256": "8692dbb180407f79ce583bcfa0f9d1703cf34146d47cc6921017866ab53d16f0",
+    "live_container": "protrading-ai-news-live-6271bd6007ae",
+    "health": "passed"
+  },
+  "frontend": {
+    "main_dart_js_sha256": "9bc7893891862976c3f1633aa76e51e88dd900502a776c7900d424c5325414c9",
+    "hosting": "https://protrading-ai-2026.web.app/"
+  },
+  "provider": {
+    "type": "official_release",
+    "source": "Federal Reserve Board",
+    "feeds": [
+      "https://www.federalreserve.gov/feeds/press_all.xml",
+      "https://www.federalreserve.gov/feeds/press_monetary.xml"
+    ],
+    "rights_reference": "https://www.federalreserve.gov/disclaimer.htm",
+    "scope": "Attributed public-domain text; no images, logos, social mentions or impact rating"
+  },
+  "firestore_readback": {
+    "article_count": 13,
+    "publication_timestamp_matches": true,
+    "all_official": true,
+    "all_licensed": true,
+    "all_unrated": true,
+    "all_sentiment_absent": true,
+    "source": "Federal Reserve Board",
+    "articles": [
+      {
+        "id": "b92cab3a2b6b5d7a6bfa3ce8ac4106bf9a164a4c31a484e02b6a4b6ff2eda919",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20261002a.htm",
+        "published_at": 1790973900,
+        "freshness": "fresh"
+      },
+      {
+        "id": "f70eacbe8e9e8dcc70003e4684ca2cc62ae8f1f5656c89b67ae067ed2ec802cd",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20261002a.htm",
+        "published_at": 1790971200,
+        "freshness": "fresh"
+      },
+      {
+        "id": "569c0c1bd34063051b1269ab34e962caa11bb0d3c52067cf26ef6a869e594df2",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20261002a.htm",
+        "published_at": 1790953200,
+        "freshness": "fresh"
+      },
+      {
+        "id": "cc348041ce35da821f13ee6b488de114a1f1de6cbad6191cec4a0795843ae844",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260930a.htm",
+        "published_at": 1790773200,
+        "freshness": "historical"
+      },
+      {
+        "id": "a2be0799e61edf9cbc4be15f4075d0ef0523bf40abaf986e75383c3630a77adb",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260929a.htm",
+        "published_at": 1790712000,
+        "freshness": "historical"
+      },
+      {
+        "id": "09e214e426cfda5f93a0e666b6cb683ec1f9c66c68670da4c4be31742515e66f",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260925a.htm",
+        "published_at": 1790368200,
+        "freshness": "historical"
+      },
+      {
+        "id": "edda391697379b65bcaaa94c42815c590a0b82932636b7abb55ee2d76378f7b8",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "published_at": 1790274600,
+        "freshness": "historical"
+      },
+      {
+        "id": "50e00fd06f6656f121750eee42611ae80f1868f4ea3559be971198ba4c435415",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260924a.htm",
+        "published_at": 1790262000,
+        "freshness": "historical"
+      },
+      {
+        "id": "b275955fd4c5a72c1a7727234297970ad6d87bdf07988ce2196b157921f3829a",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20260922a.htm",
+        "published_at": 1790109000,
+        "freshness": "historical"
+      },
+      {
+        "id": "622e23c2abc7539ebf8a31ec2e0a0649397cb69a26db84cc5bc730638a542ce3",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260918a.htm",
+        "published_at": 1789743600,
+        "freshness": "historical"
+      },
+      {
+        "id": "a6ece6339a6b97f09ea08863ae4336befa28e8c2744aa03cbf3d0143769efb88",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/enforcement20260918b.htm",
+        "published_at": 1789743600,
+        "freshness": "historical"
+      },
+      {
+        "id": "187a84d36360015f442740cd4a2f54b59082126541599eecf5c3fc61c5490277",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm",
+        "published_at": 1789581600,
+        "freshness": "historical"
+      },
+      {
+        "id": "47a6cf7a7248e8d0cdea5410812f320c8d1871892cb31d0de2ddb3ca47cf9a3d",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916b.htm",
+        "published_at": 1789581600,
+        "freshness": "historical"
+      }
+    ]
+  },
+  "browser": {
+    "approved_articles_visible": 13,
+    "unapproved_legacy_records_excluded": true,
+    "publication_age_shown": true,
+    "read_full_article_url": "https://www.federalreserve.gov/newsevents/pressreleases/orders20261002a.htm",
+    "read_full_article_verified": true,
+    "responsive_width_px": 600,
+    "overflow_logs": 0,
+    "sentiment": "unavailable (no approved fresh social provider)",
+    "ai_request": "public-source QA question submitted through native keyboard",
+    "pending_controls": "input/send/clear disabled while request pending",
+    "terminal_result": "AI unavailable; spinner ends (DeepSeek payment_required)"
+  },
+  "checks": {
+    "python_emulator": {
+      "total": 250,
+      "passed": 250
+    },
+    "backend_isolated_image": {
+      "total": 250,
+      "passed": 226,
+      "emulator_skipped": 24
+    },
+    "flutter": {
+      "total": 147,
+      "passed": 147
+    },
+    "news_chat_regressions": 8,
+    "analyzer": {
+      "errors": 0,
+      "warnings": 0,
+      "existing_mobile_infos": 3
+    },
+    "web_release_build": "passed"
+  },
+  "evidence_images": [
+    "web-production-news-fed-2026-10-03.png",
+    "web-production-news-ai-unavailable-2026-10-03.png",
+    "web-production-news-responsive-2026-10-03.png"
+  ],
+  "remaining": [
+    "Funded successful DeepSeek response and three specialists plus aggregator",
+    "Licensed high-impact calendar and official X sentiment",
+    "News What-If/Red Zone runtime on real scheduled events",
+    "Full acceptance matrix on same build; Web is not 100% complete"
+  ]
+}

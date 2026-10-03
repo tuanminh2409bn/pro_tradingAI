@@ -44,6 +44,21 @@ Provider contracts, account access, real licensed samples and staging credential
 
 ## Official contract references
 
+### Production news selection — 2026-10-03
+
+The owner delegated suitable provider choices and authorized production work.
+Fed official RSS is selected for attributed public-domain text only, based on
+the Board's disclaimer and feed index below. No images/logos, social mentions,
+sentiment rating or scheduled HIGH-impact classification are inferred. The two
+feeds produced 13 unique real releases on production; source/time/freshness and
+same-build browser evidence are in `web-production-news-qa-2026-10-03.json`.
+Trading Economics and X remain unconfigured external gates. This records the
+delegated selection and evidence, not a new paid agreement or blanket license
+for third-party content.
+
+- Fed rights and attribution: https://www.federalreserve.gov/disclaimer.htm
+- Official Fed RSS index: https://www.federalreserve.gov/feeds/feeds.htm
+
 - OANDA candle fields and granularities: https://developer.oanda.com/rest-live-v20/instrument-df/
 - Trading Economics Calendar fields: https://docs.tradingeconomics.com/economic_calendar/schema/
 - X API search documentation: https://github.com/xdevplatform/docs/blob/main/x-api/posts/search/introduction.mdx
