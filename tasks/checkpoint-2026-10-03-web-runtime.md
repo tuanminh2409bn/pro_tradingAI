@@ -305,6 +305,28 @@
   hôm nay 04/10. Lát tiếp theo nâng runtime được hỗ trợ, giữ nguyên các version
   dependency production đang dùng và kiểm tra candidate trước cutover.
 
+## Video Referral và runtime — cập nhật 04/10
+
+- FE source `a54d67d` đã lên GitHub main và Firebase Hosting. Public bundle
+  SHA `3a82f7d45ff1ef43c7c7214b95cf7b78677b45fce5f3c133db4b9735fc217d8f`
+  khớp build production. BE vẫn source `7ef3ab6`, Rules vẫn `43fd970`.
+- QA Standard tải video gốc thật: H.264/MP4, 1200×630, 5.964 giây,
+  99,573 bytes, không audio. QR đầu/giữa/cuối đều khớp link server; ba nút
+  asset khóa khi export và mở lại sau thành công. Bằng chứng JSON/PNG:
+  `web-production-referral-video-qa-2026-10-04.json` và
+  `web-production-referral-video-2026-10-04.png`.
+- Flutter 184 đạt + 2 skip chỉ dành cho Web, Chrome video 4/4; analyzer không
+  error/warning, còn 3 info Mobile có sẵn. Không gọi DeepSeek ở lượt kiểm tra.
+- Nâng Python 3.12 gặp lỗi tạo thread với default seccomp trên VPS Ubuntu
+  16.04/kernel 4.4/Docker 18.09. Không dùng unconfined cho release hoặc live.
+  Dockerfile `433a165` đã pin digest Python 3.10.18/Bullseye và constraints
+  76 dependency đúng runtime hiện tại; cold candidate pip check/thread đạt,
+  Python network-none 260 đạt + 33 skip. Không cutover BE vì app không đổi.
+  Nâng host/runtime có hỗ trợ vẫn là gate W35; xem
+  `python-runtime-upgrade-2026-10-04.md`.
+- W26 còn positive new-account registration production; W27 tiền thưởng/rút
+  tiền và các gate provider/role/SLA khác vẫn mở. Toàn kế hoạch chưa 100%.
+
 ## Tiếp tục
 
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source

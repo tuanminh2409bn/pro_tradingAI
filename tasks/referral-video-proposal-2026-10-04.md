@@ -54,3 +54,19 @@
   vào ứng dụng hoặc requirements production.
 - Chưa có bằng chứng Safari/điện thoại thực; trạng thái unsupported và WebM
   fallback có contract nhưng không suy ra mọi codec/browser đã nghiệm thu.
+
+## Release và kiểm tra production đã đạt
+
+- Source FE `a54d67d080eb12dd09ccd21e33097be3a8feb659` đã nhận ở GitHub
+  main và Firebase Hosting. SHA public bundle khớp build local:
+  `3a82f7d45ff1ef43c7c7214b95cf7b78677b45fce5f3c133db4b9735fc217d8f`.
+- QA Standard hiện có tải video thật bằng nút Web. Decoder độc lập xác nhận
+  H.264/MP4 1200×630, 5.964 giây, 69 frame, 99,573 bytes, không audio;
+  QR đầu/giữa/cuối khớp link server và accent chuyển động.
+- SDK read-only xác nhận code/registry đúng owner, QA vẫn Standard và
+  count đăng ký 0; không ghi tiền/claim/quota. BE `7ef3ab6` vẫn healthy/Redis,
+  không restart/deploy BE hoặc đổi Rules trong lát này; không gọi DeepSeek.
+- Bằng chứng và ảnh: `web-production-referral-video-qa-2026-10-04.json`,
+  `web-production-referral-video-2026-10-04.png`.
+- W26 vẫn mở vì positive new-account registration production chưa chạy;
+  không tạo thêm QA khi bước auto-review riêng còn chờ phê duyệt.

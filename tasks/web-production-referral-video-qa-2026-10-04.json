@@ -1,0 +1,67 @@
+{
+  "environment": "Firebase production protrading-ai-2026",
+  "frontend_source_commit": "a54d67d080eb12dd09ccd21e33097be3a8feb659",
+  "frontend_bundle_sha256": "3a82f7d45ff1ef43c7c7214b95cf7b78677b45fce5f3c133db4b9735fc217d8f",
+  "backend_source_commit": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+  "backend_container": "protrading-ai-referral-live-7ef3ab6",
+  "backend_image_id": "sha256:b2a9518698b73579018e65504c65b17d52a8130a614c41b816c71bc36f86ba94",
+  "file": "protrading-referral-OdCc5mkXz91kDxqnthe_sg8Y-video.mp4",
+  "bytes": 99573,
+  "sha256": "206b404988a501cc9826fe418ef794d983df3fb99fd60621216779da30c2210e",
+  "container": "mov,mp4,m4a,3gp,3g2,mj2",
+  "codec": "h264",
+  "dimensions": [
+    1200,
+    630
+  ],
+  "duration_seconds": 5.9641,
+  "frame_count": 69,
+  "audio_streams": 0,
+  "qr_frames": [
+    {
+      "frame": "first",
+      "timestamp": 0.0,
+      "matches_server_payload": true
+    },
+    {
+      "frame": "middle",
+      "timestamp": 2.9999666666666664,
+      "matches_server_payload": true
+    },
+    {
+      "frame": "last",
+      "timestamp": 5.9308,
+      "matches_server_payload": true
+    }
+  ],
+  "animated_accent_changes": true,
+  "sdk_readback": {
+    "qa_standard": true,
+    "qa_admin": false,
+    "private_registry_matches_owner": true,
+    "code_matches_browser": true,
+    "registered_invite_count": 0,
+    "financial_fields_absent": true
+  },
+  "backend_health": "ok",
+  "analysis_cache": "redis",
+  "public_bundle_matches_local_build": true,
+  "probe_paid_ai_calls": 0,
+  "production_new_account_registration_tested": false,
+  "video_lifecycle_and_header_tests": "Chrome 4/4",
+  "flutter_suite": {
+    "passed": 184,
+    "web_only_skips": 2
+  },
+  "analyzer": {
+    "errors": 0,
+    "warnings": 0,
+    "existing_mobile_infos": 3
+  },
+  "limits": [
+    "Safari and phone playback not directly tested",
+    "Positive production new-account registration probe awaiting separate QA approval",
+    "Referral money/withdrawal remains unavailable",
+    "Python 3.12 blocked by legacy VPS; backend not restarted"
+  ]
+}
