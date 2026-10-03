@@ -381,6 +381,25 @@
   all-wins từ infinity thành zero và tính break-even vào mẫu số average loss;
   không được suy ra risk adherence/discipline từ best/worst P&L.
 
+### Journal performance — local verification 04/10
+
+- Đã sửa all-wins PF, break-even average loss, parser đoán ngày/profit,
+  stats/table từ hai snapshot, và score discipline/risk suy đoán. BLoC dùng
+  một owner snapshot/generation, Web chỉ có measured metrics/summary EN/VI.
+  Không sửa Firestore schema/query/Rules hoặc API; legacy schema vẫn đọc.
+- Audio dùng LocaleCubit và generation; VI không còn dùng en-US, callback
+  cũ/end đồng bộ/start fail không làm sai trạng thái. Full Flutter 237 đạt
+  + 2 skip Web-only, target cuối 37/37; analyzer 0 error/warning, 3 info cũ.
+- Native Emulator 8801 xác nhận 3 lệnh/P&L -7.91, PF/payoff 0.61, counts
+  1/1/1 và âm tính CN 06 UTC -20.25. Nút audio Phát→Dừng→Phát; chưa nghe
+  voice/device hoặc playback production. Bundle QA khớp served source.
+  Xem `journal-performance-correctness-spec-2026-10-04.md` và JSON/PNG local.
+- Auto-review từ chối đối chiếu `DEEPSEEK_API_KEY` từ Docker inspect trên
+  các container trước khi thực thi vì chưa có phê duyệt riêng cho việc đọc
+  credential. Đã hỏi quyền đọc đúng biến/chỉ output boolean/0 phí, hoặc nơi
+  lưu an toàn. Không thử qua đường khác. Paid/production-QA probe vẫn chờ
+  duyệt trước đó; BE live auth 401 là bằng chứng cuối cùng đã được phép đọc.
+
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
 2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục

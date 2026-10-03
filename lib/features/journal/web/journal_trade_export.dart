@@ -78,7 +78,7 @@ String encodeJournalCsv(List<TradeRecord> trades) {
         _csvText(trade.closeTime.toUtc().toIso8601String()),
         _csvText(trade.symbol),
         _csvText(trade.action),
-        _csvNumber(trade.lotSize),
+        trade.lotSize > 0 ? _csvNumber(trade.lotSize) : '',
         _csvNumber(trade.entryPrice),
         _csvNumber(trade.exitPrice),
         _csvNumber(trade.netProfit),

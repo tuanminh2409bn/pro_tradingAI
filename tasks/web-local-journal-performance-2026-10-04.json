@@ -1,0 +1,61 @@
+{
+  "checked_at_utc": "2026-10-03T22:02:55Z",
+  "environment": "Firebase Auth/Firestore Emulator, local native browser",
+  "web_origin": "http://127.0.0.1:8801/",
+  "fixture_only": true,
+  "fixture_description": "Three locally owned CLOSED paper trades: one win, one loss, one break-even; no real broker account",
+  "bundle": {
+    "bytes": 3774131,
+    "sha256": "a173d2bb8884aa37bf002602b651609adffe6ed7f8fbd6ec24dec54da684862d",
+    "served_matches_build": true
+  },
+  "source_sha256": {
+    "lib/data/models/journal_models.dart": "d84f69f3e2c4a4c0f6c6453e2a0fde5206038cda8b9850c140a0fd0ffa847b69",
+    "lib/data/repositories/journal_repository.dart": "e50887f89485f5bba78beb2ac69a056490c8da32ed726c6fe9a7e58e408d81b4",
+    "lib/features/journal/bloc/journal_bloc.dart": "a09d398266556fac4bc7c119939faa008306d6426da45ac8c318ca518e6006d8",
+    "lib/features/journal/web/widgets/journal_performance.dart": "6c5cc416724bfb6ac26a151323356d95cfee6eff4758bfb46c540b9ab40a3a13",
+    "lib/features/journal/web/widgets/journal_audio_button.dart": "c9b90d1aaca58c1ea1e554ebb5e75be778413e228d16d202f6f5b059b50deec0"
+  },
+  "native_en_vi_observations": {
+    "total_closed_trades": 3,
+    "recorded_net_pnl": -7.91,
+    "win_rate_display_percent": 33.3,
+    "profit_factor_display": "0.61",
+    "average_win_loss_display": "0.61×",
+    "wins": 1,
+    "losses": 1,
+    "break_even": 1,
+    "negative_only_loss_group": {"day_utc": "Sunday", "hour_utc": 6, "trade_count": 1, "net_pnl": -20.25},
+    "all_trade_heatmap_bucket": {"day_utc": "Sunday", "hour_utc": 6, "trade_count": 3, "net_pnl": -7.91},
+    "forex_entry_exit_display": ["1.1234567", "1.1234568"],
+    "unmeasured_discipline_risk_message": true,
+    "invented_discipline_risk_progress_bars": false,
+    "account_currency_unverified_message": true,
+    "invented_usd_pnl_symbol": false,
+    "summary_title_vi": "TÓM TẮT HIỆU SUẤT",
+    "voice_button_start_stop_cycle": "play -> stop -> play",
+    "audible_playback_verified": false
+  },
+  "checks": {
+    "target_flutter_passed": 37,
+    "full_flutter_passed": 237,
+    "full_flutter_web_only_vm_skipped": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "analyzer_preexisting_mobile_infos": 3,
+    "emulator_web_release_build": "PASS",
+    "diff_check": "PASS"
+  },
+  "screenshot": {
+    "path": "tasks/web-local-journal-performance-2026-10-04.png",
+    "sha256": "9f622d0aab2dbeac52fe5df7f128a0db2ff4860228a4d5d1dfefe6274a61b53d"
+  },
+  "impact": {"deepseek_requests": 0, "production_writes": 0, "production_qa_created": 0},
+  "limitations": [
+    "Local fixture is not broker/provider evidence",
+    "Origin 8801 is outside the local QA API CORS allowlist; Journal uses Firebase Emulator directly",
+    "Native button lifecycle proves UI transitions, not audible device voice or production playback",
+    "Production QA broker gate remains locked; no positive entitled production CSV/audio proof",
+    "W18/W19 and the complete Web plan remain open"
+  ]
+}

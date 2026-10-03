@@ -21,7 +21,8 @@ class JournalRepository {
           return snapshot.docs
               .map((doc) => TradeRecord.fromFirestoreMap(doc.data()))
               .whereType<TradeRecord>()
-              .toList();
+              .toList()
+            ..sort((left, right) => right.closeTime.compareTo(left.closeTime));
         });
   }
 
@@ -32,22 +33,6 @@ class JournalRepository {
         .collection('trades')
         .snapshots()
         .map((snapshot) {
-          if (snapshot.docs.isEmpty) {
-            return const JournalStats(
-              totalProfit: 0.0,
-              winRate: 0.0,
-              profitFactor: 0.0,
-              rrRatio: '0:0',
-              equityData: [],
-              totalTrades: 0,
-              bestTrade: 0.0,
-              worstTrade: 0.0,
-              avgProfit: 0.0,
-              aiInsight: '__NO_TRADES__',
-              heatmapData: [],
-            );
-          }
-
           final trades =
               snapshot.docs
                   .map((doc) => TradeRecord.fromFirestoreMap(doc.data()))
@@ -55,142 +40,160 @@ class JournalRepository {
                   .toList()
                 ..sort((a, b) => a.closeTime.compareTo(b.closeTime));
 
-          return _computeStats(trades);
+          return buildJournalStats(trades);
         });
   }
+}
 
-  JournalStats _computeStats(List<TradeRecord> trades) {
-    if (trades.isEmpty) {
-      return const JournalStats(
-        totalProfit: 0.0,
-        winRate: 0.0,
-        profitFactor: 0.0,
-        rrRatio: '0:0',
-        equityData: [],
-        totalTrades: 0,
-        bestTrade: 0.0,
-        worstTrade: 0.0,
-        avgProfit: 0.0,
-        aiInsight: '__NO_TRADES__',
-        heatmapData: [],
-      );
-    }
-
-    final totalTrades = trades.length;
-    final winningTrades = trades.where((t) => t.netProfit > 0).toList();
-    final losingTrades = trades.where((t) => t.netProfit <= 0).toList();
-
-    // Win Rate
-    final winRate = (winningTrades.length / totalTrades) * 100;
-
-    // Total Profit
-    final totalProfit = trades.fold<double>(
-      0.0,
-      (total, trade) => total + trade.netProfit,
-    );
-
-    // Average Profit
-    final avgProfit = totalProfit / totalTrades;
-
-    // Best & Worst Trade
-    final bestTrade = trades
-        .map((t) => t.netProfit)
-        .reduce((a, b) => a > b ? a : b);
-    final worstTrade = trades
-        .map((t) => t.netProfit)
-        .reduce((a, b) => a < b ? a : b);
-
-    // Profit Factor = gross profit / gross loss
-    final grossProfit = winningTrades.fold<double>(
-      0.0,
-      (total, trade) => total + trade.netProfit,
-    );
-    final grossLoss = losingTrades.fold<double>(
-      0.0,
-      (total, trade) => total + trade.netProfit.abs(),
-    );
-    final profitFactor = grossLoss > 0
-        ? grossProfit / grossLoss
-        : grossProfit > 0
-        ? double.infinity
-        : 0.0;
-
-    // Average R:R Ratio
-    final avgWin = winningTrades.isNotEmpty
-        ? winningTrades.fold<double>(
-                0.0,
-                (total, trade) => total + trade.netProfit,
-              ) /
-              winningTrades.length
-        : 0.0;
-    final avgLoss = losingTrades.isNotEmpty
-        ? losingTrades.fold<double>(
-                0.0,
-                (total, trade) => total + trade.netProfit.abs(),
-              ) /
-              losingTrades.length
-        : 0.0;
-    final rrRatio = avgLoss > 0
-        ? '1:${(avgWin / avgLoss).toStringAsFixed(2)}'
-        : '1:0.00';
-
-    // Equity Curve (cumulative P&L from chronological trades)
-    final equityData = <double>[];
-    double cumulative = 0.0;
-    for (final trade in trades) {
-      cumulative += trade.netProfit;
-      equityData.add(cumulative);
-    }
-
-    // Heatmap: group by dayOfWeek x hour
-    final heatmapMap = <String, HeatmapEntry>{};
-    for (final trade in trades) {
-      final day = trade.closeTime.weekday; // 1=Mon, 7=Sun
-      final hour = trade.closeTime.hour;
-      final key = '$day-$hour';
-      if (heatmapMap.containsKey(key)) {
-        final existing = heatmapMap[key]!;
-        heatmapMap[key] = HeatmapEntry(
-          dayOfWeek: day,
-          hourSlot: hour,
-          totalPnL: existing.totalPnL + trade.netProfit,
-          tradeCount: existing.tradeCount + 1,
-        );
-      } else {
-        heatmapMap[key] = HeatmapEntry(
-          dayOfWeek: day,
-          hourSlot: hour,
-          totalPnL: trade.netProfit,
-          tradeCount: 1,
-        );
-      }
-    }
-
-    // AI Insight generation from real data
-    final aiInsight = buildJournalInsight(
-      totalTrades: totalTrades,
-      winRate: winRate,
-      totalProfit: totalProfit,
-      bestTrade: bestTrade,
-      worstTrade: worstTrade,
-      profitFactor: profitFactor,
-      trades: trades,
-    );
-
-    return JournalStats(
-      totalProfit: totalProfit,
-      winRate: winRate,
-      profitFactor: profitFactor.isFinite ? profitFactor : 0.0,
-      rrRatio: rrRatio,
-      equityData: equityData,
-      totalTrades: totalTrades,
-      bestTrade: bestTrade,
-      worstTrade: worstTrade,
-      avgProfit: avgProfit,
-      aiInsight: aiInsight,
-      heatmapData: heatmapMap.values.toList(),
+/// Uses one immutable owner snapshot; no network, LLM or invented risk scores.
+JournalStats buildJournalStats(List<TradeRecord> source) {
+  final trades = List<TradeRecord>.of(source)
+    ..sort((left, right) => left.closeTime.compareTo(right.closeTime));
+  if (trades.any((trade) => !trade.netProfit.isFinite)) {
+    throw const FormatException('Journal performance is not finite.');
+  }
+  if (trades.isEmpty) {
+    return const JournalStats(
+      totalProfit: 0.0,
+      winRate: 0.0,
+      profitFactor: null,
+      rrRatio: '—',
+      equityData: [],
+      totalTrades: 0,
+      bestTrade: 0.0,
+      worstTrade: 0.0,
+      avgProfit: 0.0,
+      aiInsight: '__NO_TRADES__',
+      heatmapData: [],
     );
   }
+
+  final totalTrades = trades.length;
+  final winningTrades = trades.where((t) => t.netProfit > 0).toList();
+  final losingTrades = trades.where((t) => t.netProfit < 0).toList();
+
+  // Win Rate
+  final winRate = (winningTrades.length / totalTrades) * 100;
+
+  // Total Profit
+  final totalProfit = trades.fold<double>(
+    0.0,
+    (total, trade) => total + trade.netProfit,
+  );
+
+  // Average Profit
+  final avgProfit = totalProfit / totalTrades;
+
+  // Best & Worst Trade
+  final bestTrade = trades
+      .map((t) => t.netProfit)
+      .reduce((a, b) => a > b ? a : b);
+  final worstTrade = trades
+      .map((t) => t.netProfit)
+      .reduce((a, b) => a < b ? a : b);
+
+  // Profit Factor = gross profit / gross loss
+  final grossProfit = winningTrades.fold<double>(
+    0.0,
+    (total, trade) => total + trade.netProfit,
+  );
+  final grossLoss = losingTrades.fold<double>(
+    0.0,
+    (total, trade) => total + trade.netProfit.abs(),
+  );
+  if (!totalProfit.isFinite || !grossProfit.isFinite || !grossLoss.isFinite) {
+    throw const FormatException('Journal performance overflowed.');
+  }
+  final rawProfitFactor = grossLoss > 0 ? grossProfit / grossLoss : null;
+  final profitFactor = rawProfitFactor?.isFinite == true
+      ? rawProfitFactor
+      : null;
+
+  // Average R:R Ratio
+  final avgWin = winningTrades.isNotEmpty
+      ? winningTrades.fold<double>(
+              0.0,
+              (total, trade) => total + trade.netProfit,
+            ) /
+            winningTrades.length
+      : 0.0;
+  final avgLoss = losingTrades.isNotEmpty
+      ? losingTrades.fold<double>(
+              0.0,
+              (total, trade) => total + trade.netProfit.abs(),
+            ) /
+            losingTrades.length
+      : 0.0;
+  final rawPayoff = avgWin > 0 && avgLoss > 0 ? avgWin / avgLoss : null;
+  final payoffRatio = rawPayoff?.isFinite == true ? rawPayoff : null;
+  final rrRatio = payoffRatio != null
+      ? '1:${payoffRatio.toStringAsFixed(2)}'
+      : '—';
+
+  // Equity Curve (cumulative P&L from chronological trades)
+  final equityData = <double>[];
+  double cumulative = 0.0;
+  for (final trade in trades) {
+    cumulative += trade.netProfit;
+    if (!cumulative.isFinite) {
+      throw const FormatException('Journal performance overflowed.');
+    }
+    equityData.add(cumulative);
+  }
+
+  // Heatmap: group by dayOfWeek x hour
+  final heatmapMap = <String, HeatmapEntry>{};
+  for (final trade in trades) {
+    final day = trade.closeTime.weekday; // 1=Mon, 7=Sun
+    final hour = trade.closeTime.hour;
+    final key = '$day-$hour';
+    if (heatmapMap.containsKey(key)) {
+      final existing = heatmapMap[key]!;
+      heatmapMap[key] = HeatmapEntry(
+        dayOfWeek: day,
+        hourSlot: hour,
+        totalPnL: existing.totalPnL + trade.netProfit,
+        tradeCount: existing.tradeCount + 1,
+      );
+    } else {
+      heatmapMap[key] = HeatmapEntry(
+        dayOfWeek: day,
+        hourSlot: hour,
+        totalPnL: trade.netProfit,
+        tradeCount: 1,
+      );
+    }
+  }
+
+  // AI Insight generation from real data
+  final aiInsight = buildJournalInsight(
+    totalTrades: totalTrades,
+    winRate: winRate,
+    totalProfit: totalProfit,
+    bestTrade: bestTrade,
+    worstTrade: worstTrade,
+    profitFactor: profitFactor,
+    trades: trades,
+  );
+
+  return JournalStats(
+    totalProfit: totalProfit,
+    winRate: winRate,
+    profitFactor: profitFactor,
+    rrRatio: rrRatio,
+    payoffRatio: payoffRatio,
+    winningTrades: winningTrades.length,
+    losingTrades: losingTrades.length,
+    breakEvenTrades: totalTrades - winningTrades.length - losingTrades.length,
+    lossConcentration: _journalLossConcentration(trades),
+    equityData: List.unmodifiable(equityData),
+    totalTrades: totalTrades,
+    bestTrade: bestTrade,
+    worstTrade: worstTrade,
+    avgProfit: avgProfit,
+    aiInsight: aiInsight,
+    heatmapData: heatmapMap.values.toList(),
+  );
 }
 
 /// Web heatmap uses the same UTC clock as the behavioral insight. The source
@@ -218,36 +221,22 @@ String buildJournalInsight({
   required double totalProfit,
   required double bestTrade,
   required double worstTrade,
-  required double profitFactor,
+  required double? profitFactor,
   required List<TradeRecord> trades,
 }) {
   final buffer = StringBuffer();
 
-  // Performance summary
-  if (totalProfit > 0) {
-    buffer.write(
-      'Strong performance with \$${totalProfit.toStringAsFixed(2)} total profit across $totalTrades trades. ',
-    );
-  } else {
-    buffer.write(
-      'Portfolio is down \$${totalProfit.abs().toStringAsFixed(2)} across $totalTrades trades. Focus on risk management. ',
-    );
+  if (!totalProfit.isFinite ||
+      !winRate.isFinite ||
+      !bestTrade.isFinite ||
+      !worstTrade.isFinite) {
+    throw const FormatException('Journal performance is not finite.');
   }
-
-  // Win rate insight
-  if (winRate >= 60) {
-    buffer.write(
-      'Your ${winRate.toStringAsFixed(1)}% win rate is excellent — maintain your edge. ',
-    );
-  } else if (winRate >= 45) {
-    buffer.write(
-      'Win rate at ${winRate.toStringAsFixed(1)}% is acceptable but can be improved with better entries. ',
-    );
-  } else {
-    buffer.write(
-      'Win rate of ${winRate.toStringAsFixed(1)}% is below average — consider reviewing your entry criteria. ',
-    );
-  }
+  // Legacy English formatter. Web renders its localized structured summary.
+  buffer.write(
+    '$totalTrades measured closed trades; recorded net P&L '
+    '${totalProfit.toStringAsFixed(2)}; win rate ${winRate.toStringAsFixed(1)}%. ',
+  );
 
   // Recent trend (last 7 trades)
   if (trades.length >= 7) {
@@ -255,36 +244,14 @@ String buildJournalInsight({
     final recentWins = recentTrades.where((t) => t.netProfit > 0).length;
     final recentWinRate = (recentWins / 7) * 100;
     final diff = recentWinRate - winRate;
-    if (diff > 5) {
-      buffer.write(
-        'Your win rate improved by ${diff.toStringAsFixed(1)}% in the last 7 trades — momentum is building. ',
-      );
-    } else if (diff < -5) {
-      buffer.write(
-        'Recent 7 trades show a ${diff.abs().toStringAsFixed(1)}% drop in win rate — consider taking a break. ',
-      );
-    }
-  }
-
-  final lossSlots = <(int, int), ({double pnl, int count})>{};
-  for (final trade in trades.where((trade) => trade.netProfit < 0)) {
-    final closeTime = trade.closeTime.toUtc();
-    final key = (closeTime.weekday, closeTime.hour);
-    final current = lossSlots[key];
-    lossSlots[key] = (
-      pnl: (current?.pnl ?? 0) + trade.netProfit,
-      count: (current?.count ?? 0) + 1,
+    buffer.write(
+      'Recent 7 trades win rate ${recentWinRate.toStringAsFixed(1)}%; '
+      'difference ${diff.toStringAsFixed(1)} percentage points. ',
     );
   }
-  if (lossSlots.isNotEmpty) {
-    final ordered = lossSlots.entries.toList()
-      ..sort((left, right) {
-        final byLoss = left.value.pnl.compareTo(right.value.pnl);
-        if (byLoss != 0) return byLoss;
-        final byDay = left.key.$1.compareTo(right.key.$1);
-        return byDay != 0 ? byDay : left.key.$2.compareTo(right.key.$2);
-      });
-    final worst = ordered.first;
+
+  final worst = _journalLossConcentration(trades);
+  if (worst != null) {
     const weekdays = [
       'Monday',
       'Tuesday',
@@ -294,25 +261,48 @@ String buildJournalInsight({
       'Saturday',
       'Sunday',
     ];
-    final hour = worst.key.$2.toString().padLeft(2, '0');
-    final tradeLabel = worst.value.count == 1 ? 'trade' : 'trades';
+    final hour = worst.hourSlot.toString().padLeft(2, '0');
+    final tradeLabel = worst.tradeCount == 1 ? 'trade' : 'trades';
     buffer.write(
-      'Measured loss concentration: ${weekdays[worst.key.$1 - 1]} '
-      '$hour:00 UTC, ${worst.value.count} measured losing $tradeLabel, '
-      '-\$${worst.value.pnl.abs().toStringAsFixed(2)} net. ',
+      'Measured loss concentration: ${weekdays[worst.dayOfWeek - 1]} '
+      '$hour:00 UTC, ${worst.tradeCount} measured losing $tradeLabel, '
+      '${worst.totalPnL.toStringAsFixed(2)} net P&L. ',
     );
   }
 
   // Profit factor
-  if (profitFactor.isFinite && profitFactor > 2.0) {
-    buffer.write(
-      'Profit factor of ${profitFactor.toStringAsFixed(2)} indicates a robust strategy.',
-    );
-  } else if (profitFactor.isFinite && profitFactor < 1.0) {
-    buffer.write(
-      'Profit factor below 1.0 — losses are exceeding gains. Tighten stop losses.',
-    );
+  if (profitFactor != null && profitFactor.isFinite) {
+    buffer.write('Recorded profit factor ${profitFactor.toStringAsFixed(2)}.');
   }
 
   return buffer.toString();
+}
+
+HeatmapEntry? _journalLossConcentration(List<TradeRecord> trades) {
+  final grouped = <(int, int), HeatmapEntry>{};
+  for (final trade in trades) {
+    if (!trade.netProfit.isFinite || trade.netProfit >= 0) continue;
+    final closed = trade.closeTime.toUtc();
+    final key = (closed.weekday, closed.hour);
+    final previous = grouped[key];
+    final pnl = (previous?.totalPnL ?? 0) + trade.netProfit;
+    if (!pnl.isFinite) {
+      throw const FormatException('Journal performance overflowed.');
+    }
+    grouped[key] = HeatmapEntry(
+      dayOfWeek: closed.weekday,
+      hourSlot: closed.hour,
+      totalPnL: pnl,
+      tradeCount: (previous?.tradeCount ?? 0) + 1,
+    );
+  }
+  if (grouped.isEmpty) return null;
+  final slots = grouped.values.toList()
+    ..sort((left, right) {
+      final byLoss = left.totalPnL.compareTo(right.totalPnL);
+      if (byLoss != 0) return byLoss;
+      final byDay = left.dayOfWeek.compareTo(right.dayOfWeek);
+      return byDay != 0 ? byDay : left.hourSlot.compareTo(right.hourSlot);
+    });
+  return slots.first;
 }

@@ -7,15 +7,14 @@ import '../../../data/models/journal_models.dart';
 
 class JournalBloc extends Bloc<JournalEvent, JournalState> {
   final JournalRepository _journalRepository;
-  StreamSubscription? _tradesSubscription;
-  StreamSubscription? _statsSubscription;
+  StreamSubscription<List<TradeRecord>>? _tradesSubscription;
+  int _generation = 0;
 
   JournalBloc({required JournalRepository journalRepository})
     : _journalRepository = journalRepository,
       super(JournalInitial()) {
     on<LoadJournalData>(_onLoadJournalData);
     on<UpdateTradeHistory>(_onUpdateTradeHistory);
-    on<UpdateJournalStats>(_onUpdateJournalStats);
     on<JournalStreamFailed>(_onStreamFailed);
   }
 
@@ -23,54 +22,48 @@ class JournalBloc extends Bloc<JournalEvent, JournalState> {
     LoadJournalData event,
     Emitter<JournalState> emit,
   ) async {
+    final generation = ++_generation;
     emit(JournalLoading());
     try {
       final userId = event.userId;
-
-      _tradesSubscription?.cancel();
-      _statsSubscription?.cancel();
-
-      if (userId != null && userId.isNotEmpty) {
-        _tradesSubscription = _journalRepository
-            .getTradeHistory(userId)
-            .listen(
-              (trades) => add(UpdateTradeHistory(trades)),
-              onError: (_) => add(const JournalStreamFailed()),
-            );
-
-        _statsSubscription = _journalRepository
-            .getJournalStats(userId)
-            .listen(
-              (stats) => add(UpdateJournalStats(stats)),
-              onError: (_) => add(const JournalStreamFailed()),
-            );
+      final previous = _tradesSubscription;
+      _tradesSubscription = null;
+      await previous?.cancel();
+      if (isClosed || emit.isDone || generation != _generation) return;
+      if (userId == null || userId.trim().isEmpty) {
+        emit(
+          JournalLoaded(trades: const [], stats: buildJournalStats(const [])),
+        );
+        return;
       }
-
-      // Emit initial Loaded state with empty data while streams load
-      emit(
-        const JournalLoaded(
-          trades: [],
-          stats: JournalStats(
-            totalProfit: 0.0,
-            winRate: 0.0,
-            profitFactor: 0.0,
-            rrRatio: '0:0',
-            equityData: [],
-            totalTrades: 0,
-            bestTrade: 0.0,
-            worstTrade: 0.0,
-            avgProfit: 0.0,
-            aiInsight: 'Loading trade data...',
-            heatmapData: [],
-          ),
-        ),
-      );
+      _tradesSubscription = _journalRepository
+          .getTradeHistory(userId)
+          .listen(
+            (trades) {
+              if (!isClosed && generation == _generation) {
+                add(
+                  UpdateTradeHistory(
+                    List.unmodifiable(trades),
+                    generation: generation,
+                  ),
+                );
+              }
+            },
+            onError: (_) {
+              if (!isClosed && generation == _generation) {
+                add(JournalStreamFailed(generation));
+              }
+            },
+          );
     } catch (_) {
-      emit(const JournalError('common_data_unavailable'));
+      if (!isClosed && !emit.isDone && generation == _generation) {
+        emit(const JournalError('common_data_unavailable'));
+      }
     }
   }
 
   void _onStreamFailed(JournalStreamFailed event, Emitter<JournalState> emit) {
+    if (event.generation != _generation) return;
     emit(const JournalError('common_data_unavailable'));
   }
 
@@ -78,24 +71,22 @@ class JournalBloc extends Bloc<JournalEvent, JournalState> {
     UpdateTradeHistory event,
     Emitter<JournalState> emit,
   ) {
-    if (state is JournalLoaded) {
-      emit((state as JournalLoaded).copyWith(trades: event.trades));
-    }
-  }
-
-  void _onUpdateJournalStats(
-    UpdateJournalStats event,
-    Emitter<JournalState> emit,
-  ) {
-    if (state is JournalLoaded) {
-      emit((state as JournalLoaded).copyWith(stats: event.stats));
+    if (event.generation != _generation) return;
+    try {
+      final trades = List<TradeRecord>.unmodifiable(event.trades);
+      emit(JournalLoaded(trades: trades, stats: buildJournalStats(trades)));
+    } on FormatException {
+      emit(const JournalError('common_data_unavailable'));
     }
   }
 
   @override
-  Future<void> close() {
-    _tradesSubscription?.cancel();
-    _statsSubscription?.cancel();
-    return super.close();
+  Future<void> close() async {
+    ++_generation;
+    try {
+      await _tradesSubscription?.cancel();
+    } finally {
+      await super.close();
+    }
   }
 }

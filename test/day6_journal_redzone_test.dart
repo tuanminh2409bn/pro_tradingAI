@@ -134,7 +134,9 @@ void main() {
 
       expect(insight, contains('Tuesday 09:00 UTC'));
       expect(insight, contains('2 measured losing trades'));
-      expect(insight, contains(r'-$35.00'));
+      expect(insight, contains('-35.00 net P&L'));
+      expect(insight, isNot(contains(r'$')));
+      expect(insight, isNot(contains('Tighten stop losses')));
     });
   });
 

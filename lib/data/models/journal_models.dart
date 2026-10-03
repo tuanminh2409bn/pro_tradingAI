@@ -100,33 +100,44 @@ class TradeRecord extends Equatable {
   /// Accepts both journal fields (`action`/`entryPrice`/`netProfit`) and
   /// execution fields (`type`/`openPrice`/`profit`). Skips still-OPEN trades.
   static TradeRecord? fromFirestoreMap(Map<String, dynamic> data) {
-    final status = (data['status'] ?? '').toString().toUpperCase();
-    final hasClose =
-        data['closeTime'] != null ||
-        data['exitPrice'] != null ||
-        data['closePrice'] != null;
-    if (status == 'OPEN') return null;
-    if (status.isNotEmpty && status != 'CLOSED' && !hasClose) return null;
-    if (!hasClose && status != 'CLOSED') return null;
+    final rawStatus = data['status'];
+    if (rawStatus != null && rawStatus is! String) return null;
+    final status = (rawStatus as String?)?.trim().toUpperCase() ?? '';
+    if (status.isNotEmpty && status != 'CLOSED') return null;
 
-    final rawAction = (data['action'] ?? data['type'] ?? 'BUY')
-        .toString()
-        .toUpperCase();
+    final rawSymbol = data['symbol'];
+    final sourceAction = data['action'] ?? data['type'];
+    if (rawSymbol is! String || sourceAction is! String) return null;
+    final symbol = rawSymbol.trim().toUpperCase();
+    if (symbol.isEmpty) return null;
+    final rawAction = sourceAction.trim().toUpperCase();
     final action = (rawAction == 'BUY' || rawAction == 'LONG')
         ? 'LONG'
         : (rawAction == 'SELL' || rawAction == 'SHORT')
         ? 'SHORT'
-        : rawAction;
+        : null;
+    if (action == null) return null;
 
-    DateTime closeTime = DateTime.now();
-    final ct = data['closeTime'];
-    if (ct is Timestamp) {
-      closeTime = ct.toDate();
-    } else if (ct is DateTime) {
-      closeTime = ct;
-    } else {
-      final ot = data['openTime'];
-      if (ot is Timestamp) closeTime = ot.toDate();
+    double? finiteNumber(Object? value) {
+      if (value is! num) return null;
+      final number = value.toDouble();
+      return number.isFinite ? number : null;
+    }
+
+    final closeTime = _journalCloseTime(data['closeTime']);
+    final entryPrice = finiteNumber(data['entryPrice'] ?? data['openPrice']);
+    final exitPrice = finiteNumber(data['exitPrice'] ?? data['closePrice']);
+    final netProfit = finiteNumber(data['netProfit'] ?? data['profit']);
+    final rawSize = data['lotSize'] ?? data['volume'];
+    // Zero is the existing unknown-size sentinel, never a measured zero lot.
+    final lotSize = rawSize == null ? 0.0 : finiteNumber(rawSize);
+    if (closeTime == null ||
+        entryPrice == null ||
+        exitPrice == null ||
+        netProfit == null ||
+        lotSize == null ||
+        lotSize < 0) {
+      return null;
     }
 
     final rawExecutionMode = data['executionMode'] ?? data['tradeMode'];
@@ -137,12 +148,12 @@ class TradeRecord extends Equatable {
         : null;
 
     return TradeRecord(
-      symbol: (data['symbol'] ?? '').toString(),
+      symbol: symbol,
       action: action,
-      lotSize: (data['lotSize'] ?? data['volume'] ?? 0).toDouble(),
-      entryPrice: (data['entryPrice'] ?? data['openPrice'] ?? 0).toDouble(),
-      exitPrice: (data['exitPrice'] ?? data['closePrice'] ?? 0).toDouble(),
-      netProfit: (data['netProfit'] ?? data['profit'] ?? 0).toDouble(),
+      lotSize: lotSize,
+      entryPrice: entryPrice,
+      exitPrice: exitPrice,
+      netProfit: netProfit,
       closeTime: closeTime,
       brokerMetrics: BrokerTradeMetrics.fromFirestoreMap(data),
       executionMode: executionMode?.isEmpty == true ? null : executionMode,
@@ -161,6 +172,33 @@ class TradeRecord extends Equatable {
     brokerMetrics,
     executionMode,
   ];
+}
+
+DateTime? _journalCloseTime(Object? value) {
+  if (value is Timestamp) return value.toDate().toUtc();
+  if (value is DateTime) return value.toUtc();
+  if (value is! String) return null;
+  final text = value.trim();
+  final match = RegExp(
+    r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(Z|[+-](\d{2}):(\d{2}))$',
+  ).firstMatch(text);
+  if (match == null) return null;
+  final year = int.parse(match[1]!);
+  final month = int.parse(match[2]!);
+  final day = int.parse(match[3]!);
+  if (year < 1 ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > DateTime.utc(year, month + 1, 0).day ||
+      int.parse(match[4]!) > 23 ||
+      int.parse(match[5]!) > 59 ||
+      int.parse(match[6]!) > 59 ||
+      (match[8] != null && int.parse(match[8]!) > 23) ||
+      (match[9] != null && int.parse(match[9]!) > 59)) {
+    return null;
+  }
+  return DateTime.tryParse(text)?.toUtc();
 }
 
 class HeatmapEntry extends Equatable {
@@ -183,8 +221,13 @@ class HeatmapEntry extends Equatable {
 class JournalStats extends Equatable {
   final double totalProfit;
   final double winRate;
-  final double profitFactor;
+  final double? profitFactor;
   final String rrRatio;
+  final double? payoffRatio;
+  final int winningTrades;
+  final int losingTrades;
+  final int breakEvenTrades;
+  final HeatmapEntry? lossConcentration;
   final List<double> equityData;
   final int totalTrades;
   final double bestTrade;
@@ -199,6 +242,11 @@ class JournalStats extends Equatable {
     required this.profitFactor,
     required this.rrRatio,
     required this.equityData,
+    this.payoffRatio,
+    this.winningTrades = 0,
+    this.losingTrades = 0,
+    this.breakEvenTrades = 0,
+    this.lossConcentration,
     this.totalTrades = 0,
     this.bestTrade = 0.0,
     this.worstTrade = 0.0,
@@ -213,6 +261,11 @@ class JournalStats extends Equatable {
     winRate,
     profitFactor,
     rrRatio,
+    payoffRatio,
+    winningTrades,
+    losingTrades,
+    breakEvenTrades,
+    lossConcentration,
     equityData,
     totalTrades,
     bestTrade,

@@ -325,13 +325,17 @@ class _TradeTable extends StatelessWidget {
                 ? 'journal_broker_record'
                 : 'journal_mode_unavailable',
           ),
-          '${trade.lotSize} ${context.tr('journal_lots')}',
+          trade.lotSize.isFinite && trade.lotSize > 0
+              ? '${trade.lotSize} ${context.tr('journal_lots')}'
+              : '—',
           _price(trade.entryPrice),
           _price(trade.exitPrice),
           _metric(trade.swap, trade),
           _metric(trade.commission, trade),
           _metric(trade.slippage, trade, decimalPlaces: 5),
-          '${trade.netProfit >= 0 ? '+' : ''}\$${trade.netProfit.toStringAsFixed(2)}',
+          trade.netProfit.isFinite
+              ? '${trade.netProfit >= 0 ? '+' : ''}${trade.netProfit.toStringAsFixed(2)}'
+              : '—',
         ], positive: trade.netProfit >= 0),
     ],
   );

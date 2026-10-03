@@ -18,20 +18,17 @@ class LoadJournalData extends JournalEvent {
 
 class UpdateTradeHistory extends JournalEvent {
   final List<TradeRecord> trades;
-  const UpdateTradeHistory(this.trades);
+  final int generation;
+  const UpdateTradeHistory(this.trades, {required this.generation});
 
   @override
-  List<Object?> get props => [trades];
-}
-
-class UpdateJournalStats extends JournalEvent {
-  final JournalStats stats;
-  const UpdateJournalStats(this.stats);
-
-  @override
-  List<Object?> get props => [stats];
+  List<Object?> get props => [trades, generation];
 }
 
 class JournalStreamFailed extends JournalEvent {
-  const JournalStreamFailed();
+  final int generation;
+  const JournalStreamFailed(this.generation);
+
+  @override
+  List<Object?> get props => [generation];
 }

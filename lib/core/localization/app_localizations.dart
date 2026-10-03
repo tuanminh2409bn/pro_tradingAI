@@ -234,6 +234,24 @@ class AppLocalizations {
       'win_rate': 'WIN RATE',
       'profit_factor': 'PROFIT FACTOR',
       'avg_rr_ratio': 'AVG R:R RATIO',
+      'journal_recorded_pnl': 'RECORDED NET P&L',
+      'journal_retry': 'Retry loading trades',
+      'journal_average_win_loss': 'AVG WIN / AVG LOSS',
+      'journal_no_losing_trades': 'No losing trades in this sample',
+      'journal_ratio_unavailable': 'Ratio unavailable for this sample',
+      'journal_payoff_requires_both': 'Requires winning and losing trades',
+      'journal_break_even_excluded': 'Break-even trades excluded',
+      'journal_pnl_currency_unverified':
+          'P&L is recorded data; account currency is unverified.',
+      'journal_summary_title': 'PERFORMANCE SUMMARY',
+      'journal_measured_summary':
+          'Measured {count} closed trades: net P&L {pnl}; win rate {rate}%.',
+      'journal_loss_summary':
+          'Largest measured loss group: {day} {hour}:00 UTC, {count} losing trades, net P&L {pnl}.',
+      'journal_outcome_counts':
+          'Wins {wins} · Losses {losses} · Break-even {flat}',
+      'journal_risk_unmeasured':
+          'Discipline and risk adherence are unmeasured: initial risk records are required.',
       'above_target': 'ABOVE TARGET',
       'equity_growth_curve': 'EQUITY GROWTH CURVE',
       'start': 'START',
@@ -742,6 +760,23 @@ class AppLocalizations {
       'win_rate': 'TỶ LỆ THẮNG',
       'profit_factor': 'HỆ SỐ LỢI NHUẬN',
       'avg_rr_ratio': 'TỶ LỆ R:R TRUNG BÌNH',
+      'journal_recorded_pnl': 'P&L RÒNG THEO BẢN GHI',
+      'journal_retry': 'Tải lại lịch sử giao dịch',
+      'journal_average_win_loss': 'LỜI TB / LỖ TB',
+      'journal_no_losing_trades': 'Mẫu này chưa có lệnh lỗ',
+      'journal_ratio_unavailable': 'Chưa tính được tỷ lệ từ mẫu này',
+      'journal_payoff_requires_both': 'Cần có cả lệnh lời và lệnh lỗ',
+      'journal_break_even_excluded': 'Không tính lệnh hòa vốn',
+      'journal_pnl_currency_unverified':
+          'P&L theo bản ghi; chưa xác nhận tiền tệ tài khoản.',
+      'journal_summary_title': 'TÓM TẮT HIỆU SUẤT',
+      'journal_measured_summary':
+          'Đã đo {count} lệnh đóng: P&L ròng {pnl}; tỷ lệ thắng {rate}%.',
+      'journal_loss_summary':
+          'Nhóm lỗ đo được lớn nhất: {day} {hour}:00 UTC, {count} lệnh lỗ, P&L ròng {pnl}.',
+      'journal_outcome_counts': 'Thắng {wins} · Thua {losses} · Hòa vốn {flat}',
+      'journal_risk_unmeasured':
+          'Chưa đo kỷ luật và tuân thủ rủi ro: cần dữ liệu rủi ro ban đầu của từng lệnh.',
       'above_target': 'VƯỢT MỤC TIÊU',
       'equity_growth_curve': 'BIỂU ĐỒ TĂNG TRƯỞNG VỐN',
       'start': 'BẮT ĐẦU',
