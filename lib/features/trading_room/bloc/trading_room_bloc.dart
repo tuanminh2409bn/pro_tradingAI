@@ -36,6 +36,7 @@ TradingRoomLoaded stateAfterSymbolChange(
       current.currentSignal?.symbol.toUpperCase() == symbol.toUpperCase();
   return current.copyWith(
     currentSymbol: symbol,
+    isAnalyzing: false,
     candles: const [],
     clearSignal: !signalMatches,
     positions: markPositionsBySymbol(current.positions, current.symbolPrices),
@@ -52,7 +53,11 @@ TradingRoomLoaded stateAfterTimeframeChange(
       current.tradingMode.normalizeTimeframe(timeframe)) {
     return current;
   }
-  return current.copyWith(currentTimeframe: timeframe, clearSignal: true);
+  return current.copyWith(
+    currentTimeframe: timeframe,
+    clearSignal: true,
+    isAnalyzing: false,
+  );
 }
 
 double dailyPnLIncludingFloating(
@@ -140,6 +145,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   String? _userId;
   bool _serverCutoffLoaded = false;
   Timer? _positionRefreshTimer;
+  int _analysisRequestNonce = 0;
 
   TradingRoomBloc({required TradingRepository tradingRepository})
     : _tradingRepository = tradingRepository,
@@ -205,6 +211,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
     }
 
     emit(TradingRoomLoading());
+    _analysisRequestNonce++;
     _userId = newUserId;
     _serverCutoffLoaded = false;
     try {
@@ -374,8 +381,7 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
       // Prefer signal matching the chart symbol; ignore foreign-symbol bleed
       TradingSignal? currentSignal;
       for (final s in event.signals) {
-        if (s.symbol.toUpperCase() ==
-            currentState.currentSymbol.toUpperCase()) {
+        if (isSignalForCurrentChart(currentState, s)) {
           currentSignal = s;
           break;
         }
@@ -389,7 +395,6 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
         currentState.copyWith(
           currentSignal: currentSignal,
           clearSignal: currentSignal == null,
-          isAnalyzing: false,
         ),
       );
     }
@@ -731,6 +736,8 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
         currentState.copyWith(
           tradingMode: event.mode,
           currentTimeframe: newTimeframe,
+          isAnalyzing: false,
+          clearSignal: true,
         ),
       );
     }
@@ -890,7 +897,18 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
   ) async {
     if (state is TradingRoomLoaded) {
       final currentState = state as TradingRoomLoaded;
-      if (currentState.isCutoffActive) return;
+      if (currentState.isCutoffActive || currentState.isAnalyzing) return;
+      final requestNonce = ++_analysisRequestNonce;
+      bool isCurrentRequest() {
+        final current = state;
+        return !emit.isDone &&
+            requestNonce == _analysisRequestNonce &&
+            current is TradingRoomLoaded &&
+            current.currentSymbol == currentState.currentSymbol &&
+            current.currentTimeframe == currentState.currentTimeframe &&
+            current.tradingMode == currentState.tradingMode;
+      }
+
       emit(currentState.copyWith(isAnalyzing: true));
       try {
         await _tradingRepository.requestAnalysis(
@@ -900,36 +918,32 @@ class TradingRoomBloc extends Bloc<TradingRoomEvent, TradingRoomState> {
           tradingMode: currentState.tradingMode.wireName,
         );
         final current = state;
-        if (current is TradingRoomLoaded) {
+        if (current is TradingRoomLoaded && isCurrentRequest()) {
           emit(
             current.copyWith(
+              isAnalyzing: false,
               actionResultNonce: current.actionResultNonce + 1,
               actionMessageKey: 'tr_analysis_requested',
               actionSucceeded: true,
             ),
           );
         }
-      } catch (_) {
+      } catch (error) {
         final current = state;
-        if (current is TradingRoomLoaded) {
+        if (current is TradingRoomLoaded && isCurrentRequest()) {
           emit(
             current.copyWith(
               isAnalyzing: false,
               actionResultNonce: current.actionResultNonce + 1,
-              actionMessageKey: 'tr_analysis_request_failed',
+              actionMessageKey: error is AnalysisRequestFailure
+                  ? error.messageKey
+                  : 'tr_analysis_request_failed',
               actionSucceeded: false,
             ),
           );
         }
         return;
       }
-
-      Future.delayed(const Duration(seconds: 12), () {
-        if (state is TradingRoomLoaded &&
-            (state as TradingRoomLoaded).isAnalyzing) {
-          add(const CancelAnalysisSpinner());
-        }
-      });
     }
   }
 

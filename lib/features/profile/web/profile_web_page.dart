@@ -714,34 +714,55 @@ class ProfileWebPage extends StatelessWidget {
     AccessQuota quota,
     bool isMobile,
   ) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: isMobile ? 1 : 1,
-      mainAxisSpacing: 16,
-      childAspectRatio: 4,
+    return Column(
       children: [
-        _buildQuotaCard(
-          context.tr('profile_api_requests'),
-          quota.apiUsed,
-          quota.apiLimit,
-          AppColors.primary,
-          available: quota.hasApiQuota,
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: isMobile ? 1 : 1,
+          mainAxisSpacing: 16,
+          childAspectRatio: 4,
+          children: [
+            _buildQuotaCard(
+              context.tr('profile_api_requests'),
+              quota.apiUsed,
+              quota.apiLimit,
+              AppColors.primary,
+              available: quota.hasApiQuota,
+            ),
+            _buildQuotaCard(
+              context.tr('profile_backtest_sessions'),
+              quota.backtestUsed,
+              quota.backtestLimit,
+              AppColors.secondary,
+              available: quota.hasBacktestQuota,
+            ),
+            _buildQuotaCard(
+              context.tr('profile_neural_storage'),
+              quota.storageUsed.toInt(),
+              quota.storageLimit.toInt(),
+              AppColors.accent,
+              available: quota.hasStorageQuota,
+            ),
+          ],
         ),
-        _buildQuotaCard(
-          context.tr('profile_backtest_sessions'),
-          quota.backtestUsed,
-          quota.backtestLimit,
-          AppColors.secondary,
-          available: quota.hasBacktestQuota,
-        ),
-        _buildQuotaCard(
-          context.tr('profile_neural_storage'),
-          quota.storageUsed.toInt(),
-          quota.storageLimit.toInt(),
-          AppColors.accent,
-          available: quota.hasStorageQuota,
-        ),
+        if (quota.hasApiQuota && quota.resetAt != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              context
+                  .tr('profile_analysis_reset')
+                  .replaceAll(
+                    '{time}',
+                    quota.resetAt!
+                        .toLocal()
+                        .toIso8601String()
+                        .substring(0, 16)
+                        .replaceAll('T', ' '),
+                  ),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+          ),
       ],
     );
   }

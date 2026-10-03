@@ -72,6 +72,35 @@ class AppLocalizations {
       'backtest_play': 'Play replay',
       'backtest_pause': 'Pause replay',
       'backtest_next_candle': 'Next candle',
+      'backtest_setup': 'Replay settings',
+      'backtest_symbol': 'Symbol (BTCUSD, XAUUSD, ...)',
+      'backtest_training': 'Private training · M5',
+      'backtest_initial_balance': 'Initial simulation balance (quote currency)',
+      'backtest_max_loss': 'Maximum loss (%)',
+      'backtest_equity': 'Simulation equity',
+      'backtest_open_pnl': 'Open P&L',
+      'backtest_speed': 'SPEED',
+      'backtest_replay_status': 'REPLAY STATUS',
+      'backtest_closed_price': 'Current closed candle price',
+      'backtest_execution_basis':
+          'Quantity is in asset units. Execution uses candle closes; broker spread, fees and slippage are excluded.',
+      'backtest_quantity': 'Quantity (asset units)',
+      'backtest_close_trade': 'Close',
+      'backtest_closed': 'Closed',
+      'backtest_new_session': 'Start a new session',
+      'backtest_start_resume': 'Start / resume replay',
+      'backtest_resume_hint':
+          'Resume the saved session for this symbol, paused at its saved candle. Initial balance and maximum loss apply to new sessions.',
+      'backtest_review_required': 'Risk review required',
+      'backtest_review_summary':
+          'Loss at the current candle: {loss}. Closed trades: {count}. Review your position size and risk before continuing.',
+      'backtest_acknowledge': 'I have reviewed my risk',
+      'backtest_retry_save': 'Retry saving',
+      'backtest_save_failed':
+          'The latest state could not be saved. Replay is paused; retry saving before continuing.',
+      'backtest_invalid_action': 'Check the quantity and replay settings.',
+      'profile_analysis_reset':
+          'Analysis allowance resets (local time): {time}',
       'news_ai_unavailable':
           'AI analysis is temporarily unavailable. Please try again.',
       'community_post_success': 'Analysis posted successfully.',
@@ -99,8 +128,20 @@ class AppLocalizations {
       'admin_radar_saved': 'Radar configuration saved.',
       'tr_risk_saved': 'Risk configuration saved.',
       'tr_risk_save_failed': 'Unable to save risk configuration.',
-      'tr_analysis_requested': 'AI analysis request accepted.',
+      'tr_analysis_requested': 'AI analysis completed.',
+      'tr_chart_price': 'Chart price',
+      'tr_quotes_unavailable':
+          'This candle feed does not provide broker bid/ask or spread.',
+      'tr_paper': 'PAPER',
       'tr_analysis_request_failed': 'Unable to request AI analysis.',
+      'tr_analysis_quota_exhausted':
+          'Your analysis allowance is exhausted. Check the reset date in Profile.',
+      'tr_analysis_account_access_required':
+          'Analysis access is unavailable for this account. Contact support.',
+      'tr_analysis_policy_pending':
+          'Analysis is unavailable until your account policy is configured.',
+      'tr_analysis_timeout':
+          'The analysis has not finished. Check for a result before requesting again.',
       'tr_trade_executed': 'Paper trade executed.',
       'tr_trade_partial':
           'Some take-profit legs executed. Review open positions before retrying.',
@@ -446,6 +487,36 @@ class AppLocalizations {
       'backtest_play': 'Phát mô phỏng',
       'backtest_pause': 'Tạm dừng mô phỏng',
       'backtest_next_candle': 'Nến tiếp theo',
+      'backtest_setup': 'Cấu hình phát lại',
+      'backtest_symbol': 'Mã tài sản (BTCUSD, XAUUSD, ...)',
+      'backtest_training': 'Luyện tập riêng tư · M5',
+      'backtest_initial_balance': 'Số dư mô phỏng ban đầu (tiền định giá)',
+      'backtest_max_loss': 'Lỗ tối đa (%)',
+      'backtest_equity': 'Vốn mô phỏng',
+      'backtest_open_pnl': 'Lãi/lỗ đang mở',
+      'backtest_speed': 'TỐC ĐỘ',
+      'backtest_replay_status': 'TRẠNG THÁI PHÁT LẠI',
+      'backtest_closed_price': 'Giá nến đã đóng hiện tại',
+      'backtest_execution_basis':
+          'Khối lượng tính theo đơn vị tài sản. Lệnh dùng giá đóng nến; chưa tính spread, phí và trượt giá của broker.',
+      'backtest_quantity': 'Khối lượng (đơn vị tài sản)',
+      'backtest_close_trade': 'Đóng',
+      'backtest_closed': 'Đã đóng',
+      'backtest_new_session': 'Bắt đầu phiên mới',
+      'backtest_start_resume': 'Bắt đầu / khôi phục phiên',
+      'backtest_resume_hint':
+          'Khôi phục phiên của mã đã chọn và tạm dừng tại nến đã lưu. Số dư ban đầu và mức lỗ tối đa áp dụng cho phiên mới.',
+      'backtest_review_required': 'Cần xem lại rủi ro',
+      'backtest_review_summary':
+          'Lỗ tại nến hiện tại: {loss}. Số lệnh đã đóng: {count}. Xem lại khối lượng và rủi ro trước khi tiếp tục.',
+      'backtest_acknowledge': 'Tôi đã xem lại rủi ro',
+      'backtest_retry_save': 'Lưu lại trạng thái',
+      'backtest_save_failed':
+          'Chưa lưu được trạng thái mới nhất. Phiên đã tạm dừng; hãy lưu lại trước khi tiếp tục.',
+      'backtest_invalid_action':
+          'Hãy kiểm tra khối lượng và cấu hình phát lại.',
+      'profile_analysis_reset':
+          'Đặt lại lượt phân tích (giờ địa phương): {time}',
       'news_ai_unavailable':
           'Phân tích AI tạm thời chưa khả dụng. Vui lòng thử lại.',
       'community_post_success': 'Đã đăng bài phân tích.',
@@ -473,8 +544,20 @@ class AppLocalizations {
       'admin_radar_saved': 'Đã lưu cấu hình Radar.',
       'tr_risk_saved': 'Đã lưu cấu hình rủi ro.',
       'tr_risk_save_failed': 'Không thể lưu cấu hình rủi ro.',
-      'tr_analysis_requested': 'Hệ thống đã nhận yêu cầu phân tích AI.',
+      'tr_analysis_requested': 'Đã hoàn tất phân tích AI.',
+      'tr_chart_price': 'Giá biểu đồ',
+      'tr_quotes_unavailable':
+          'Nguồn nến này chưa cung cấp BID/ASK và spread của broker.',
+      'tr_paper': 'GIAO DỊCH GIẤY',
       'tr_analysis_request_failed': 'Không thể gửi yêu cầu phân tích AI.',
+      'tr_analysis_quota_exhausted':
+          'Bạn đã dùng hết lượt phân tích. Xem ngày đặt lại hạn mức trong Hồ sơ.',
+      'tr_analysis_account_access_required':
+          'Tài khoản chưa có quyền phân tích. Vui lòng liên hệ hỗ trợ.',
+      'tr_analysis_policy_pending':
+          'Phân tích chưa khả dụng cho đến khi chính sách tài khoản được cấu hình.',
+      'tr_analysis_timeout':
+          'Phân tích chưa hoàn tất. Hãy kiểm tra kết quả trước khi gửi yêu cầu mới.',
       'tr_trade_executed': 'Đã khớp lệnh giao dịch giấy.',
       'tr_trade_partial':
           'Một số phần chốt lời đã khớp. Hãy kiểm tra vị thế trước khi thử lại.',

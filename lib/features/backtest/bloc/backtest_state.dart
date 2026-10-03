@@ -19,6 +19,16 @@ class BacktestLoaded extends BacktestState {
   final int cursor;
   final int totalBars;
   final String historySource;
+  final List<BacktestSimulatedTrade> closedTrades;
+  final BacktestSessionReview? pendingReview;
+  final bool isSaved;
+  final String? errorKey;
+
+  bool get canRewind =>
+      activeTrades.isEmpty &&
+      closedTrades.isEmpty &&
+      !session.isLocked &&
+      isSaved;
 
   const BacktestLoaded({
     required this.session,
@@ -27,6 +37,10 @@ class BacktestLoaded extends BacktestState {
     required this.cursor,
     required this.totalBars,
     required this.historySource,
+    this.closedTrades = const [],
+    this.pendingReview,
+    this.isSaved = true,
+    this.errorKey,
   });
 
   BacktestLoaded copyWith({
@@ -44,6 +58,10 @@ class BacktestLoaded extends BacktestState {
       cursor: cursor ?? this.cursor,
       totalBars: totalBars ?? this.totalBars,
       historySource: historySource ?? this.historySource,
+      closedTrades: closedTrades,
+      pendingReview: pendingReview,
+      isSaved: isSaved,
+      errorKey: errorKey,
     );
   }
 
@@ -55,6 +73,10 @@ class BacktestLoaded extends BacktestState {
     cursor,
     totalBars,
     historySource,
+    closedTrades,
+    pendingReview,
+    isSaved,
+    errorKey,
   ];
 }
 

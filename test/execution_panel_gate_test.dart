@@ -63,6 +63,7 @@ Future<_RecordingTradingRoomBloc> _pumpPanel(
   required TradingSignal signal,
   bool cutoff = false,
   String timeframe = '5',
+  double? markPrice,
 }) async {
   final bloc = _RecordingTradingRoomBloc(
     TradingRoomLoaded(
@@ -70,6 +71,7 @@ Future<_RecordingTradingRoomBloc> _pumpPanel(
       currentSymbol: 'XAUUSD',
       currentTimeframe: timeframe,
       currentSignal: signal,
+      symbolPrices: {if (markPrice != null) 'XAUUSD': markPrice},
       isCutoffActive: cutoff,
     ),
   );
@@ -89,6 +91,17 @@ Future<_RecordingTradingRoomBloc> _pumpPanel(
 }
 
 void main() {
+  testWidgets('a real candle price does not fabricate broker quotes', (
+    tester,
+  ) async {
+    await _pumpPanel(tester, signal: _signal(ready: false), markPrice: 2000);
+    expect(find.text('1999.85'), findsNothing);
+    expect(find.text('2000.15'), findsNothing);
+    expect(find.text('3.0'), findsNothing);
+    expect(find.text('—'), findsNWidgets(3));
+    expect(find.textContaining('2000.00'), findsWidgets);
+  });
+
   testWidgets('missing market price does not show invented bid or ask', (
     tester,
   ) async {

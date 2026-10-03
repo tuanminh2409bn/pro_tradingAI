@@ -700,7 +700,7 @@ class _WebTopNavbar extends StatelessWidget {
               String status = context.tr('tr_connecting');
               Color statusColor = AppColors.accent;
               if (state is TradingRoomLoaded) {
-                status = context.tr('tr_live');
+                status = context.tr('tr_paper');
                 statusColor = AppColors.primary;
               }
               return Container(

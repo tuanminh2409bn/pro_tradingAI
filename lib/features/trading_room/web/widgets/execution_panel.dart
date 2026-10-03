@@ -122,10 +122,6 @@ class _ExecutionPanelState extends State<ExecutionPanel>
         final hasMarketPrice = currentPrice.isFinite && currentPrice > 0;
         final entryPrice = hardSetup ? matchedSignal.entryPrice : currentPrice;
 
-        // ── Bid/Ask from SymbolMeta (not leftover foreign symbol) ──
-        final spread = meta.typicalSpread;
-        final bid = currentPrice - spread / 2;
-        final ask = currentPrice + spread / 2;
         final digits = meta.digits;
 
         // Single SL only (V2.1 P0#10)
@@ -212,15 +208,17 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 const SizedBox(height: 12),
                 if (matchedSignal != null) _buildStageBanner(matchedSignal),
 
-                // ── Bid / Ask Price Display ──
-                _buildBidAskDisplay(
-                  bid,
-                  ask,
-                  spread,
-                  digits,
-                  state.currentSymbol,
-                  hasMarketPrice,
+                Text(
+                  '${context.tr('tr_chart_price')}: ${hasMarketPrice ? currentPrice.toStringAsFixed(digits) : context.tr('common_data_unavailable')}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  context.tr('tr_quotes_unavailable'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+                const SizedBox(height: 8),
+                _buildBidAskDisplay(),
                 const SizedBox(height: 16),
 
                 // Header
@@ -569,7 +567,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      bid.toStringAsFixed(digits),
+                                      entryPrice.toStringAsFixed(digits),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -611,10 +609,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  _formatSpreadPips(
-                                    spread,
-                                    state.currentSymbol,
-                                  ),
+                                  '—',
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
@@ -701,7 +696,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      ask.toStringAsFixed(digits),
+                                      entryPrice.toStringAsFixed(digits),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
@@ -1279,30 +1274,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
     context.read<TradingRoomBloc>().add(SaveRiskConfig(config));
   }
 
-  // ─── Bid/Ask Helpers ─────────────────────────────────────────
-
-  static String _formatSpreadPips(double spread, String symbol) {
-    final s = symbol.toUpperCase();
-    if (s.contains('XAU')) {
-      return (spread * 10).toStringAsFixed(1); // Gold: 1 pip = 0.1
-    }
-    if (s.contains('JPY')) return (spread * 100).toStringAsFixed(1);
-    if (s.contains('BTC')) return spread.toStringAsFixed(0);
-    if (s.contains('ETH')) return spread.toStringAsFixed(1);
-    if (s.contains('US30') || s.contains('US500') || s.contains('US100')) {
-      return spread.toStringAsFixed(1);
-    }
-    return (spread * 10000).toStringAsFixed(1); // Forex: 1 pip = 0.0001
-  }
-
-  Widget _buildBidAskDisplay(
-    double bid,
-    double ask,
-    double spread,
-    int digits,
-    String symbol,
-    bool hasMarketPrice,
-  ) {
+  Widget _buildBidAskDisplay() {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -1336,7 +1308,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    hasMarketPrice ? bid.toStringAsFixed(digits) : '—',
+                    '—',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
@@ -1364,7 +1336,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  hasMarketPrice ? _formatSpreadPips(spread, symbol) : '—',
+                  '—',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -1402,7 +1374,7 @@ class _ExecutionPanelState extends State<ExecutionPanel>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    hasMarketPrice ? ask.toStringAsFixed(digits) : '—',
+                    '—',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,

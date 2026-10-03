@@ -6,6 +6,8 @@ import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../data/repositories/backtest_repository.dart';
 import '../../../data/repositories/trading_repository.dart';
+import '../../../data/models/trading_models.dart';
+import '../../trading_room/web/widgets/kinetic_chart.dart';
 import '../bloc/backtest_bloc.dart';
 import '../bloc/backtest_event.dart';
 import '../bloc/backtest_state.dart';
@@ -19,13 +21,16 @@ class BacktestWebPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) {
-        final tradingRepository = context.read<TradingRepository>();
-        tradingRepository.changeSymbol('XAUUSD');
-        tradingRepository.changeTimeframe('5');
+        TradingRepository? tradingRepository;
         return BacktestBloc(
           backtestRepository: context.read<BacktestRepository>(),
-          historyStream: tradingRepository.getCandleStream,
-        )..add(StartBacktestSession('XAUUSD', 10000.0, userId: userId));
+          historyStream: (symbol) {
+            final history = tradingRepository ??= TradingRepository();
+            history.changeSymbol(symbol);
+            return history.getCandleStream(symbol);
+          },
+          disposeHistory: () => tradingRepository?.dispose(),
+        );
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -35,7 +40,10 @@ class BacktestWebPage extends StatelessWidget {
             Expanded(
               child: BlocBuilder<BacktestBloc, BacktestState>(
                 builder: (context, state) {
-                  if (state is BacktestLoading || state is BacktestInitial) {
+                  if (state is BacktestInitial) {
+                    return _BacktestSetup(userId: userId);
+                  }
+                  if (state is BacktestLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
                         color: AppColors.primary,
@@ -45,9 +53,20 @@ class BacktestWebPage extends StatelessWidget {
 
                   if (state is BacktestError) {
                     return Center(
-                      child: Text(
-                        context.tr(state.message),
-                        style: const TextStyle(color: AppColors.bear),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            context.tr(state.message),
+                            style: const TextStyle(color: AppColors.bear),
+                          ),
+                          TextButton(
+                            onPressed: () => context.read<BacktestBloc>().add(
+                              OpenBacktestSetup(),
+                            ),
+                            child: Text(context.tr('backtest_setup')),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -60,18 +79,46 @@ class BacktestWebPage extends StatelessWidget {
                           children: [
                             _buildSimulationHeader(context, state),
                             Expanded(
-                              child: Row(
-                                children: [
-                                  _buildTradingPanel(state),
-                                  Expanded(
-                                    child: _buildChartCanvas(context, state),
-                                  ),
-                                ],
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  if (constraints.maxWidth < 800) {
+                                    return Column(
+                                      children: [
+                                        SizedBox(
+                                          height: 300,
+                                          width: double.infinity,
+                                          child: _buildTradingPanel(
+                                            context,
+                                            state,
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: _buildChartCanvas(
+                                            context,
+                                            state,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  return Row(
+                                    children: [
+                                      _buildTradingPanel(context, state),
+                                      Expanded(
+                                        child: _buildChartCanvas(
+                                          context,
+                                          state,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ],
                         ),
-                        if (session.isLocked) _buildDisciplineLockOverlay(),
+                        if (session.isLocked)
+                          _buildDisciplineLockOverlay(context, state),
                       ],
                     );
                   }
@@ -93,14 +140,14 @@ class BacktestWebPage extends StatelessWidget {
         Row(
           children: [
             _buildHeaderMetric(
-              'TRADING PAIR',
+              context.tr('backtest_symbol'),
               session.symbol,
-              subtitle: 'Gold Spot',
+              subtitle: context.tr('backtest_training'),
             ),
             const SizedBox(width: 40),
             _buildHeaderMetric(
-              'INITIAL BAL',
-              '\$${session.initialBalance}',
+              context.tr('backtest_initial_balance'),
+              '${session.initialBalance.toStringAsFixed(2)} ${_currency(state)}',
               icon: Icons.account_balance_wallet,
             ),
           ],
@@ -109,15 +156,15 @@ class BacktestWebPage extends StatelessWidget {
         Row(
           children: [
             _buildHeaderMetric(
-              'SIM EQUITY',
-              '\$${session.equity.toStringAsFixed(2)}',
+              context.tr('backtest_equity'),
+              '${session.equity.toStringAsFixed(2)} ${_currency(state)}',
               isNumeric: true,
               textAlign: CrossAxisAlignment.end,
             ),
             const SizedBox(width: 24),
             _buildHeaderMetric(
-              'P&L (OPEN)',
-              '${session.openPL >= 0 ? '+' : ''}\$${session.openPL.toStringAsFixed(2)}',
+              context.tr('backtest_open_pnl'),
+              '${session.openPL.toStringAsFixed(2)} ${_currency(state)}',
               isNumeric: true,
               isPositive: session.openPL >= 0,
               textAlign: CrossAxisAlignment.end,
@@ -208,7 +255,7 @@ class BacktestWebPage extends StatelessWidget {
         children: [
           IconButton(
             tooltip: context.tr('backtest_first_candle'),
-            onPressed: state.cursor == 0
+            onPressed: state.cursor == 0 || !state.canRewind
                 ? null
                 : () => context.read<BacktestBloc>().add(
                     const SeekReplayCursor(0),
@@ -217,7 +264,7 @@ class BacktestWebPage extends StatelessWidget {
           ),
           IconButton(
             tooltip: context.tr('backtest_previous_candle'),
-            onPressed: state.cursor == 0
+            onPressed: state.cursor == 0 || !state.canRewind
                 ? null
                 : () => context.read<BacktestBloc>().add(
                     const StepReplayCursor(-1),
@@ -229,13 +276,16 @@ class BacktestWebPage extends StatelessWidget {
               session.isPlaying ? 'backtest_pause' : 'backtest_play',
             ),
             button: true,
+            enabled: state.isSaved && !session.isLocked,
             child: Tooltip(
               message: context.tr(
                 session.isPlaying ? 'backtest_pause' : 'backtest_play',
               ),
               excludeFromSemantics: true,
               child: InkWell(
-                onTap: () => context.read<BacktestBloc>().add(TogglePlayback()),
+                onTap: !state.isSaved || session.isLocked
+                    ? null
+                    : () => context.read<BacktestBloc>().add(TogglePlayback()),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -259,7 +309,10 @@ class BacktestWebPage extends StatelessWidget {
           ),
           IconButton(
             tooltip: context.tr('backtest_next_candle'),
-            onPressed: state.cursor >= state.totalBars - 1
+            onPressed:
+                state.cursor >= state.totalBars - 1 ||
+                    !state.isSaved ||
+                    session.isLocked
                 ? null
                 : () => context.read<BacktestBloc>().add(
                     const StepReplayCursor(1),
@@ -269,22 +322,35 @@ class BacktestWebPage extends StatelessWidget {
           const SizedBox(width: 8),
           const VerticalDivider(color: Colors.white10, indent: 8, endIndent: 8),
           const SizedBox(width: 8),
-          const Text(
-            'SPEED',
-            style: TextStyle(
+          Text(
+            context.tr('backtest_speed'),
+            style: const TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.bold,
               color: Colors.white38,
             ),
           ),
           const SizedBox(width: 8),
-          _buildSpeedBtn(context, '1X', isActive: session.speed == 1, speed: 1),
-          _buildSpeedBtn(context, '5X', isActive: session.speed == 5, speed: 5),
+          _buildSpeedBtn(
+            context,
+            '1X',
+            isActive: session.speed == 1,
+            speed: 1,
+            enabled: state.isSaved && !session.isLocked,
+          ),
+          _buildSpeedBtn(
+            context,
+            '5X',
+            isActive: session.speed == 5,
+            speed: 5,
+            enabled: state.isSaved && !session.isLocked,
+          ),
           _buildSpeedBtn(
             context,
             '10X',
             isActive: session.speed == 10,
             speed: 10,
+            enabled: state.isSaved && !session.isLocked,
           ),
           const SizedBox(width: 8),
         ],
@@ -297,9 +363,12 @@ class BacktestWebPage extends StatelessWidget {
     String label, {
     bool isActive = false,
     required int speed,
+    required bool enabled,
   }) {
     return InkWell(
-      onTap: () => context.read<BacktestBloc>().add(UpdateSpeed(speed)),
+      onTap: !enabled
+          ? null
+          : () => context.read<BacktestBloc>().add(UpdateSpeed(speed)),
       child: Container(
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -326,7 +395,12 @@ class BacktestWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildTradingPanel(BacktestLoaded state) {
+  String _currency(BacktestLoaded state) {
+    final symbol = state.session.symbol;
+    return symbol.length >= 6 ? symbol.substring(symbol.length - 3) : '';
+  }
+
+  Widget _buildTradingPanel(BuildContext context, BacktestLoaded state) {
     final activeTrades = state.activeTrades;
     final currentPrice = state.visibleBars.last.close;
     return Container(
@@ -336,12 +410,11 @@ class BacktestWebPage extends StatelessWidget {
         color: AppColors.surface,
         border: Border(right: BorderSide(color: Colors.white10)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListView(
         children: [
-          const Text(
-            'REPLAY STATUS',
-            style: TextStyle(
+          Text(
+            context.tr('backtest_replay_status'),
+            style: const TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w900,
               color: AppColors.primary,
@@ -349,7 +422,7 @@ class BacktestWebPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _buildInputLabel('CURRENT CLOSED-CANDLE PRICE'),
+          _buildInputLabel(context.tr('backtest_closed_price')),
           Text(
             currentPrice.toStringAsFixed(2),
             style: const TextStyle(
@@ -364,37 +437,65 @@ class BacktestWebPage extends StatelessWidget {
             style: const TextStyle(color: Colors.white38, fontSize: 10),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Order simulation is locked until the persisted risk and review workflow is approved.',
-            style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
-          ),
-          const SizedBox(height: 40),
-          const Text(
-            'ACTIVE SESSIONS',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: Colors.white38,
-              letterSpacing: 1,
+          Text(
+            context.tr('backtest_execution_basis'),
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 11,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: ListView.builder(
-              itemCount: activeTrades.length,
-              itemBuilder: (context, index) {
-                final trade = activeTrades[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: _buildActiveTradeItem(
-                    '${trade.type} ${trade.lotSize} Lots',
-                    '${trade.currentProfit >= 0 ? '+' : ''}\$${trade.currentProfit.toStringAsFixed(2)}',
-                    trade.currentProfit >= 0,
-                  ),
-                );
-              },
+          if (state.errorKey != null)
+            Text(
+              context.tr(state.errorKey!),
+              style: const TextStyle(color: AppColors.bear),
             ),
+          if (!state.isSaved)
+            TextButton(
+              onPressed: () =>
+                  context.read<BacktestBloc>().add(RetryBacktestSave()),
+              child: Text(context.tr('backtest_retry_save')),
+            ),
+          _BacktestOrderControls(
+            enabled: state.isSaved && !state.session.isLocked,
           ),
+          TextButton(
+            onPressed: !state.isSaved || state.session.isLocked
+                ? null
+                : () => context.read<BacktestBloc>().add(OpenBacktestSetup()),
+            child: Text(context.tr('backtest_setup')),
+          ),
+          const SizedBox(height: 16),
+          for (final trade in activeTrades)
+            Column(
+              children: [
+                _buildActiveTradeItem(
+                  '${trade.type} ${trade.volume}',
+                  '${trade.profit.toStringAsFixed(2)} ${_currency(state)}',
+                  trade.profit >= 0,
+                ),
+                TextButton(
+                  onPressed: !state.isSaved || state.session.isLocked
+                      ? null
+                      : () => context.read<BacktestBloc>().add(
+                          CloseBacktestTrade(trade.id!),
+                        ),
+                  child: Text(
+                    '${context.tr('backtest_close_trade')} ${trade.type}',
+                  ),
+                ),
+              ],
+            ),
+          for (final trade in state.closedTrades.reversed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildActiveTradeItem(
+                '${context.tr('backtest_closed')} ${trade.side.name.toUpperCase()}',
+                '${trade.realizedPnl.toStringAsFixed(2)} ${_currency(state)}',
+                trade.realizedPnl >= 0,
+              ),
+            ),
         ],
       ),
     );
@@ -465,12 +566,29 @@ class BacktestWebPage extends StatelessWidget {
       color: const Color(0xFF0b0e11),
       child: Stack(
         children: [
-          Center(
-            child: Text(
-              '${state.visibleBars.length} CLOSED CANDLES REVEALED',
-              style: const TextStyle(
-                color: Colors.white24,
-                fontWeight: FontWeight.bold,
+          Positioned.fill(
+            bottom: 105,
+            child: KineticChart(
+              key: ValueKey('backtest:${session.id}'),
+              symbol: session.symbol,
+              candles: state.visibleBars
+                  .map(
+                    (bar) => Candle(
+                      timestamp: DateTime.fromMillisecondsSinceEpoch(
+                        bar.timestamp * 1000,
+                        isUtc: true,
+                      ),
+                      open: bar.open,
+                      high: bar.high,
+                      low: bar.low,
+                      close: bar.close,
+                      volume: bar.volume,
+                    ),
+                  )
+                  .toList(),
+              now: () => DateTime.fromMillisecondsSinceEpoch(
+                state.visibleBars.last.timestamp * 1000,
+                isUtc: true,
               ),
             ),
           ),
@@ -485,9 +603,11 @@ class BacktestWebPage extends StatelessWidget {
                   min: 0,
                   max: (state.totalBars - 1).toDouble(),
                   divisions: state.totalBars > 1 ? state.totalBars - 1 : null,
-                  onChanged: (value) => context.read<BacktestBloc>().add(
-                    SeekReplayCursor(value.round()),
-                  ),
+                  onChanged: !state.canRewind
+                      ? null
+                      : (value) => context.read<BacktestBloc>().add(
+                          SeekReplayCursor(value.round()),
+                        ),
                   activeColor: AppColors.primary,
                   inactiveColor: Colors.white10,
                 ),
@@ -520,7 +640,11 @@ class BacktestWebPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDisciplineLockOverlay() {
+  Widget _buildDisciplineLockOverlay(
+    BuildContext context,
+    BacktestLoaded state,
+  ) {
+    final review = state.pendingReview!;
     return Container(
       color: Colors.black.withValues(alpha: 0.8),
       child: Center(
@@ -537,32 +661,48 @@ class BacktestWebPage extends StatelessWidget {
             children: [
               const Icon(Icons.lock_reset, color: AppColors.bear, size: 64),
               const SizedBox(height: 24),
-              const Text(
-                'DISCIPLINE LOCK',
-                style: TextStyle(
+              Text(
+                context.tr('backtest_review_required'),
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Simulation Equity has reached zero. Take 15 mins to reflect.',
+              Text(
+                context
+                    .tr('backtest_review_summary')
+                    .replaceAll(
+                      '{loss}',
+                      '${review.lossAmount.toStringAsFixed(2)} ${_currency(state)}',
+                    )
+                    .replaceAll('{count}', review.closedTradeCount.toString()),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54),
+                style: const TextStyle(color: Colors.white54),
               ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: null,
+                  onPressed: !state.isSaved
+                      ? () => context.read<BacktestBloc>().add(
+                          RetryBacktestSave(),
+                        )
+                      : () => context.read<BacktestBloc>().add(
+                          AcknowledgeBacktestReview(review.id),
+                        ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white10,
                     padding: const EdgeInsets.all(16),
                   ),
-                  child: const Text(
-                    'VIEW ANALYTICS',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  child: Text(
+                    context.tr(
+                      state.isSaved
+                          ? 'backtest_acknowledge'
+                          : 'backtest_retry_save',
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -572,6 +712,175 @@ class BacktestWebPage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BacktestSetup extends StatefulWidget {
+  final String? userId;
+  const _BacktestSetup({required this.userId});
+  @override
+  State<_BacktestSetup> createState() => _BacktestSetupState();
+}
+
+class _BacktestSetupState extends State<_BacktestSetup> {
+  final _form = GlobalKey<FormState>();
+  final _symbol = TextEditingController(text: 'BTCUSD');
+  final _balance = TextEditingController(text: '10000');
+  final _loss = TextEditingController(text: '5');
+  bool _createNew = false;
+
+  @override
+  void dispose() {
+    _symbol.dispose();
+    _balance.dispose();
+    _loss.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: SizedBox(
+        width: 420,
+        child: Form(
+          key: _form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                context.tr('backtest_setup'),
+                style: const TextStyle(color: AppColors.primary, fontSize: 22),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                context.tr('backtest_resume_hint'),
+                style: const TextStyle(color: Colors.white54),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _symbol,
+                decoration: InputDecoration(
+                  labelText: context.tr('backtest_symbol'),
+                ),
+                validator: (value) =>
+                    RegExp(
+                      r'^[A-Z]{6,9}$',
+                    ).hasMatch((value ?? '').trim().toUpperCase())
+                    ? null
+                    : context.tr('backtest_invalid_action'),
+              ),
+              TextFormField(
+                controller: _balance,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: context.tr('backtest_initial_balance'),
+                ),
+                validator: (value) {
+                  final number = double.tryParse(value ?? '');
+                  return number != null && number.isFinite && number > 0
+                      ? null
+                      : context.tr('backtest_invalid_action');
+                },
+              ),
+              TextFormField(
+                controller: _loss,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: context.tr('backtest_max_loss'),
+                ),
+                validator: (value) {
+                  final number = double.tryParse(value ?? '');
+                  return number != null &&
+                          number.isFinite &&
+                          number > 0 &&
+                          number <= 100
+                      ? null
+                      : context.tr('backtest_invalid_action');
+                },
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _createNew,
+                title: Text(context.tr('backtest_new_session')),
+                onChanged: (value) =>
+                    setState(() => _createNew = value ?? false),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  if (!_form.currentState!.validate()) return;
+                  context.read<BacktestBloc>().add(
+                    StartBacktestSession(
+                      _symbol.text.trim().toUpperCase(),
+                      double.parse(_balance.text),
+                      userId: widget.userId,
+                      maxLossPercent: double.parse(_loss.text),
+                      createNew: _createNew,
+                    ),
+                  );
+                },
+                child: Text(context.tr('backtest_start_resume')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _BacktestOrderControls extends StatefulWidget {
+  final bool enabled;
+  const _BacktestOrderControls({required this.enabled});
+  @override
+  State<_BacktestOrderControls> createState() => _BacktestOrderControlsState();
+}
+
+class _BacktestOrderControlsState extends State<_BacktestOrderControls> {
+  final _quantity = TextEditingController(text: '1');
+  @override
+  void dispose() {
+    _quantity.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      TextField(
+        controller: _quantity,
+        enabled: widget.enabled,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(labelText: context.tr('backtest_quantity')),
+      ),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          for (final side in ['BUY', 'SELL'])
+            Expanded(
+              child: FilledButton(
+                onPressed: !widget.enabled
+                    ? null
+                    : () {
+                        context.read<BacktestBloc>().add(
+                          ExecuteBacktestTrade(
+                            side,
+                            double.tryParse(_quantity.text) ?? 0,
+                          ),
+                        );
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: side == 'BUY'
+                      ? AppColors.bull
+                      : AppColors.bear,
+                ),
+                child: Text(side),
+              ),
+            ),
+        ],
+      ),
+    ],
+  );
 }
 
 class _WebTopNavbar extends StatelessWidget {

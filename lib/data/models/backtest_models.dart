@@ -29,6 +29,37 @@ class BacktestBar extends Equatable {
     isClosed: isClosed ?? this.isClosed,
   );
 
+  factory BacktestBar.fromMap(Map<String, dynamic> map) {
+    if (map['t'] is! int ||
+        map['closed'] != true ||
+        ['o', 'h', 'l', 'c', 'v'].any((key) => map[key] is! num)) {
+      throw const FormatException('Invalid stored backtest bar');
+    }
+    final bar = BacktestBar(
+      timestamp: map['t'] as int,
+      open: (map['o'] as num).toDouble(),
+      high: (map['h'] as num).toDouble(),
+      low: (map['l'] as num).toDouble(),
+      close: (map['c'] as num).toDouble(),
+      volume: (map['v'] as num).toDouble(),
+      isClosed: true,
+    );
+    if (!bar.isValid) {
+      throw const FormatException('Invalid stored backtest bar');
+    }
+    return bar;
+  }
+
+  Map<String, dynamic> toMap() => {
+    't': timestamp,
+    'o': open,
+    'h': high,
+    'l': low,
+    'c': close,
+    'v': volume,
+    'closed': isClosed,
+  };
+
   bool get isValid =>
       timestamp > 0 &&
       open.isFinite &&
@@ -740,6 +771,10 @@ class BacktestSimulationEngine {
   }
 
   bool advanceTick() {
+    if (_isLocked) {
+      replay.pause();
+      return false;
+    }
     final advanced = replay.advanceTick();
     if (advanced) _enforceLossLock();
     return advanced;
@@ -813,7 +848,86 @@ class BacktestSimulationEngine {
     if ((_balance - expectedBalance).abs() > 0.0000001) {
       throw const FormatException('Backtest balance does not reconcile');
     }
+    final prices = {
+      for (final bar in replay.visibleBars) bar.timestamp: bar.close,
+    };
+    if (_trades.any(
+          (trade) =>
+              prices[trade.entryTimestamp] != trade.entryPrice ||
+              (trade.exitTimestamp != null &&
+                  prices[trade.exitTimestamp] != trade.exitPrice),
+        ) ||
+        (_pendingReview != null &&
+            _pendingReview!.triggeredAtTimestamp >
+                replay.currentBar.timestamp) ||
+        (_lastAcknowledgedReview != null &&
+            _lastAcknowledgedReview!.triggeredAtTimestamp >
+                replay.currentBar.timestamp)) {
+      throw const FormatException(
+        'Backtest execution is outside visible history',
+      );
+    }
   }
+}
+
+/// Private training recording; it is not verified broker performance.
+class BacktestRecording {
+  final List<BacktestBar> bars;
+  final BacktestSimulationSnapshot simulation;
+
+  BacktestRecording({required List<BacktestBar> bars, required this.simulation})
+    : bars = List<BacktestBar>.unmodifiable(bars);
+
+  factory BacktestRecording.fromMap(
+    Map<String, dynamic> map, {
+    required String sessionId,
+  }) {
+    final bars = map['bars'];
+    final simulation = map['simulation'];
+    if (map['version'] != 1 ||
+        bars is! List ||
+        bars.isEmpty ||
+        bars.length > 3000 ||
+        simulation is! Map) {
+      throw const FormatException('Invalid backtest recording');
+    }
+    try {
+      final recording = BacktestRecording(
+        bars: bars
+            .map(
+              (bar) =>
+                  BacktestBar.fromMap(Map<String, dynamic>.from(bar as Map)),
+            )
+            .toList(),
+        simulation: BacktestSimulationSnapshot.fromMap(
+          Map<String, dynamic>.from(simulation),
+        ),
+      );
+      if (recording.simulation.replay.sessionId != sessionId) {
+        throw const FormatException('Backtest recording identity mismatch');
+      }
+      recording.restore();
+      return recording;
+    } on TypeError {
+      throw const FormatException('Invalid backtest recording');
+    } on ArgumentError {
+      throw const FormatException('Invalid backtest recording');
+    }
+  }
+
+  BacktestSimulationEngine restore() => BacktestSimulationEngine.restore(
+    snapshot: simulation,
+    bars: bars,
+    expectedSessionId: simulation.replay.sessionId,
+    expectedSymbol: simulation.replay.symbol,
+    expectedSourceId: simulation.replay.sourceId,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'version': 1,
+    'bars': bars.map((bar) => bar.toMap()).toList(),
+    'simulation': simulation.toMap(),
+  };
 }
 
 class BacktestSession extends Equatable {

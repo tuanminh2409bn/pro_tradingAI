@@ -12,10 +12,42 @@ class StartBacktestSession extends BacktestEvent {
   final String symbol;
   final double initialBalance;
   final String? userId;
-  const StartBacktestSession(this.symbol, this.initialBalance, {this.userId});
+  final double maxLossPercent;
+  final bool createNew;
+  const StartBacktestSession(
+    this.symbol,
+    this.initialBalance, {
+    this.userId,
+    this.maxLossPercent = 5,
+    this.createNew = false,
+  });
 
   @override
-  List<Object?> get props => [symbol, initialBalance, userId];
+  List<Object?> get props => [
+    symbol,
+    initialBalance,
+    userId,
+    maxLossPercent,
+    createNew,
+  ];
+}
+
+class OpenBacktestSetup extends BacktestEvent {}
+
+class RetryBacktestSave extends BacktestEvent {}
+
+class CloseBacktestTrade extends BacktestEvent {
+  final String tradeId;
+  const CloseBacktestTrade(this.tradeId);
+  @override
+  List<Object?> get props => [tradeId];
+}
+
+class AcknowledgeBacktestReview extends BacktestEvent {
+  final String reviewId;
+  const AcknowledgeBacktestReview(this.reviewId);
+  @override
+  List<Object?> get props => [reviewId];
 }
 
 class ReplayTick extends BacktestEvent {}

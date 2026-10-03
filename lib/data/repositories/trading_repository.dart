@@ -7,6 +7,61 @@ import 'package:http/http.dart' as http;
 import '../models/trading_models.dart';
 import '../../core/constants/backend_endpoints.dart';
 
+/// Only known backend codes are translated; provider details never reach UI.
+class AnalysisRequestFailure implements Exception {
+  final String messageKey;
+
+  const AnalysisRequestFailure([String? code])
+    : messageKey = code == 'quota_exhausted'
+          ? 'tr_analysis_quota_exhausted'
+          : code == 'account_role_required' || code == 'account_disabled'
+          ? 'tr_analysis_account_access_required'
+          : code == 'policy_pending'
+          ? 'tr_analysis_policy_pending'
+          : code == 'timeout'
+          ? 'tr_analysis_timeout'
+          : 'tr_analysis_request_failed';
+}
+
+Future<void> waitForAnalysisRequest(
+  Stream<Map<String, dynamic>?> statuses, {
+  Duration timeout = const Duration(seconds: 90),
+}) async {
+  final completed = Completer<void>();
+  final subscription = statuses.listen(
+    (data) {
+      if (completed.isCompleted) return;
+      if (data == null || data['status'] == 'ERROR') {
+        completed.completeError(
+          AnalysisRequestFailure(
+            data?['error'] is String ? data!['error'] as String : null,
+          ),
+        );
+      } else if (data['status'] == 'COMPLETED') {
+        completed.complete();
+      }
+    },
+    onError: (Object error) {
+      if (!completed.isCompleted) {
+        completed.completeError(const AnalysisRequestFailure());
+      }
+    },
+    onDone: () {
+      if (!completed.isCompleted) {
+        completed.completeError(const AnalysisRequestFailure());
+      }
+    },
+  );
+  try {
+    await completed.future.timeout(
+      timeout,
+      onTimeout: () => throw const AnalysisRequestFailure('timeout'),
+    );
+  } finally {
+    await subscription.cancel();
+  }
+}
+
 /// Retains one key while a paper execution's outcome is unknown.
 class PaperIntentKeys {
   final Map<String, String> _pending = {};
@@ -55,6 +110,10 @@ class TradingRepository {
   static const String _apiBaseUrl = BackendEndpoints.apiBaseUrl;
 
   WebSocketChannel? _channel;
+  final WebSocketChannel Function(Uri) _channelFactory;
+  StreamSubscription<dynamic>? _channelSubscription;
+  Timer? _reconnectTimer;
+  bool _disposed = false;
   final _accountController = StreamController<TradingAccount>.broadcast();
   final _candleController = StreamController<List<Candle>>.broadcast();
   final _pricesController = StreamController<Map<String, double>>.broadcast();
@@ -64,9 +123,13 @@ class TradingRepository {
   /// Mark prices keyed by clean symbol — independent of chart candles.
   final Map<String, double> _symbolPrices = {};
   String _activeSymbol = 'XAUUSD';
+  String _activeTimeframe = '5';
 
-  TradingRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance {
+  TradingRepository({
+    FirebaseFirestore? firestore,
+    WebSocketChannel Function(Uri)? channelFactory,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _channelFactory = channelFactory ?? WebSocketChannel.connect {
     _initWebSocket();
   }
 
@@ -100,11 +163,35 @@ class TradingRepository {
   }
 
   void _initWebSocket() {
+    if (_disposed) return;
     try {
-      _channel?.sink.close();
-      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
-      _channel!.stream.listen(
+      final previous = _channel;
+      final channel = _channelFactory(Uri.parse(_wsUrl));
+      _channel = channel;
+      _channelSubscription?.cancel();
+      previous?.sink.close();
+      unawaited(
+        channel.ready.then<void>(
+          (_) {
+            if (_disposed || !identical(_channel, channel)) return;
+            channel.sink.add(
+              jsonEncode({'action': 'set_symbol', 'symbol': _activeSymbol}),
+            );
+            channel.sink.add(
+              jsonEncode({
+                'action': 'set_interval',
+                'interval': _activeTimeframe,
+              }),
+            );
+          },
+          onError: (Object error, StackTrace stack) {
+            if (identical(_channel, channel)) _reconnect();
+          },
+        ),
+      );
+      _channelSubscription = channel.stream.listen(
         (message) {
+          if (_disposed) return;
           final data = jsonDecode(message);
           final msgType = data['type'] as String? ?? '';
 
@@ -133,6 +220,12 @@ class TradingRepository {
             tickSymbol: msgSymbol,
             tickPrice: msgPrice,
           );
+          // Late full snapshots must have the same guard as candle deltas.
+          if (msgSymbol != _activeSymbol ||
+              (data['interval'] != null &&
+                  data['interval'].toString() != _activeTimeframe)) {
+            return;
+          }
 
           // ── 3. TICK (delta) — only changed candles ───────────────
           if (msgType == 'tick') {
@@ -189,10 +282,10 @@ class TradingRepository {
           }
         },
         onError: (_) {
-          _reconnect();
+          if (identical(_channel, channel)) _reconnect();
         },
         onDone: () {
-          _reconnect();
+          if (identical(_channel, channel)) _reconnect();
         },
       );
     } catch (_) {
@@ -201,12 +294,9 @@ class TradingRepository {
   }
 
   void _reconnect() {
+    if (_disposed || _reconnectTimer?.isActive == true) return;
+    _reconnectTimer = Timer(const Duration(seconds: 5), _initWebSocket);
     _channel?.sink.close();
-    Future.delayed(const Duration(seconds: 5), () {
-      if (_channel == null || _channel!.closeCode != null) {
-        _initWebSocket();
-      }
-    });
   }
 
   // ─── Firebase Auth Token Helper ───
@@ -513,7 +603,7 @@ class TradingRepository {
     String? tradingMode,
   }) async {
     if (userId.isEmpty) throw StateError('Authentication required');
-    await _firestore.collection('analysis_requests').add({
+    final request = await _firestore.collection('analysis_requests').add({
       'symbol': symbol,
       'timeframe': timeframe,
       'execution_tf': timeframe,
@@ -522,6 +612,9 @@ class TradingRepository {
       'requestedAt': FieldValue.serverTimestamp(),
       if (tradingMode != null) 'trading_mode': tradingMode,
     });
+    await waitForAnalysisRequest(
+      request.snapshots().map((snapshot) => snapshot.data()),
+    );
   }
 
   // ─── Streams ───
@@ -535,10 +628,15 @@ class TradingRepository {
   }
 
   void changeTimeframe(String tf) {
+    if (_disposed || tf == _activeTimeframe) return;
+    _activeTimeframe = tf;
+    _cache.clear();
+    _candleController.add([]);
     _channel?.sink.add(jsonEncode({"action": "set_interval", "interval": tf}));
   }
 
   void changeSymbol(String symbol) {
+    if (_disposed || symbol.toUpperCase() == _activeSymbol) return;
     _activeSymbol = symbol.toUpperCase();
     _channel?.sink.add(
       jsonEncode({"action": "set_symbol", "symbol": _activeSymbol}),
@@ -627,6 +725,10 @@ class TradingRepository {
   }
 
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _reconnectTimer?.cancel();
+    _channelSubscription?.cancel();
     _channel?.sink.close();
     _accountController.close();
     _candleController.close();
