@@ -8,7 +8,16 @@ abstract class CommunityEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadCommunityData extends CommunityEvent {}
+class LoadCommunityData extends CommunityEvent {
+  final String? sharedPostId;
+  const LoadCommunityData({this.sharedPostId});
+  @override
+  List<Object?> get props => [sharedPostId];
+}
+
+class RetryCommunityLikes extends CommunityEvent {
+  const RetryCommunityLikes();
+}
 
 class UpdateCommunityFeed extends CommunityEvent {
   final List<CommunityPost> posts;

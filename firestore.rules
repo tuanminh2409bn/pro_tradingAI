@@ -159,6 +159,10 @@ service cloud.firestore {
         // Public comments and their parent count are committed together by BE.
         allow write: if false;
       }
+      match /likes/{userId} {
+        allow get: if isOwner(userId);
+        allow write: if false;
+      }
     }
     match /leaderboard/{document=**} {
       allow read: if true;

@@ -126,6 +126,10 @@ class ProTradingApp extends StatelessWidget {
               }
             },
             child: BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (previous, current) =>
+                  !kIsWeb ||
+                  current.status != AuthStatus.loading ||
+                  previous.status != AuthStatus.unauthenticated,
               builder: (context, state) {
                 if (state.status == AuthStatus.authenticated) {
                   return kIsWeb

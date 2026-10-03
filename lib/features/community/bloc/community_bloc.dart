@@ -11,6 +11,9 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
   StreamSubscription? _commentsSubscription;
   int _loadGeneration = 0;
   int _commentsGeneration = 0;
+  final Set<String> _restoredLikePostIds = {};
+  final Set<String> _failedLikePostIds = {};
+  String? _sharedPostId;
 
   CommunityBloc({required CommunityRepository communityRepository})
     : _communityRepository = communityRepository,
@@ -25,6 +28,13 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     on<CloseCommunityComments>(_onCloseComments);
     on<UpdateCommunityComments>(_onUpdateComments);
     on<CreateCommunityComment>(_onCreateComment);
+    on<RetryCommunityLikes>((event, emit) {
+      final current = state;
+      if (current is CommunityLoaded && current.restoringLikePostIds.isEmpty) {
+        _restoredLikePostIds.clear();
+        add(UpdateCommunityFeed(current.posts, generation: _loadGeneration));
+      }
+    });
   }
 
   Future<void> _onLoadData(
@@ -32,6 +42,9 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     Emitter<CommunityState> emit,
   ) async {
     final generation = ++_loadGeneration;
+    _restoredLikePostIds.clear();
+    _failedLikePostIds.clear();
+    _sharedPostId = event.sharedPostId;
     ++_commentsGeneration;
     emit(CommunityLoading());
     try {
@@ -81,11 +94,61 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     emit(const CommunityError('common_data_unavailable'));
   }
 
-  void _onUpdateFeed(UpdateCommunityFeed event, Emitter<CommunityState> emit) {
+  Future<void> _onUpdateFeed(
+    UpdateCommunityFeed event,
+    Emitter<CommunityState> emit,
+  ) async {
     if (event.generation != null && event.generation != _loadGeneration) return;
-    if (state is CommunityLoaded) {
-      emit((state as CommunityLoaded).copyWith(posts: event.posts));
+    final current = state;
+    if (current is! CommunityLoaded) return;
+    final generation = _loadGeneration;
+    final ids = {
+      for (final post in event.posts)
+        if (post.id != null) post.id!,
+      if (_sharedPostId != null) _sharedPostId!,
+    }.difference(_restoredLikePostIds);
+    _restoredLikePostIds.addAll(ids);
+    emit(
+      current.copyWith(
+        posts: event.posts,
+        restoringLikePostIds: {...current.restoringLikePostIds, ...ids},
+      ),
+    );
+    if (ids.isEmpty) return;
+    Set<String> liked;
+    try {
+      liked = await _communityRepository.getLikedPostIds(ids);
+    } catch (_) {
+      final latest = state;
+      if (emit.isDone ||
+          generation != _loadGeneration ||
+          latest is! CommunityLoaded) {
+        return;
+      }
+      _restoredLikePostIds.removeAll(ids);
+      _failedLikePostIds.addAll(ids);
+      emit(
+        latest.copyWith(
+          restoringLikePostIds: latest.restoringLikePostIds.difference(ids),
+          likeStatusUnavailable: _failedLikePostIds.isNotEmpty,
+        ),
+      );
+      return;
     }
+    final latest = state;
+    if (emit.isDone ||
+        generation != _loadGeneration ||
+        latest is! CommunityLoaded) {
+      return;
+    }
+    _failedLikePostIds.removeAll(ids);
+    emit(
+      latest.copyWith(
+        restoringLikePostIds: latest.restoringLikePostIds.difference(ids),
+        likedPostIds: {...latest.likedPostIds, ...liked},
+        likeStatusUnavailable: _failedLikePostIds.isNotEmpty,
+      ),
+    );
   }
 
   void _onUpdateLeaderboard(
@@ -145,6 +208,7 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     final current = state;
     if (current is! CommunityLoaded ||
         current.likedPostIds.contains(event.postId) ||
+        current.restoringLikePostIds.contains(event.postId) ||
         current.likingPostIds.contains(event.postId)) {
       return;
     }

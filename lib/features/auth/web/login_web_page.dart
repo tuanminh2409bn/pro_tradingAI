@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/local_qa_mode.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/locale_cubit.dart';
 import '../../../core/widgets/language_toggle.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -47,7 +48,12 @@ class _LoginWebPageState extends State<LoginWebPage>
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.tr('fill_all_fields')),
+          content: Text(
+            AppLocalizations.get(
+              context.read<LocaleCubit>().state,
+              'fill_all_fields',
+            ),
+          ),
           backgroundColor: AppColors.bear,
         ),
       );
@@ -74,7 +80,12 @@ class _LoginWebPageState extends State<LoginWebPage>
           if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(context.tr(state.errorMessage!)),
+                content: Text(
+                  AppLocalizations.get(
+                    context.read<LocaleCubit>().state,
+                    state.errorMessage!,
+                  ),
+                ),
                 backgroundColor: AppColors.bear,
               ),
             );

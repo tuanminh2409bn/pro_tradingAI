@@ -119,6 +119,7 @@ class AppLocalizations {
       'community_like_action': 'Like',
       'community_liked': 'Liked',
       'community_like_failed': 'Unable to like this post. Please retry.',
+      'community_like_status_retry': 'Reload your liked-post status',
       'community_comments': 'Comments',
       'community_comments_recent':
           'Latest 100 public comments. Do not post private account details.',
@@ -563,6 +564,7 @@ class AppLocalizations {
       'community_like_action': 'Thích',
       'community_liked': 'Đã thích',
       'community_like_failed': 'Không thể thích bài viết. Vui lòng thử lại.',
+      'community_like_status_retry': 'Tải lại trạng thái bài viết đã thích',
       'community_comments': 'Bình luận',
       'community_comments_recent':
           '100 bình luận công khai gần nhất. Không đăng thông tin tài khoản riêng tư.',

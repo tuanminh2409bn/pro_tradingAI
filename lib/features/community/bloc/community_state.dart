@@ -20,6 +20,8 @@ class CommunityLoaded extends CommunityState {
   final bool postSucceeded;
   final Set<String> likedPostIds;
   final Set<String> likingPostIds;
+  final Set<String> restoringLikePostIds;
+  final bool likeStatusUnavailable;
   final int likeFailureNonce;
   final String? commentsPostId;
   final List<CommunityComment> comments;
@@ -37,6 +39,8 @@ class CommunityLoaded extends CommunityState {
     this.postSucceeded = false,
     this.likedPostIds = const <String>{},
     this.likingPostIds = const <String>{},
+    this.restoringLikePostIds = const <String>{},
+    this.likeStatusUnavailable = false,
     this.likeFailureNonce = 0,
     this.commentsPostId,
     this.comments = const [],
@@ -55,6 +59,8 @@ class CommunityLoaded extends CommunityState {
     bool? postSucceeded,
     Set<String>? likedPostIds,
     Set<String>? likingPostIds,
+    Set<String>? restoringLikePostIds,
+    bool? likeStatusUnavailable,
     int? likeFailureNonce,
     String? commentsPostId,
     bool clearComments = false,
@@ -73,6 +79,9 @@ class CommunityLoaded extends CommunityState {
       postSucceeded: postSucceeded ?? this.postSucceeded,
       likedPostIds: likedPostIds ?? this.likedPostIds,
       likingPostIds: likingPostIds ?? this.likingPostIds,
+      restoringLikePostIds: restoringLikePostIds ?? this.restoringLikePostIds,
+      likeStatusUnavailable:
+          likeStatusUnavailable ?? this.likeStatusUnavailable,
       likeFailureNonce: likeFailureNonce ?? this.likeFailureNonce,
       commentsPostId: clearComments
           ? null
@@ -99,6 +108,8 @@ class CommunityLoaded extends CommunityState {
     postSucceeded,
     likedPostIds,
     likingPostIds,
+    restoringLikePostIds,
+    likeStatusUnavailable,
     likeFailureNonce,
     commentsPostId,
     comments,

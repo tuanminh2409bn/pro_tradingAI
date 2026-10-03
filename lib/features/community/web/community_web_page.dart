@@ -52,7 +52,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
     return BlocProvider(
       create: (context) => CommunityBloc(
         communityRepository: context.read<CommunityRepository>(),
-      )..add(LoadCommunityData()),
+      )..add(LoadCommunityData(sharedPostId: widget.sharedPostId)),
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: Column(
@@ -123,7 +123,9 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                           ),
                           TextButton(
                             onPressed: () => context.read<CommunityBloc>().add(
-                              LoadCommunityData(),
+                              LoadCommunityData(
+                                sharedPostId: widget.sharedPostId,
+                              ),
                             ),
                             child: Text(context.tr('community_retry')),
                           ),
@@ -278,6 +280,13 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
         .toList();
     return Column(
       children: [
+        if (state.likeStatusUnavailable)
+          TextButton.icon(
+            onPressed: () =>
+                context.read<CommunityBloc>().add(const RetryCommunityLikes()),
+            icon: const Icon(Icons.refresh),
+            label: Text(context.tr('community_like_status_retry')),
+          ),
         if (widget.sharedPostId != null)
           StreamBuilder<CommunityPost?>(
             stream: _sharedPostStream,
@@ -327,7 +336,9 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                   _PostCard(
                     post: post,
                     liked: state.likedPostIds.contains(post.id),
-                    liking: state.likingPostIds.contains(post.id),
+                    liking:
+                        state.likingPostIds.contains(post.id) ||
+                        state.restoringLikePostIds.contains(post.id),
                   ),
                 ],
               );
@@ -361,7 +372,9 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
       itemBuilder: (context, index) => _PostCard(
         post: posts[index],
         liked: state.likedPostIds.contains(posts[index].id),
-        liking: state.likingPostIds.contains(posts[index].id),
+        liking:
+            state.likingPostIds.contains(posts[index].id) ||
+            state.restoringLikePostIds.contains(posts[index].id),
       ),
     );
   }

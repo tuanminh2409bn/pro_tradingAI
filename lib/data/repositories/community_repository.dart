@@ -180,9 +180,35 @@ class CommunityRepository {
   }
 
   /// The backend owns the like marker and counter transaction.
+  Future<Set<String>> getLikedPostIds(Iterable<String> postIds) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Authentication is required');
+    final ids = postIds.toSet();
+    if (ids.length > 51 ||
+        ids.any((id) => !RegExp(r'^[A-Za-z0-9_-]{1,128}$').hasMatch(id))) {
+      throw ArgumentError('Invalid community post IDs');
+    }
+    final markers = await Future.wait(
+      ids.map((id) async {
+        final marker = await _firestore
+            .collection('community')
+            .doc(id)
+            .collection('likes')
+            .doc(user.uid)
+            .get();
+        return marker.exists ? id : null;
+      }),
+    );
+    if (_auth.currentUser?.uid != user.uid) {
+      throw StateError('Identity changed');
+    }
+    return markers.whereType<String>().toSet();
+  }
+
   Future<void> likePost(String postId) async {
-    final token = await _auth.currentUser?.getIdToken();
-    if (token == null || token.isEmpty) {
+    final user = _auth.currentUser;
+    final token = await user?.getIdToken();
+    if (token == null || token.isEmpty || _auth.currentUser?.uid != user?.uid) {
       throw StateError('Authentication is required');
     }
     final response = await _client

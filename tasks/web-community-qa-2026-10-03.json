@@ -1,8 +1,21 @@
 {
   "date": "2026-10-03",
   "scope": "W24 Community post/comment/like/share",
-  "source_commit": null,
-  "production": {"status": "pending_release", "public_qa_posts_created": 0, "llm_calls": 0},
+  "source_commit": "f11707a8341351b9fbd8f774f7c9697256549762",
+  "production": {
+    "status": "v1_released_follow_up_prepared",
+    "backend_container": "protrading-ai-community-live-f11707a",
+    "backend_image": "protrading-ai:community-f11707a",
+    "v1_web_bundle_sha256": "1498611496aeb17ec7c2606ae84303fb09b92ed85659bde4bb371e69984d89e2",
+    "v1_public_bundle_matches_local": true,
+    "rules_v1": "deployed",
+    "standard_qa_browser": "signed in after reload; real empty feed and no verified rankings",
+    "community_documents": 0,
+    "leaderboard_documents": 0,
+    "public_qa_posts_created": 0,
+    "llm_calls": 0,
+    "proof": "web-production-community-2026-10-03.png"
+  },
   "local": {
     "firebase": "loopback Auth 9099 + Firestore 8080 Emulators",
     "backend": "actual server.py, localhost:8088, no provider keys, workers disabled",
@@ -12,6 +25,7 @@
       "comments": 1,
       "likes": 1,
       "like_replay_after_new_login_count": 1,
+      "liked_marker_restored_automatically_after_fresh_login": true,
       "owner_matches_real_emulator_token": true,
       "shared_link_opens_post_after_login": true,
       "shared_post_uses_document_lookup_not_feed_window": true,
@@ -20,21 +34,24 @@
     },
     "proofs": [
       "web-local-community-comments-2026-10-03.png",
-      "web-local-community-shared-post-2026-10-03.png"
+      "web-local-community-shared-post-2026-10-03.png",
+      "web-local-community-like-restored-2026-10-03.png"
     ]
   },
   "verification": {
-    "python_emulator_suite": {"total": 279, "passed": 279, "skipped": 0},
-    "flutter_suite": {"total": 160, "passed": 160},
+    "python_emulator_suite": {"total": 280, "passed": 280, "skipped": 0},
+    "flutter_suite": {"total": 163, "passed": 162, "skipped_web_only_test": 1},
+    "chrome_auth_lifecycle_test": {"total": 1, "passed": 1},
     "analyzer": {"errors": 0, "warnings": 0, "existing_mobile_infos": 3},
     "atomic_concurrency": {"parallel_post_replays": 20, "stored_posts": 1,
       "parallel_comment_replays": 20, "stored_comments": 1, "parent_counter": 1},
-    "rules": "client create/update denied; delete only post owner; comments public only while parent exists",
+    "rules": "client create/update denied; delete only post owner; comments public only while parent exists; like marker get only by its owner, no list/write",
+    "login_lifecycle": "Web form keeps draft while auth is pending and displays localized error; boot loading and Mobile behavior retained",
     "transport_retry": "same owner/content intent reuses request ID; changed content with same ID rejected",
     "async_lifecycle": "duplicate send guarded; close/reload generations discard stale results",
     "syntax_diff_check": "passed",
     "build_web_local": "passed",
-    "build_web_production": "passed"
+    "build_web_production": "passed; no localhost API endpoints in production bundle"
   },
   "limits": [
     "No production community test message has been published to customers.",

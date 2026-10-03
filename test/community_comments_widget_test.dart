@@ -43,6 +43,9 @@ class _Repository extends Fake implements CommunityRepository {
     if (fail) throw StateError('offline');
     await pending.future;
   }
+
+  @override
+  Future<Set<String>> getLikedPostIds(Iterable<String> postIds) async => {};
 }
 
 void main() {

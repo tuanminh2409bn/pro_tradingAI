@@ -190,10 +190,12 @@
 
 - Checklist có 36 mục W, đã đóng 7 và còn 29; nhiều mục mở đã có phần code
   hoặc runtime proof. Đây là số mục nghiệm thu, không phải phần trăm code.
-- Code còn cần hoàn thiện gồm quota Backtest, Community comment/share,
-  Referral code/kit/ledger, tenant controls, Radar và các flow Admin/push/privacy
+- Quota Backtest và Community post/comment/like/share đã có code và bằng chứng
+  runtime như các mục dưới. Code còn cần hoàn thiện gồm Referral code/kit/ledger,
+  tenant controls, Radar và các flow Admin/push/privacy
   được phép. Còn bộ render 27/27, 8/8 chức năng và role/load/rollback cùng build.
-- Điều kiện nguồn/kinh doanh còn thiếu: DeepSeek đủ số dư, calendar/social có
+- Chủ tài khoản đã xác nhận nạp DeepSeek; probe AI thật vẫn chờ duyệt cụ thể.
+  Điều kiện nguồn/kinh doanh còn thiếu: calendar/social có
   quyền dùng và mẫu thật, quyền phân phối market data, chính sách Referral và
   consent/retention/sink của Data Lake. Owner đã giao chọn phương án kỹ thuật;
   không xin lại quyền triển khai đã có, không tự thanh toán hoặc ký hợp đồng.
@@ -204,7 +206,7 @@
   lại sau khi đủ nguồn và quyết định, với phạm vi hiện tại. Chưa phải deadline
   đã cam kết; thời gian chờ nhà cung cấp/giấy phép/nạp số dư không được xác định.
 
-## Community W24 — bản đang chuẩn bị phát hành 03/10
+## Community W24 — v1 đã phát hành, sửa khôi phục đang hoàn tất 03/10
 
 - Đã nối post/comment/like/share qua backend/token và Firestore thật trên
   Emulator. Post/comment retry dùng cùng requestId, comment counter cùng
@@ -215,11 +217,22 @@
   khóa send khi pending, bỏ callback cũ sau close/reload. Share link không chứa
   UID/token/PII; lookup theo document và mở đúng bài sau đăng nhập mới. Browser
   local đã ghi một post/comment, count like/comment 1/1; like retry giữ 1.
-- Python Emulator **279/279**, Flutter **160/160**, syntax/diff check và Web
-  local/release build đạt. Analyzer 0 error/0 warning, còn 3 info Mobile cũ.
-  Bằng chứng: `web-community-qa-2026-10-03.json` và hai ảnh local đi kèm.
+- Source `f11707a` đã lên main/FE/BE/Rules; live container
+  `protrading-ai-community-live-f11707a`, rollback giữ bản Backtest `0de11ce`.
+  Bundle Web public khớp SHA local; health đạt, API anonymous trả 401. SDK
+  read-only xác nhận collection Community và leaderboard đều 0 document;
+  browser QA Standard sau reload hiển thị đúng feed trống, không có ranking giả.
+- Bản follow-up cho phép owner đọc đúng marker like (không list/write hoặc
+  cross-user), tự khôi phục trạng thái đã thích, có retry khi đọc lỗi và bỏ
+  callback cũ. Browser đăng nhập mới tự hiện “Đã thích · 1”, không gọi like lại.
+- Phát hiện và sửa form đăng nhập Web bị dispose khi auth đang pending;
+  giữ draft/controller, hiển thị lỗi đăng nhập được localize. Test Chrome thật
+  tái hiện trước sửa và đạt sau sửa; boot loading và Mobile giữ behavior cũ.
+- Python Emulator **280/280**, Flutter VM **162 đạt + 1 Web-only skip**,
+  test Chrome **1/1**, analyzer 0 error/0 warning và 3 info Mobile cũ.
+  Bằng chứng: `web-community-qa-2026-10-03.json` và các ảnh local/production.
 - Chưa đăng nội dung QA cho khách hàng trên Community production; W24 còn
-  chờ phát hành/readback, W25 verified-trade/leaderboard vẫn chưa nghiệm thu.
+  thiếu write-flow production, W25 verified-trade/leaderboard vẫn chưa nghiệm thu.
   Không gọi DeepSeek ở slice này. Probe Analysis/Chat production vẫn chờ câu
   xác nhận cụ thể do cơ chế duyệt tự động yêu cầu.
 

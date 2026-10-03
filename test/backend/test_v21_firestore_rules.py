@@ -386,6 +386,15 @@ class FirestoreRulesTests(unittest.TestCase):
         self.assertEqual(_request("DELETE", path, "alice"), 200)
         self.assertEqual(_request("GET", comment), 403)
 
+    def test_community_like_marker_is_get_only_for_its_owner(self):
+        marker = f"community/post-{uuid.uuid4().hex}/likes/alice"
+        self.assertEqual(_request("PATCH", marker, "_admin", {"userId": "alice"}), 200)
+        self.assertEqual(_request("GET", marker, "alice"), 200)
+        self.assertEqual(_request("GET", marker, "bob"), 403)
+        self.assertEqual(_request("GET", marker), 403)
+        self.assertEqual(_request("PATCH", marker, "alice", {"userId": "alice"}), 403)
+        self.assertEqual(_request("DELETE", marker, "alice"), 403)
+
     def test_admin_data_requires_verified_admin_claim(self):
         path = "admin/stats"
         self.assertEqual(_request("PATCH", path, "_admin", {"status": "READY"}), 200)
