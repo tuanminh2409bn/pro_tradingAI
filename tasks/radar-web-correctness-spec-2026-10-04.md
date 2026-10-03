@@ -53,3 +53,20 @@ UI hoặc fixture local không thay thế các bằng chứng đó.
   Xem `web-local-radar-correctness-2026-10-04.json` và hai ảnh local kèm theo.
 - Không thêm dependency hoặc thay Firestore/REST/Rules; BE không đổi.
   Chưa đóng W31/W32/W34 hoặc tuyên bố Web 100%.
+
+## Release production 04/10
+
+- Source `1487cd8cbc9be0e266820b35fe5d069e4d7a326d` đã lên main/Firebase.
+  Public bundle khớp toàn bộ byte với build đúng VPS/Emulator off:
+  3,792,258 bytes, SHA
+  `1122bd039e1a65e971affd4f31d835a516ce84a62567c683047e32d74b2e5d0c`.
+- QA Standard reload: Radar EN/VI có snapshot/freshness-unverified và
+  strength-unmeasured, không có vạch 4/5, push tắt có lý do, chưa có AI
+  confirmation cho asset đang chọn. Giá EURUSD giữ 1.13727, không tự gắn
+  USD cho mọi cặp. Không dùng giá Radar cũ để nghiệm thu giá tick hiện tại.
+- Native chọn ETHUSD rồi Open Trading Room: chart ETHUSD M5/Scalping tải
+  nến và giá 2686.47, thắng saved chart BTCUSD. Không yêu cầu analysis/chat/
+  trade; card VETO đã có không phải bằng chứng AI mới. Broker gate Journal
+  vẫn khóa sau thay đổi route dùng chung. BE/Rules không đổi.
+- Xem `web-production-radar-correctness-2026-10-04.json` và hai ảnh production.
+  Các gate worker/provider/license/FCM/load/role còn mở, không tuyên bố 100%.

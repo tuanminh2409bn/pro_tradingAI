@@ -411,6 +411,32 @@
   đúng quyền. Tổng kế hoạch vẫn 7 đóng/29 mở; không quy số test thành % hoàn
   thành. Xem `web-production-journal-performance-2026-10-04.json`.
 
+### Radar Web — production release 04/10
+
+- FE `1487cd8` đã lên main/Firebase, public bundle 3,792,258 bytes SHA
+  `1122bd039e1a65e971affd4f31d835a516ce84a62567c683047e32d74b2e5d0c`
+  khớp local production build. BE `7ef3ab6`/Rules `43fd970` không đổi.
+- Bỏ strength 4/5 cố định, nhãn realtime/today/USD thiếu chứng cứ; giá giữ
+  precision và snapshot/freshness unverified rõ ràng, EN/VI/narrow/retry.
+  Selected detail lấy snapshot mới, clear/removal/reload/error/close an toàn.
+- Route target tạm thời truyền symbol/frame qua shell→TradingRoom; target
+  thắng saved symbol, repo interval/state/mode đúng matrix; ordinary entry
+  vẫn restore saved symbol. Target 14/14, full Flutter 247 + 2 Web-only skip,
+  analyzer 0 error/warning và 3 info Mobile cũ. Không thêm dependency.
+- Native Emulator đóng detail/update giá giữ closed, chọn lại ETHUSD/H4 mở
+  Day Trading. Native production EN/VI, ETHUSD từ Radar mở ETHUSD/M5 có nến/
+  giá thật (2686.47 tại capture), khác saved BTCUSD. Không yêu cầu AI/chat/
+  trade; VETO có sẵn không phải AI-success proof mới. Journal gate vẫn khóa.
+  Xem `radar-web-correctness-spec-2026-10-04.md` và JSON/PNG local/production.
+- Read-only smoke trước release còn cho thấy News 13 Fed releases/sentiment
+  unavailable, Backtest config hiện đúng, Community feed/leaderboard trống,
+  Referral kit/các financial empty-state có thật và Profile MFA disabled có
+  lý do. Đây là navigation/render smoke, không phải write/role/provider E2E.
+  Community counter ký tự còn English trong VI; W34 chưa đóng.
+- Tổng 36 hàng nghiệm thu: 7 đóng/29 mở. Các gate AI key 401, đọc credential
+  và paid/new-QA probe chờ duyệt, broker/license/provider/role/worker/FCM,
+  ledger/payment và supported-host/SLA/rollback vẫn cản nghiệm thu 100%.
+
 1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
    Operations và readback sau release, xác nhận SHA remote sau push.
 2. Quota Backtest đã triển khai và chứng minh Standard production. Tiếp tục

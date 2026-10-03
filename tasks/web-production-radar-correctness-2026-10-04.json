@@ -1,0 +1,45 @@
+{
+  "checked_at_utc": "2026-10-03T22:48:21Z",
+  "environment": "Firebase Hosting production, existing Standard QA session",
+  "url": "https://protrading-ai-2026.web.app/",
+  "source_commit": "1487cd8cbc9be0e266820b35fe5d069e4d7a326d",
+  "github_main_matches_source": true,
+  "public_bundle": {
+    "http_status": 200,
+    "bytes": 3792258,
+    "sha256": "1122bd039e1a65e971affd4f31d835a516ce84a62567c683047e32d74b2e5d0c",
+    "matches_local_production_build": true,
+    "production_endpoints_present": true,
+    "qa_endpoints_and_emulator_warning_absent": true
+  },
+  "native_observations": {
+    "qa_session_restored_after_reload": true,
+    "en_vi_snapshot_freshness_unverified_message": true,
+    "en_vi_strength_unmeasured_message": true,
+    "fixed_four_of_five_strength_bars": false,
+    "push_control_disabled_with_reason": true,
+    "radar_ai_confirmation_available_for_selected_asset": false,
+    "reported_eurusd_price_precision": "1.13727",
+    "invented_usd_symbol_for_all_asset_prices": false,
+    "saved_chart_before_radar_entry": "BTCUSD M5",
+    "selected_radar_asset": "ETHUSD",
+    "chart_after_open_from_radar": "ETHUSD M5",
+    "chart_mode": "Scalping",
+    "chart_price_loaded_from_existing_feed": "2686.47",
+    "fresh_analysis_requested": false,
+    "existing_veto_card_observed_is_not_a_new_ai_success_proof": true,
+    "journal_broker_gate_still_locked_after_shared_route_release": true
+  },
+  "screenshots": [
+    {"path": "tasks/web-production-radar-correctness-2026-10-04.png", "sha256": "ea121385f29eab2f9ebfeee21916ffaa1a71fe39968275b450ca3f5123780aae"},
+    {"path": "tasks/web-production-radar-chart-target-2026-10-04.png", "sha256": "5428be14ced63b39c14bed5172be37de011fcf7d65fde863b6dc6774b414bd3e"}
+  ],
+  "unchanged_runtime": {"backend_source": "7ef3ab68c254244f11cd827113e7be18b584a2a4", "firestore_rules_source": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c"},
+  "impact": {"model_requests_requested_by_this_probe": 0, "production_user_mutations_requested": 0, "production_qa_created": 0},
+  "limitations": [
+    "Radar records are labeled snapshots; freshness/provider/commercial rights were not accepted in this probe",
+    "Opening an existing market feed is not real AI confirmation, paper execution or broker bid/ask verification",
+    "No worker/FCM was enabled; 50-100 asset and multi-user load/role/device acceptance remain open",
+    "This slice does not complete W31/W32/W34 or the complete Web plan"
+  ]
+}
