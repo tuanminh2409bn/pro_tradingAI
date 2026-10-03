@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-03",
+  "source_commit": "85e5e6b",
+  "scope": "Existing admin/service_status readiness fields; no schema/public API change",
+  "backend": {
+    "release_id": "e03feca1d470",
+    "live_container": "protrading-ai-services-live-e03feca1d470",
+    "image": "protrading-ai:services-e03feca1d470",
+    "image_sha256": "b82962fc900bc49fcc50e316ea385608ae79c8135a4c40e66919d2e7b21a0cb0",
+    "rollback_container": "protrading-ai-news-live-6271bd6007ae"
+  },
+  "localhost_health": "ok",
+  "public_health": "ok",
+  "public_websocket": {"result": "passed", "symbol": "BTCUSD", "interval": "5", "type": "init", "candle_count": 3000, "positive_price": true},
+  "provider_readonly_check": {
+    "endpoint": "https://api.deepseek.com/user/balance",
+    "http_status": 200,
+    "is_available": false,
+    "documentation": "https://api-docs.deepseek.com/api/get-user-balance/"
+  },
+  "firestore_readback": {
+    "ai_online": false,
+    "ai_latency": 192,
+    "data_online": true,
+    "mt4_online": false,
+    "mt4_latency": 0,
+    "redis_online": true,
+    "redis_backend": "redis",
+    "updated_at": "2026-10-03T11:15:17.997000+00:00"
+  },
+  "checks": {
+    "python_emulator": {
+      "total": 256,
+      "passed": 256
+    },
+    "isolated_final_image": {
+      "total": 256,
+      "passed": 232,
+      "emulator_skipped": 24
+    },
+    "focused_status_and_ws": 11
+  },
+  "contracts_preserved": [
+    "No LLM completion called by readiness",
+    "No keys or monetary balances in status/logs/artifact",
+    "Paper-only broker; no public endpoint reachability treated as active bridge",
+    "Recent finite symbol mark receipt required; client chart state remains independent"
+  ],
+  "limitations": [
+    "Admin browser QA still requires separate claim-bearing identity",
+    "Data receipt does not establish market-data redistribution rights or validate all history/timeframes",
+    "Python 3.10.18 runtime emitted Google support warning effective 2026-10-04; runtime upgrade remains an operations follow-up"
+  ]
+}

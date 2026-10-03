@@ -137,10 +137,51 @@
   AI-unavailable, responsive cùng thư mục. W20/W21 vẫn mở cho nguồn social,
   calendar và bằng chứng What-If/Red Zone; không đánh dấu toàn trang News 100%.
 
+## Operations — readiness thật
+
+- Source BE `85e5e6b`. DeepSeek status dùng GET `/user/balance`, HTTP 200 và
+  boolean `is_available=true`; không coi root endpoint trả 402/404 là AI online,
+  không gọi completion trả phí và không lưu/in số dư hoặc key.
+- Data status yêu cầu mark hữu hạn, dương và được nhận trong 180 giây, chia sẻ
+  riêng timestamp theo symbol giữa các session; chart state vẫn độc lập.
+  MT4 Bridge không được báo online từ HTTP root khi chưa có bridge hoạt động.
+- Live `protrading-ai:services-e03feca1d470`, image SHA
+  `b82962fc900bc49fcc50e316ea385608ae79c8135a4c40e66919d2e7b21a0cb0`;
+  localhost/public health đạt. Container News cũ giữ stopped để rollback.
+- Read-only DeepSeek thật: HTTP 200, `is_available=false`. Firestore status
+  sau cutover: AI false, MT4 false, Data true, Redis true. Chỉ ghi các field
+  status có sẵn, không đổi Rules/schema/public API/dependency.
+- Full Python với Emulator 256/256; image cuối cô lập 256 ca gồm 232 đạt,
+  24 skip cần Emulator. Sáu regression readiness mới và các ca isolation/local
+  WebSocket/async boundary đều đạt.
+- WSS public sau cutover nhận BTCUSD/M5 init, 3.000 nến và giá dương;
+  probe read-only không gọi Analysis hoặc tạo lệnh.
+- Bằng chứng: `web-production-service-readiness-2026-10-03.json`.
+  Admin browser vẫn cần danh tính có claim phù hợp; không cấp Admin cho QA
+  Standard từ phê duyệt cấp Standard.
+
+## Mốc hoàn thành kế hoạch
+
+- Checklist có 36 mục W, đã đóng 7 và còn 29; nhiều mục mở đã có phần code
+  hoặc runtime proof. Đây là số mục nghiệm thu, không phải phần trăm code.
+- Code còn cần hoàn thiện gồm quota Backtest, Community comment/share,
+  Referral code/kit/ledger, tenant controls, Radar và các flow Admin/push/privacy
+  được phép. Còn bộ render 27/27, 8/8 chức năng và role/load/rollback cùng build.
+- Điều kiện nguồn/kinh doanh còn thiếu: DeepSeek đủ số dư, calendar/social có
+  quyền dùng và mẫu thật, quyền phân phối market data, chính sách Referral và
+  consent/retention/sink của Data Lake. Owner đã giao chọn phương án kỹ thuật;
+  không xin lại quyền triển khai đã có, không tự thanh toán hoặc ký hợp đồng.
+- Chưa có ngày nghiệm thu 100% có thể cam kết. Việc code và kiểm thử vẫn tiếp
+  tục được trên các phần độc lập; trạng thái unavailable không đóng các chức
+  năng mà chủ dự án yêu cầu phải hoạt động đầy đủ.
+- Ước lượng sơ bộ cho lập kế hoạch: 10–15 ngày làm việc cho code/kiểm thử còn
+  lại sau khi đủ nguồn và quyết định, với phạm vi hiện tại. Chưa phải deadline
+  đã cam kết; thời gian chờ nhà cung cấp/giấy phép/nạp số dư không được xác định.
+
 ## Tiếp tục
 
-1. Lưu source News và bằng chứng release vào GitHub main theo phê duyệt đã có,
-   xác nhận SHA remote sau push. Foundation/Backtest đã có trên main `5ed71ac`.
+1. Source News và bằng chứng đã có trên main `6268e60`; lưu tiếp source
+   Operations và readback sau release, xác nhận SHA remote sau push.
 2. Tiếp tục quota Backtest và kiểm thử các role khác bằng danh tính đúng quyền.
 3. Tiếp tục các hàng News, Community, Referral, Admin, Radar, Push, Data Lake
    và role matrix còn mở trong `web-completion-plan.md`.
