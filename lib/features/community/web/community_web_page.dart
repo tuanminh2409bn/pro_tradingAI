@@ -14,6 +14,7 @@ import '../bloc/community_event.dart';
 import '../bloc/community_state.dart';
 import 'widgets/community_like_button.dart';
 import 'widgets/community_comments_dialog.dart';
+import 'widgets/community_character_counter.dart';
 import '../../../core/utils/community_post_link.dart';
 
 class CommunityWebPage extends StatefulWidget {
@@ -215,6 +216,7 @@ class _CommunityWebPageState extends State<CommunityWebPage> {
                   enabled: !state.isPosting,
                   maxLines: 4,
                   maxLength: communityPostMaxLength,
+                  buildCounter: communityCharacterCounter,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: context.tr('community_post_hint'),

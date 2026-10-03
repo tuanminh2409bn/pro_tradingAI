@@ -6,6 +6,7 @@ import '../../../../data/models/community_models.dart';
 import '../../bloc/community_bloc.dart';
 import '../../bloc/community_event.dart';
 import '../../bloc/community_state.dart';
+import 'community_character_counter.dart';
 
 Future<void> showCommunityComments(BuildContext context, String postId) async {
   final bloc = context.read<CommunityBloc>();
@@ -124,6 +125,7 @@ class _CommunityCommentsDialogState extends State<CommunityCommentsDialog> {
                   minLines: 2,
                   maxLines: 4,
                   maxLength: communityCommentMaxLength,
+                  buildCounter: communityCharacterCounter,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: context.tr('community_comment_hint'),
