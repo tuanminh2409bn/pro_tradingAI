@@ -2,14 +2,14 @@
 
 ## Bản đang phục vụ
 
-- FE source trên GitHub main/Firebase: `e43f7f5ad613c0287f7f09aad87bd658208edf5c`.
-  Public `main.dart.js` khớp byte với build production: 3,793,346 bytes,
-  SHA-256 `7d90f0321070005cc31f18fa5937e39bd2a71d99d571b60237efad0f7a71a238`.
+- FE source trên GitHub main/Firebase: `6a2745b9188a81a61ab2d85044a9ee468fb3ab15`.
+  Public `main.dart.js` khớp byte với build production: 3,803,382 bytes,
+  SHA-256 `1f83e0eb1d9588321507321b42a6a250cc272654147232041ee9d44165b5f74d`.
   Endpoint production có mặt; không có endpoint/warning Emulator.
 - BE source `7ef3ab68c254244f11cd827113e7be18b584a2a4`, container
   `protrading-ai-referral-live-7ef3ab6`, image `protrading-ai:referral-7ef3ab6`.
   Rules source `43fd970aa1a574d42ac56b7c82cee2ade94dde2c`. Hai phần này không
-  thay đổi trong các sửa Journal/Radar/Community hôm nay.
+  thay đổi trong các sửa Journal/Radar/Community/Profile hôm nay.
 
 ## Đã sửa và có bằng chứng
 
@@ -35,6 +35,17 @@
   Analyzer không error/warning, còn 3 info Mobile đã có; exit code 1 do infos.
   Full 247 là baseline Radar, không ghi thành full rerun cho slice counter.
   [Bằng chứng](web-production-community-counter-2026-10-04.json).
+- **Profile `6a2745b`:** seeding kiểm tra UID, metadata lấy từ cùng Auth identity,
+  transaction giữ profile đã tồn tại khi contention; chỉ refresh lastSeen.
+  5 regression đỏ trước sửa, 7 plugin-boundary cases đạt, full Flutter cuối
+  **254 đạt + 2 Web-only VM skip**; analyzer 0 error/warning, 3 info Mobile cũ.
+  Native Emulator tạo profile mới/giữ fields cũ/createdAt và foreign UID 403.
+  Production QA restore, Profile EN/VI và Journal gate đạt; chọn rõ ETHUSD
+  trên Radar mở ETHUSD/M5 có nến/giá 2686.59. Không bấm AI/Chat/Trade.
+  Thêm dev declaration cho platform interface đang có; không đổi version
+  runtime/dependency production. [Spec](profile-seed-correctness-spec-2026-10-04.md),
+  [local](web-local-profile-seed-2026-10-04.json),
+  [production](web-production-profile-seed-2026-10-04.json).
 
 ## Các mục vẫn mở
 
@@ -48,6 +59,12 @@
   Không dùng đường khác đọc secret, bỏ qua quota hoặc nâng QA Standard lên Admin.
 - Còn nguồn/quyền sử dụng thương mại market feed, Macro/calendar/sentiment,
   broker/currency/initial-risk sample, TTS playback và ma trận role/tenant thật.
+- Còn code onboarding cấp Standard tự động cho đăng ký mới (seeding không cấp
+  claim), leaderboard từ dữ liệu broker đã xác minh và tích hợp business.
+  QA local có role Standard do setup, không chứng minh pipeline grant-role.
+  Một tab QA mất cảnh báo Emulator và lỗi Auth sau reload; fresh-tab login đạt
+  nhưng root cause và local session restore chưa nghiệm thu. Production session
+  restore đã đạt.
 - Radar worker 50–100 asset, AI provenance/freshness, multi-user/load và FCM
   thiết bị chưa nghiệm thu. Ledger/referral accrual/withdrawal/payment policy
   và tích hợp business còn thiếu; Data Lake consent/sink còn tắt.

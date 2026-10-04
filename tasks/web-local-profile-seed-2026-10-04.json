@@ -1,0 +1,63 @@
+{
+  "recorded_at_utc": "2026-10-03T23:58:12Z",
+  "environment": "Loopback Web, Auth/Firestore Emulators; backend providers disabled",
+  "url": "http://127.0.0.1:8805/",
+  "source_commit": "6a2745b9188a81a61ab2d85044a9ee468fb3ab15",
+  "qa_bundle": {
+    "bytes": 3788998,
+    "sha256": "2efc9160d3d90eb71955c7de1f7976645a334253fe5db2ab13157de04cbfa8ee",
+    "served_bytes_match_local_qa_build": true,
+    "production_api_endpoint_absent": true
+  },
+  "fixture": {
+    "uid": "qa-profile-seed-20261004-v1",
+    "auth_role_manually_assigned_in_emulator_setup": "standard",
+    "profile_initially_missing": true,
+    "protected_fields_for_existing_profile_probe": {
+      "username": "qa-profile-preserved",
+      "brokerLinked": true,
+      "totalTrades": 7,
+      "winRate": 57.142857,
+      "rank": 3,
+      "tier": "FREE"
+    },
+    "business_data": false
+  },
+  "observations": {
+    "browser_initial_seed_metadata_matches_owner": true,
+    "createdAt_and_lastSeen_are_server_timestamps": true,
+    "fresh_tab_relogin_keeps_existing_profile_fields": true,
+    "createdAt_preserved": true,
+    "lastSeen_increased": true,
+    "foreign_uid_read_http_status": 403,
+    "browser_reload_session_restore_passed": false,
+    "automatic_standard_role_provisioning_tested": false
+  },
+  "verification": {
+    "red_regression_cases_before_fix": 5,
+    "final_plugin_boundary_regressions_passed": 7,
+    "full_flutter_suite_passed": 254,
+    "web_only_vm_skips": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "analyzer_preexisting_mobile_infos": 3,
+    "analyzer_exit_code": 1
+  },
+  "screenshot": {
+    "path": "tasks/web-local-profile-seed-2026-10-04.png",
+    "bytes": 55984,
+    "sha256": "72feccd3fd0f10a504c6d7b64f60021e9a81fa968308016407f58fb2f2cba59c"
+  },
+  "impact": {
+    "new_local_emulator_fixture_accounts": 1,
+    "production_accounts_created_or_elevated": 0,
+    "model_requests_requested": 0,
+    "production_schema_or_rules_changes": false
+  },
+  "limitations": [
+    "Controlled plugin-boundary contention proves field preservation; this is not a production load test",
+    "One QA tab lost the Emulator warning and failed Auth after reload; root cause remains unverified. Fresh-tab relogin succeeded",
+    "The fixture role was assigned during setup, not by an automatic registration pipeline",
+    "W28/W34 and the complete Web plan remain open"
+  ]
+}

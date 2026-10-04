@@ -1,0 +1,65 @@
+{
+  "checked_at_utc": "2026-10-04T00:11:51Z",
+  "environment": "Firebase Hosting production, existing Standard QA session",
+  "url": "https://protrading-ai-2026.web.app/",
+  "source_commit": "6a2745b9188a81a61ab2d85044a9ee468fb3ab15",
+  "github_main_matches_source": true,
+  "public_bundle": {
+    "http_status": 200,
+    "bytes": 3803382,
+    "sha256": "1f83e0eb1d9588321507321b42a6a250cc272654147232041ee9d44165b5f74d",
+    "matches_local_production_build": true,
+    "production_endpoints_present": true,
+    "qa_endpoints_emulator_warning_and_fixture_credentials_absent": true
+  },
+  "native_observations": {
+    "existing_qa_session_restored_after_production_reload": true,
+    "qa_profile_identity_rendered_in_en_and_vi": true,
+    "profile_emulator_warning_absent": true,
+    "mfa_unavailable_reason_rendered": true,
+    "journal_broker_gate_still_locked": true,
+    "initial_radar_detail_symbol": "BTCUSD",
+    "selected_radar_detail_symbol_after_explicit_card_click": "ETHUSD",
+    "chart_after_open_from_selected_radar_detail": "ETHUSD M5",
+    "chart_mode": "Scalping",
+    "chart_price_at_capture": "2686.59",
+    "existing_veto_card_is_not_a_new_ai_success_proof": true,
+    "analysis_chat_trade_actions_invoked": false
+  },
+  "verification": {
+    "red_profile_regression_cases_before_fix": 5,
+    "final_plugin_boundary_profile_tests_passed": 7,
+    "full_flutter_suite_passed": 254,
+    "web_only_vm_skips": 2,
+    "analyzer_errors": 0,
+    "analyzer_warnings": 0,
+    "analyzer_preexisting_mobile_infos": 3,
+    "analyzer_exit_code": 1,
+    "production_web_build_and_hosting_deploy_passed": true,
+    "local_native_owner_seed_and_existing_profile_preservation_passed": true,
+    "local_foreign_uid_read_status": 403
+  },
+  "screenshot": {
+    "path": "tasks/web-production-profile-seed-chart-2026-10-04.png",
+    "bytes": 81752,
+    "sha256": "0d0c1e0c2abbe28381dbf93f6900f3ece839a703197e6fcdbd79ed51da6f8245"
+  },
+  "unchanged_runtime": {
+    "backend_source": "7ef3ab68c254244f11cd827113e7be18b584a2a4",
+    "firestore_rules_source": "43fd970aa1a574d42ac56b7c82cee2ade94dde2c"
+  },
+  "impact": {
+    "production_accounts_created_or_elevated": 0,
+    "model_requests_requested_by_this_probe": 0,
+    "explicit_profile_edit_actions_invoked": 0,
+    "normal_authenticated_bootstrap_may_update_owner_lastSeen": true,
+    "production_schema_or_rules_changes": false
+  },
+  "limitations": [
+    "New-owner and concurrent profile preservation are proven locally; no production identity was created for that flow",
+    "Production readback does not establish automatic Standard claim provisioning for new registrations",
+    "The selected detail title is the chart target; prices in the Radar ticker are not a selection indicator",
+    "Market candles are not verified broker bid/ask or a commercial data-license acceptance",
+    "W28/W31/W34 and the complete Web plan remain open"
+  ]
+}

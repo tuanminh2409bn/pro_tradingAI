@@ -144,6 +144,14 @@ chốt quyền nguồn/role/nghiệm thu còn lại; không coi quota là toàn 
 | [ ] W32 · Push phân đoạn Web (M) | Admin lọc role/country/device và opt-out trên server, preview/audit không chứa token, FCM gửi và điều hướng Web đúng. | Segment/limit/auth tests, FCM sandbox Web và audit/token-retirement check. | W06, W16, W28, G5/G7 |
 | [ ] W33 · DataMasker ranh giới Web (M) | Chỉ export bản ghi đã consent, HMAC pseudonym, retention/deletion đúng chính sách; không có UID/token/PII vào sink/log. | Allowlist/consent/deletion tests, real sink/log sample sau G7. | W04, G7 |
 
+Cập nhật Auth/Profile 04/10: FE `6a2745b` đã lên main/production, profile seeding
+được transaction/UID guard bảo vệ; 254 Flutter tests đạt + 2 Web-only VM skip,
+analyzer 0 error/warning. Native Emulator tạo/giữ profile và Rules foreign UID
+403; production QA restore/Profile EN-VI/Journal gate/Radar ETHUSD chart đạt.
+W28 vẫn thiếu onboarding cấp `role=standard` tự động cho tài khoản mới và
+ma trận production các role; không suy claim từ trường profile `tier=FREE`.
+Xem `profile-seed-correctness-spec-2026-10-04.md` và checkpoint 04/10.
+
 **Checkpoint P6:** cổng G đạt cho các luồng Web; Admin không chỉ là nút giao diện, mọi thay đổi có hiệu lực và bị kiểm soát quyền.
 
 ### P7 — Ổn định và nghiệm thu Web (T49–T50)
