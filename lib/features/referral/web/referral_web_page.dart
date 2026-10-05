@@ -7,11 +7,13 @@ import '../../../core/constants/colors.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/localization/locale_cubit.dart';
 import '../../../data/models/referral_models.dart';
+import '../../../data/models/referral_wallet.dart';
 import '../../../data/repositories/referral_repository.dart';
 import '../bloc/referral_bloc.dart';
 import '../bloc/referral_event.dart';
 import '../bloc/referral_state.dart';
 import 'referral_kit_card.dart';
+import 'referral_wallet_card.dart';
 
 class ReferralWebPage extends StatelessWidget {
   final String? userId;
@@ -78,6 +80,11 @@ class ReferralWebPage extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildHeader(context, isMobile),
+                              if (userId != null)
+                                ReferralWalletCard(
+                                  key: ValueKey(userId),
+                                  userId: userId!,
+                                ),
                               if (registrationPending ||
                                   registrationMessageKey != null)
                                 Padding(
@@ -254,7 +261,7 @@ class ReferralWebPage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 20),
               child: Text(
-                context.tr('referral_ledger_unavailable'),
+                context.tr('referral_summary_unavailable'),
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ),
@@ -471,17 +478,18 @@ class ReferralWebPage extends StatelessWidget {
                   const Divider(color: Colors.white10, height: 1),
               itemBuilder: (context, index) {
                 final tx = history[index];
+                final isReservation = tx.type == 'HOLD' || tx.type == 'RELEASE';
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 8,
                   ),
                   title: Text(
-                    tx.title,
+                    context.tr(tx.title),
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                   subtitle: Text(
-                    tx.status,
+                    '${context.tr(tx.status)} · ${tx.date.toLocal().toString().substring(0, 16)}',
                     style: TextStyle(
                       color: tx.status == 'COMPLETED'
                           ? AppColors.primary
@@ -491,9 +499,17 @@ class ReferralWebPage extends StatelessWidget {
                     ),
                   ),
                   trailing: Text(
-                    '${tx.amount >= 0 ? '+' : '-'}\$${tx.amount.abs().toStringAsFixed(2)}',
+                    tx.amountMinor == null
+                        ? '—'
+                        : ReferralWallet.money(
+                            isReservation
+                                ? tx.amountMinor!.abs()
+                                : tx.amountMinor!,
+                          ),
                     style: TextStyle(
-                      color: tx.amount >= 0
+                      color: isReservation
+                          ? Colors.white54
+                          : tx.amount >= 0
                           ? AppColors.primary
                           : AppColors.bear,
                       fontWeight: FontWeight.bold,

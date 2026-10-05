@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:protrading_ai/core/utils/referral_video.dart';
 import 'package:protrading_ai/core/localization/locale_cubit.dart';
 import 'package:protrading_ai/data/models/referral_models.dart';
+import 'package:protrading_ai/data/models/referral_wallet.dart';
 import 'package:protrading_ai/data/repositories/referral_repository.dart';
 import 'package:protrading_ai/features/referral/web/referral_web_page.dart';
 
@@ -15,6 +16,14 @@ final _identity = ReferralIdentity.fromServerLink(
 );
 
 class _Repository extends Fake implements ReferralRepository {
+  _Repository({this.history = const []});
+  final List<RewardTransaction> history;
+
+  @override
+  Stream<ReferralWallet?> getWallet(String userId) => Stream.value(null);
+  @override
+  Stream<List<ReferralWithdrawal>> getWithdrawals(String userId) =>
+      Stream.value(const []);
   bool fail = false;
   int provisions = 0;
   @override
@@ -36,7 +45,7 @@ class _Repository extends Fake implements ReferralRepository {
   Stream<List<MemberNode>> getNetwork(String uid) => Stream.value(const []);
   @override
   Stream<List<RewardTransaction>> getRewardHistory(String uid) =>
-      Stream.value(const []);
+      Stream.value(history);
 }
 
 Widget _page(
@@ -85,7 +94,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text(
-          'Chưa có phần thưởng và số thành viên trả phí được xác minh.',
+          'Chưa có tổng hoa hồng và số thành viên trả phí đã được đối soát.',
         ),
         findsOneWidget,
       );
@@ -111,6 +120,40 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('reservations are neutral and payout is the actual debit', (
+    tester,
+  ) async {
+    final date = DateTime.utc(2026, 10, 5);
+    final history = ['CREDIT', 'HOLD', 'RELEASE', 'PAYOUT'].map((kind) {
+      return RewardTransaction.fromLedger({
+        'kind': kind,
+        'currency': 'USD',
+        'amountMinor': kind == 'CREDIT' ? 4000 : 2000,
+      }, date)!;
+    }).toList();
+    await tester.pumpWidget(_page(_Repository(history: history)));
+    await tester.pumpAndSettle();
+    Text amountFor(String title) =>
+        tester
+                .widget<ListTile>(
+                  find.ancestor(
+                    of: find.text(title),
+                    matching: find.byType(ListTile),
+                  ),
+                )
+                .trailing!
+            as Text;
+    final held = amountFor('Giữ tiền cho yêu cầu rút');
+    final released = amountFor('Hoàn khoản tiền đã giữ');
+    expect(held.data, 'USD 20.00');
+    expect(released.data, 'USD 20.00');
+    expect(held.style?.color, Colors.white54);
+    expect(released.style?.color, Colors.white54);
+    expect(amountFor('Ghi nhận chuyển tiền bên ngoài').data, '-USD 20.00');
+    expect(amountFor('Ghi có hoa hồng đã quyết toán').data, 'USD 40.00');
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('provision failure exposes retry instead of a fake code', (
     tester,

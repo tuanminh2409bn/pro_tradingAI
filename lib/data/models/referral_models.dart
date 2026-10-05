@@ -118,6 +118,7 @@ class RewardTransaction extends Equatable {
   final double amount;
   final String status; // 'COMPLETED', 'PROCESSED'
   final String type; // 'COMMISSION', 'BONUS', 'WITHDRAWAL'
+  final int? amountMinor;
 
   const RewardTransaction({
     required this.title,
@@ -125,10 +126,39 @@ class RewardTransaction extends Equatable {
     required this.amount,
     required this.status,
     required this.type,
+    this.amountMinor,
   });
 
+  static RewardTransaction? fromLedger(
+    Map<String, dynamic> data,
+    DateTime? date,
+  ) {
+    final minor = data['amountMinor'];
+    final kind = data['kind'];
+    const kinds = {'CREDIT', 'REVERSAL', 'HOLD', 'RELEASE', 'PAYOUT'};
+    if (data['currency'] != 'USD' ||
+        date == null ||
+        minor is! int ||
+        minor <= 0 ||
+        minor > 1000000000000 ||
+        !kinds.contains(kind)) {
+      return null;
+    }
+    final signed = (kind == 'REVERSAL' || kind == 'HOLD' || kind == 'PAYOUT')
+        ? -minor
+        : minor;
+    return RewardTransaction(
+      title: 'referral_ledger_${(kind as String).toLowerCase()}',
+      date: date,
+      amount: signed / 100,
+      amountMinor: signed,
+      status: 'referral_ledger_posted',
+      type: kind,
+    );
+  }
+
   @override
-  List<Object?> get props => [title, date, amount, status];
+  List<Object?> get props => [title, date, amount, status, type, amountMinor];
 }
 
 class ReferralIdentity extends Equatable {

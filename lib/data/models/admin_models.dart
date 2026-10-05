@@ -38,6 +38,7 @@ class SystemStats extends Equatable {
 }
 
 class PendingRequest extends Equatable {
+  final String status;
   final String id;
   final String userId;
   final String username;
@@ -46,6 +47,7 @@ class PendingRequest extends Equatable {
   final DateTime date;
 
   const PendingRequest({
+    this.status = 'PENDING',
     required this.id,
     required this.userId,
     required this.username,
@@ -55,7 +57,7 @@ class PendingRequest extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, userId, type, amount];
+  List<Object?> get props => [id, userId, type, amount, status];
 }
 
 class AIConfig extends Equatable {

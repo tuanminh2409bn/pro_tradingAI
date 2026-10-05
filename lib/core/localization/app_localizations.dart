@@ -24,6 +24,71 @@ class AppLocalizations {
           'Too many attempts. Wait a moment and try again.',
       'auth_popup_cancelled': 'Google sign-in was cancelled or blocked.',
       'auth_generic_error': 'Authentication is temporarily unavailable.',
+      'auth_onboarding_unavailable':
+          'Account access could not be prepared. Retry to continue safely.',
+      'auth_onboarding_retry': 'Retry account setup',
+      'referral_wallet_title': 'Verified referral wallet',
+      'referral_summary_unavailable':
+          'Verified aggregate rewards and paid member counts are not available yet.',
+      'referral_admin_approve': 'Approve request',
+      'referral_admin_reject': 'Reject request and release reserved funds',
+      'referral_ledger_credit': 'Settled commission credit',
+      'referral_ledger_reversal': 'Commission reversal',
+      'referral_ledger_hold': 'Funds reserved for withdrawal',
+      'referral_ledger_release': 'Reservation released',
+      'referral_ledger_payout': 'External payment recorded',
+      'referral_ledger_posted': 'Recorded in ledger',
+      'referral_receipt_title': 'Verified subscription receipts',
+      'referral_receipt_note':
+          'Import only a reconciled USD subscription receipt, at least 14 days after settlement. The same reference cannot credit twice.',
+      'referral_receipt_reference':
+          'Receipt reference (16–96 letters/digits/_/-)',
+      'referral_receipt_payer': 'Payer Firebase UID',
+      'referral_receipt_net': 'Settled net revenue (USD)',
+      'referral_receipt_date': 'Settlement date in UTC (YYYY-MM-DD)',
+      'referral_receipt_verified':
+          'I verified this settled subscription receipt against the payment records.',
+      'referral_receipt_submit': 'Record settled receipt',
+      'referral_receipt_id': 'Ledger receipt ID',
+      'referral_receipt_recorded':
+          'Receipt recorded. Repeated submissions do not credit again.',
+      'referral_receipt_invalid':
+          'Enter a valid reference, amount or UTC date.',
+      'referral_receipt_reversal_id':
+          'Ledger receipt ID to reverse (64 hexadecimal characters)',
+      'referral_receipt_reversal_confirm':
+          'Reverse this receipt and its commissions?',
+      'referral_receipt_reverse': 'Record reversal',
+      'referral_receipt_reversed': 'Reversal recorded.',
+      'referral_withdrawal_history': 'Withdrawal status',
+      'referral_withdrawal_status_pending': 'Awaiting review',
+      'referral_withdrawal_status_approved':
+          'Approved; awaiting external payment',
+      'referral_withdrawal_status_rejected': 'Rejected; reservation released',
+      'referral_withdrawal_status_paid': 'External payment confirmed',
+      'referral_admin_confirm_payment': 'Confirm external payment',
+      'referral_admin_payment_note':
+          'Record only after verifying the transfer receipt outside this website. This action does not transfer money.',
+      'referral_admin_payment_reference':
+          'Verified receipt reference (16–96 letters/digits/_/-)',
+      'referral_admin_payment_recorded':
+          'External payment confirmation recorded.',
+      'referral_cancel': 'Cancel',
+      'referral_available_balance': 'Available',
+      'referral_held_balance': 'Reserved for review',
+      'referral_manual_payment_note':
+          'USD; F1 20%, F2 5% of settled subscription net revenue after 14 days. Minimum withdrawal USD 20. Admin approval reserves payment; it does not transfer money.',
+      'referral_withdrawal_pending':
+          'An existing withdrawal is awaiting Admin review or payment confirmation.',
+      'referral_withdrawal_amount': 'Withdrawal amount (USD)',
+      'referral_withdrawal_submit': 'Request withdrawal',
+      'referral_withdrawal_amount_invalid':
+          'Enter USD 20 or more, within your available balance.',
+      'referral_withdrawal_retry_amount':
+          'Retry the original amount before creating another request.',
+      'referral_withdrawal_received': 'Request received. Admin will review it.',
+      'referral_withdrawal_failed':
+          'Unable to confirm the request. Retry with the same amount.',
       'neural_network_signals': 'Evidence-Based Market Analysis',
       'zero_latency': 'Risk-Gated Paper Execution',
       'global_liquidity': 'Multi-Timeframe Market Context',
@@ -567,6 +632,70 @@ class AppLocalizations {
           'Có quá nhiều lần thử. Vui lòng chờ và thử lại.',
       'auth_popup_cancelled': 'Đăng nhập Google đã bị hủy hoặc chặn.',
       'auth_generic_error': 'Dịch vụ xác thực tạm thời không khả dụng.',
+      'auth_onboarding_unavailable':
+          'Chưa thể thiết lập quyền tài khoản. Hãy thử lại để tiếp tục.',
+      'auth_onboarding_retry': 'Thử lại thiết lập tài khoản',
+      'referral_wallet_title': 'Ví hoa hồng đã xác minh',
+      'referral_summary_unavailable':
+          'Chưa có tổng hoa hồng và số thành viên trả phí đã được đối soát.',
+      'referral_admin_approve': 'Duyệt yêu cầu',
+      'referral_admin_reject': 'Từ chối và hoàn tiền đã giữ',
+      'referral_ledger_credit': 'Ghi có hoa hồng đã quyết toán',
+      'referral_ledger_reversal': 'Đảo hoa hồng',
+      'referral_ledger_hold': 'Giữ tiền cho yêu cầu rút',
+      'referral_ledger_release': 'Hoàn khoản tiền đã giữ',
+      'referral_ledger_payout': 'Ghi nhận chuyển tiền bên ngoài',
+      'referral_ledger_posted': 'Đã ghi sổ',
+      'referral_receipt_title': 'Chứng từ thuê bao đã xác minh',
+      'referral_receipt_note':
+          'Chỉ nhập chứng từ thuê bao USD đã đối soát, sau ngày quyết toán ít nhất 14 ngày. Một mã chứng từ chỉ ghi có một lần.',
+      'referral_receipt_reference': 'Mã chứng từ (16–96 chữ/số/_/-)',
+      'referral_receipt_payer': 'Firebase UID người thanh toán',
+      'referral_receipt_net': 'Doanh thu ròng đã quyết toán (USD)',
+      'referral_receipt_date': 'Ngày quyết toán UTC (YYYY-MM-DD)',
+      'referral_receipt_verified':
+          'Tôi đã đối chiếu chứng từ thuê bao này với hồ sơ thanh toán đã quyết toán.',
+      'referral_receipt_submit': 'Ghi nhận chứng từ đã quyết toán',
+      'referral_receipt_id': 'Mã chứng từ trong sổ',
+      'referral_receipt_recorded':
+          'Đã ghi nhận chứng từ. Gửi lại không cộng thêm hoa hồng.',
+      'referral_receipt_invalid': 'Nhập đúng mã, số tiền hoặc ngày UTC.',
+      'referral_receipt_reversal_id':
+          'Mã chứng từ trong sổ cần đảo (64 ký tự thập lục phân)',
+      'referral_receipt_reversal_confirm':
+          'Đảo chứng từ này và các khoản hoa hồng?',
+      'referral_receipt_reverse': 'Ghi nhận đảo chứng từ',
+      'referral_receipt_reversed': 'Đã ghi nhận đảo chứng từ.',
+      'referral_withdrawal_history': 'Trạng thái rút tiền',
+      'referral_withdrawal_status_pending': 'Đang chờ xét duyệt',
+      'referral_withdrawal_status_approved':
+          'Đã duyệt, chờ chuyển tiền bên ngoài',
+      'referral_withdrawal_status_rejected': 'Đã từ chối, hoàn tiền đã giữ',
+      'referral_withdrawal_status_paid': 'Đã xác nhận chuyển tiền bên ngoài',
+      'referral_admin_confirm_payment': 'Xác nhận chuyển tiền bên ngoài',
+      'referral_admin_payment_note':
+          'Chỉ ghi nhận sau khi kiểm tra chứng từ chuyển tiền ngoài website. Thao tác này không chuyển tiền.',
+      'referral_admin_payment_reference':
+          'Mã chứng từ đã xác minh (16–96 chữ/số/_/-)',
+      'referral_admin_payment_recorded':
+          'Đã ghi nhận xác nhận thanh toán bên ngoài.',
+      'referral_cancel': 'Hủy',
+      'referral_available_balance': 'Có thể rút',
+      'referral_held_balance': 'Đang giữ để xét duyệt',
+      'referral_manual_payment_note':
+          'USD; F1 20%, F2 5% doanh thu thuê bao ròng đã quyết toán sau 14 ngày. Rút tối thiểu 20 USD. Admin duyệt yêu cầu; việc duyệt chưa chuyển tiền.',
+      'referral_withdrawal_pending':
+          'Có yêu cầu đang chờ Admin duyệt hoặc xác nhận thanh toán.',
+      'referral_withdrawal_amount': 'Số tiền rút (USD)',
+      'referral_withdrawal_submit': 'Yêu cầu rút tiền',
+      'referral_withdrawal_amount_invalid':
+          'Nhập từ 20 USD và không vượt số dư có thể rút.',
+      'referral_withdrawal_retry_amount':
+          'Thử lại số tiền ban đầu trước khi tạo yêu cầu khác.',
+      'referral_withdrawal_received':
+          'Đã nhận yêu cầu, đang chờ Admin xét duyệt.',
+      'referral_withdrawal_failed':
+          'Chưa xác nhận được yêu cầu. Hãy thử lại cùng số tiền.',
       'neural_network_signals': 'Phân Tích Thị Trường Có Bằng Chứng',
       'zero_latency': 'Giao Dịch Giấy Có Kiểm Soát Rủi Ro',
       'global_liquidity': 'Bối Cảnh Thị Trường Đa Khung Thời Gian',
