@@ -25,6 +25,79 @@ class _Firestore extends Fake implements FirebaseFirestore {}
 
 void main() {
   test(
+    'leaderboard reads token API and excludes private or stale rows',
+    () async {
+      var calls = 0;
+      final now = DateTime.now().toUtc();
+      final row = <String, Object>{
+        'publicId': 'a' * 32,
+        'schemaVersion': 1,
+        'source': 'broker_verified',
+        'isServerVerified': true,
+        'displayName': 'Public alias',
+        'growthPercent': 1.25,
+        'unitVolume': 2.0,
+        'asOf': now.toIso8601String(),
+      };
+      final client = MockClient((request) async {
+        calls++;
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/community/leaderboard');
+        expect(request.headers['Authorization'], 'Bearer offline-token');
+        expect(request.body, isEmpty);
+        return http.Response(
+          jsonEncode({
+            'source': 'broker_verified',
+            'entries': [
+              row,
+              {...row, 'email': 'private@example.test'},
+              {
+                ...row,
+                'asOf': now.subtract(const Duration(days: 3)).toIso8601String(),
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      addTearDown(client.close);
+      final repository = CommunityRepository(
+        firestore: _Firestore(),
+        auth: _Auth(),
+        client: client,
+      );
+      final entries = await repository.getLeaderboard().first;
+      expect(calls, 1);
+      expect(entries, hasLength(1));
+      expect(entries.single.name, 'Public alias');
+      expect(entries.single.performance, 1.25);
+    },
+  );
+
+  test(
+    'missing identity cannot read ranking; HTTP denial is not fake empty data',
+    () async {
+      var calls = 0;
+      final client = MockClient((request) async {
+        calls++;
+        return http.Response('{}', 403);
+      });
+      addTearDown(client.close);
+      final auth = _Auth()..signedIn = false;
+      final repository = CommunityRepository(
+        firestore: _Firestore(),
+        auth: auth,
+        client: client,
+      );
+      await expectLater(repository.getLeaderboard().first, throwsStateError);
+      expect(calls, 0);
+      auth.signedIn = true;
+      await expectLater(repository.getLeaderboard().first, throwsStateError);
+      expect(calls, 1);
+    },
+  );
+
+  test(
     'Post/comment transport retries preserve IDs and use token-bound APIs',
     () async {
       final requests = <http.Request>[];

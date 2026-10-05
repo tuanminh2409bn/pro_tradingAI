@@ -192,5 +192,54 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test(
+      'public leaderboard boundary rejects legacy, stale, non-broker and PII fields',
+      () {
+        final now = DateTime.utc(2026, 10, 5);
+        final data = <String, dynamic>{
+          'schemaVersion': 1,
+          'source': 'broker_verified',
+          'isServerVerified': true,
+          'displayName': 'Consented alias',
+          'growthPercent': 12.5,
+          'unitVolume': 100.25,
+          'asOf': now,
+        };
+        VerifiedLeaderboardMetric? parse(
+          Map<String, dynamic> value, {
+          DateTime? asOf,
+        }) => VerifiedLeaderboardMetric.fromServer(
+          'a' * 32,
+          value,
+          asOf: asOf ?? now,
+          now: now,
+        );
+        expect(parse(data)!.unitVolume, 100.25);
+        for (final patch in [
+          {'source': 'paper'},
+          {'isServerVerified': false},
+          {'growthPercent': double.nan},
+          {'unitVolume': -1},
+          {'userId': 'private'},
+          {'accountId': 'private'},
+          {'email': 'private@example.test'},
+          {'displayName': 'private@example.test'},
+          {'balance': 1000},
+          {'profit': 99},
+        ]) {
+          expect(parse({...data, ...patch}), isNull);
+        }
+        expect(
+          parse(data, asOf: now.subtract(const Duration(days: 3))),
+          isNull,
+        );
+        expect(parse(data, asOf: now.add(const Duration(seconds: 1))), isNull);
+        expect(
+          parse({'name': 'Legacy', 'performance': 99, 'volume': 'demo'}),
+          isNull,
+        );
+      },
+    );
   });
 }

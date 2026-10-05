@@ -228,6 +228,52 @@ class VerifiedLeaderboardMetric extends Equatable {
     required this.isServerVerified,
   });
 
+  static VerifiedLeaderboardMetric? fromServer(
+    String publicId,
+    Map<String, dynamic> data, {
+    required DateTime? asOf,
+    required DateTime now,
+  }) {
+    const fields = {
+      'schemaVersion',
+      'source',
+      'isServerVerified',
+      'displayName',
+      'growthPercent',
+      'unitVolume',
+      'asOf',
+    };
+    final growth = data['growthPercent'];
+    final volume = data['unitVolume'];
+    final name = data['displayName'];
+    if (data.keys.any((key) => !fields.contains(key)) ||
+        data['schemaVersion'] != 1 ||
+        data['source'] != 'broker_verified' ||
+        data['isServerVerified'] != true ||
+        !RegExp(r'^[a-f0-9]{32,64}$').hasMatch(publicId) ||
+        name is! String ||
+        name.trim().isEmpty ||
+        name.length > 80 ||
+        name.contains('@') ||
+        growth is! num ||
+        !growth.isFinite ||
+        volume is! num ||
+        !volume.isFinite ||
+        volume < 0 ||
+        asOf == null ||
+        asOf.isAfter(now) ||
+        now.difference(asOf) > const Duration(days: 2)) {
+      return null;
+    }
+    return VerifiedLeaderboardMetric(
+      publicParticipantId: publicId,
+      displayName: name.trim(),
+      growthPercent: growth.toDouble(),
+      unitVolume: volume.toDouble(),
+      isServerVerified: true,
+    );
+  }
+
   @override
   List<Object?> get props => [
     publicParticipantId,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -94,25 +95,64 @@ class CommunityRepository {
       value is String && value.isNotEmpty ? value : fallback;
   int _count(Object? value) => value is int && value >= 0 ? value : 0;
 
-  /// Stream bảng xếp hạng — dữ liệu thật từ Firestore.
-  Stream<List<LeaderboardEntry>> getLeaderboard() {
-    return _firestore
-        .collection('leaderboard')
-        .orderBy('performance', descending: true)
-        .limit(20)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.asMap().entries.map((entry) {
-            final data = entry.value.data();
-            return LeaderboardEntry(
-              rank: entry.key + 1,
-              name: data['name'] ?? 'Trader',
-              avatarUrl: data['avatarUrl'] ?? '',
-              performance: (data['performance'] ?? 0).toDouble(),
-              volume: data['volume'] ?? '0',
-            );
-          }).toList();
-        });
+  /// Bảng xếp hạng đã xác minh, chỉ nhận các trường công khai từ API.
+  Stream<List<LeaderboardEntry>> getLeaderboard() async* {
+    yield await _loadLeaderboard();
+    yield* Stream.periodic(
+      const Duration(minutes: 5),
+    ).asyncMap((_) => _loadLeaderboard());
+  }
+
+  Future<List<LeaderboardEntry>> _loadLeaderboard() async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Authentication required');
+    final token = await user.getIdToken();
+    if (token == null || token.isEmpty || _auth.currentUser?.uid != user.uid) {
+      throw StateError('Authentication required');
+    }
+    final response = await _client
+        .get(
+          Uri.parse('$_serverBaseUrl/api/community/leaderboard'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 15));
+    if (_auth.currentUser?.uid != user.uid) {
+      throw StateError('Identity changed');
+    }
+    if (response.statusCode != 200) throw StateError('Leaderboard unavailable');
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic> ||
+        data['source'] != 'broker_verified' ||
+        data['entries'] is! List ||
+        (data['entries'] as List).length > 20) {
+      throw const FormatException('Invalid leaderboard response');
+    }
+    final now = DateTime.now().toUtc();
+    final metrics = <VerifiedLeaderboardMetric>[];
+    for (final raw in data['entries'] as List) {
+      if (raw is! Map<String, dynamic> || raw['publicId'] is! String) continue;
+      final publicId = raw['publicId'] as String;
+      final fields = Map<String, dynamic>.from(raw)..remove('publicId');
+      final date = fields['asOf'];
+      final metric = VerifiedLeaderboardMetric.fromServer(
+        publicId,
+        fields,
+        asOf: date is String ? DateTime.tryParse(date)?.toUtc() : null,
+        now: now,
+      );
+      if (metric != null) metrics.add(metric);
+    }
+    return CommunityLeaderboard.rankVerified(metrics)
+        .map(
+          (entry) => LeaderboardEntry(
+            rank: entry.rank,
+            name: entry.displayName,
+            avatarUrl: '',
+            performance: entry.growthPercent,
+            volume: entry.unitVolume.toString(),
+          ),
+        )
+        .toList();
   }
 
   /// Đăng bài viết mới lên community feed.
