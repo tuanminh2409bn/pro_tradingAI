@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-enum AuthStatus { authenticated, unauthenticated, loading }
+enum AuthStatus { authenticated, unauthenticated, loading, onboarding }
 
 class AuthState extends Equatable {
   final AuthStatus status;
@@ -41,6 +41,13 @@ class AuthState extends Equatable {
     : this._(status: AuthStatus.unauthenticated, errorMessage: errorMessage);
 
   const AuthState.loading() : this._(status: AuthStatus.loading);
+
+  const AuthState.onboarding(User user, {String? errorMessage})
+    : this._(
+        status: AuthStatus.onboarding,
+        user: user,
+        errorMessage: errorMessage,
+      );
 
   @override
   List<Object?> get props => [

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'firebase_options.dart';
@@ -10,6 +8,7 @@ import 'features/dashboard/mobile/mobile_dashboard_shell.dart';
 import 'features/auth/web/login_web_page.dart';
 import 'features/auth/mobile/login_mobile_page.dart';
 import 'features/auth/bloc/auth_bloc.dart';
+import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/bloc/auth_state.dart';
 import 'core/localization/locale_cubit.dart';
 import 'data/repositories/auth_repository.dart';
@@ -25,6 +24,7 @@ import 'data/repositories/admin_repository.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'core/constants/colors.dart';
 import 'core/constants/local_qa_mode.dart';
+import 'core/utils/firebase_qa_bootstrap.dart';
 import 'core/utils/referral_link.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/services/fcm_service.dart';
@@ -32,18 +32,11 @@ import 'core/services/fcm_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   if (kIsWeb && LocalQaMode.enabled) {
-    await FirebaseAuth.instance.useAuthEmulator(
-      LocalQaMode.host,
-      LocalQaMode.authPort,
-    );
-    FirebaseFirestore.instance.useFirestoreEmulator(
-      LocalQaMode.host,
-      LocalQaMode.firestorePort,
-    );
+    await prepareFirebaseQa(DefaultFirebaseOptions.currentPlatform);
   }
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Initialize GoogleSignIn for version 7.2.0
   if (!(kIsWeb && LocalQaMode.enabled)) {
@@ -89,6 +82,9 @@ void main() async {
               profileRepository: profileRepository,
               referralRepository: referralRepository,
               signupReferralCode: kIsWeb ? referralCodeFromUri(Uri.base) : null,
+              completeOnboarding: kIsWeb
+                  ? authRepository.completeWebOnboarding
+                  : null,
             ),
           ),
           BlocProvider(create: (context) => LocaleCubit()),
@@ -170,6 +166,37 @@ class ProTradingApp extends StatelessWidget {
                   return kIsWeb
                       ? const LoginWebPage()
                       : const LoginMobilePage();
+                } else if (state.status == AuthStatus.onboarding &&
+                    state.errorMessage != null) {
+                  return Scaffold(
+                    body: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              context.tr('auth_onboarding_unavailable'),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: () => context.read<AuthBloc>().add(
+                                const AuthOnboardingRetryRequested(),
+                              ),
+                              child: Text(context.tr('auth_onboarding_retry')),
+                            ),
+                            TextButton(
+                              onPressed: () => context.read<AuthBloc>().add(
+                                AuthLogoutRequested(),
+                              ),
+                              child: Text(context.tr('tr_logout_tooltip')),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
                 }
                 return const Scaffold(
                   body: Center(

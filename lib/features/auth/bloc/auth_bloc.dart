@@ -30,9 +30,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ProfileRepository _profileRepository;
   final ReferralRepository? _referralRepository;
   final String? _signupReferralCode;
+  final Future<void> Function(User)? _completeOnboarding;
+  final Map<String, Future<void>> _onboardingPending = {};
+  String? _activeUserId;
   final Set<String> _registrationPending = {};
   final Set<String> _registrationAttempted = {};
   int _identityGeneration = 0;
+  int _onboardingGeneration = 0;
   int _referralFeedbackSequence = 0;
   StreamSubscription? _userSubscription;
 
@@ -41,10 +45,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required ProfileRepository profileRepository,
     ReferralRepository? referralRepository,
     String? signupReferralCode,
+    Future<void> Function(User)? completeOnboarding,
   }) : _authRepository = authRepository,
        _profileRepository = profileRepository,
        _referralRepository = referralRepository,
        _signupReferralCode = signupReferralCode,
+       _completeOnboarding = completeOnboarding,
        super(const AuthState.loading()) {
     on<AuthUserChanged>(_onUserChanged);
     on<AuthLogoutRequested>(_onLogoutRequested);
@@ -52,6 +58,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthRegistrationReferralRequested>(_onRegistrationReferral);
+    on<AuthOnboardingRetryRequested>((event, emit) async {
+      final user = state.user;
+      if (state.status == AuthStatus.onboarding &&
+          user != null &&
+          state.errorMessage != null) {
+        await _onUserChanged(AuthUserChanged(user), emit);
+      }
+    });
 
     _userSubscription = _authRepository.user.listen(
       (user) => add(AuthUserChanged(user)),
@@ -68,7 +82,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         previous.status == AuthStatus.authenticated &&
         previous.user?.uid == event.user!.uid;
     if (!sameUser) ++_identityGeneration;
+    final generation = ++_onboardingGeneration;
+    _activeUserId = event.user?.uid;
     if (event.user != null) {
+      final user = event.user!;
+      if (_completeOnboarding != null && !sameUser) {
+        emit(AuthState.onboarding(user));
+        final pending = _onboardingPending.putIfAbsent(
+          user.uid,
+          () => Future<void>.sync(() => _completeOnboarding(user)),
+        );
+        try {
+          await pending;
+        } catch (_) {
+          if (!isClosed &&
+              !emit.isDone &&
+              generation == _onboardingGeneration &&
+              _activeUserId == user.uid) {
+            emit(
+              AuthState.onboarding(
+                user,
+                errorMessage: 'auth_onboarding_unavailable',
+              ),
+            );
+          }
+          return;
+        } finally {
+          if (identical(_onboardingPending[user.uid], pending)) {
+            _onboardingPending.remove(user.uid);
+          }
+        }
+        if (isClosed ||
+            emit.isDone ||
+            generation != _onboardingGeneration ||
+            _activeUserId != user.uid) {
+          return;
+        }
+      }
       emit(
         AuthState.authenticated(
           event.user!,
