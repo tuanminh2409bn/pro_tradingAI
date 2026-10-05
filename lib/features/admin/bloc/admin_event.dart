@@ -41,6 +41,36 @@ class HandleRequest extends AdminEvent {
 
 class LoadAIConfig extends AdminEvent {}
 
+class ConfirmReferralPayment extends AdminEvent {
+  final String requestId;
+  final String paymentReference;
+  const ConfirmReferralPayment(this.requestId, this.paymentReference);
+  @override
+  List<Object?> get props => [requestId, paymentReference];
+}
+
+class ImportReferralReceipt extends AdminEvent {
+  final String receiptId;
+  final String payerUid;
+  final int netMinor;
+  final DateTime settledAt;
+  const ImportReferralReceipt(
+    this.receiptId,
+    this.payerUid,
+    this.netMinor,
+    this.settledAt,
+  );
+  @override
+  List<Object?> get props => [receiptId, payerUid, netMinor, settledAt];
+}
+
+class ReverseReferralReceipt extends AdminEvent {
+  final String receiptId;
+  const ReverseReferralReceipt(this.receiptId);
+  @override
+  List<Object?> get props => [receiptId];
+}
+
 class SaveAIConfig extends AdminEvent {
   final String masterPrompt;
   const SaveAIConfig(this.masterPrompt);

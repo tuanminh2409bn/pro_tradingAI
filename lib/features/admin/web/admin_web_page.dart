@@ -10,6 +10,7 @@ import '../../../data/repositories/admin_repository.dart';
 import '../bloc/admin_bloc.dart';
 import '../bloc/admin_event.dart';
 import '../bloc/admin_state.dart';
+import 'referral_receipt_card.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
@@ -132,6 +133,11 @@ class AdminWebPage extends StatelessWidget {
                           const SizedBox(height: 24),
 
                           // ── AI Config ────────────────────────────────────
+                          ReferralReceiptCard(
+                            busy: state.referralReceiptBusy,
+                            receiptId: state.lastReferralReceiptId,
+                          ),
+                          const SizedBox(height: 24),
                           _AIConfigCard(
                             aiConfig: state.aiConfig,
                             isSaving: state.aiConfigSaving,
@@ -555,6 +561,66 @@ class AdminWebPage extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmPayment(
+    BuildContext context,
+    PendingRequest request,
+  ) async {
+    final input = TextEditingController();
+    final form = GlobalKey<FormState>();
+    final reference = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.tr('referral_admin_confirm_payment')),
+        content: Form(
+          key: form,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${request.amount}\n${context.tr('referral_admin_payment_note')}',
+              ),
+              TextFormField(
+                controller: input,
+                maxLength: 96,
+                validator: (value) =>
+                    RegExp(
+                      r'^[A-Za-z0-9_-]{16,96}$',
+                    ).hasMatch(value?.trim() ?? '')
+                    ? null
+                    : context.tr('referral_receipt_invalid'),
+                decoration: InputDecoration(
+                  labelText: context.tr('referral_admin_payment_reference'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.tr('referral_cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (form.currentState?.validate() != true) return;
+              final value = input.text.trim();
+              if (RegExp(r'^[A-Za-z0-9_-]{16,96}$').hasMatch(value)) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: Text(context.tr('referral_admin_confirm_payment')),
+          ),
+        ],
+      ),
+    );
+    input.dispose();
+    if (context.mounted && reference != null) {
+      context.read<AdminBloc>().add(
+        ConfirmReferralPayment(request.id, reference),
+      );
+    }
+  }
+
   Widget _buildApprovalRow(BuildContext context, PendingRequest req) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -598,16 +664,30 @@ class AdminWebPage extends StatelessWidget {
           ),
           Row(
             children: [
-              IconButton(
-                onPressed: () =>
-                    context.read<AdminBloc>().add(HandleRequest(req.id, true)),
-                icon: const Icon(
-                  Icons.check,
-                  color: AppColors.primary,
-                  size: 18,
+              if (req.type == 'REFERRAL_WITHDRAWAL' && req.status == 'APPROVED')
+                IconButton(
+                  onPressed: () => _confirmPayment(context, req),
+                  tooltip: context.tr('referral_admin_confirm_payment'),
+                  icon: const Icon(
+                    Icons.receipt_long,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                )
+              else
+                IconButton(
+                  tooltip: context.tr('referral_admin_approve'),
+                  onPressed: () => context.read<AdminBloc>().add(
+                    HandleRequest(req.id, true),
+                  ),
+                  icon: const Icon(
+                    Icons.check,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
                 ),
-              ),
               IconButton(
+                tooltip: context.tr('referral_admin_reject'),
                 onPressed: () =>
                     context.read<AdminBloc>().add(HandleRequest(req.id, false)),
                 icon: const Icon(Icons.close, color: AppColors.bear, size: 18),

@@ -17,10 +17,63 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     : _adminRepository = adminRepository,
       super(AdminInitial()) {
     on<LoadAdminData>(_onLoadData);
+    on<ImportReferralReceipt>((event, emit) async {
+      final current = state;
+      if (current is! AdminLoaded || current.referralReceiptBusy) return;
+      emit(current.copyWith(referralReceiptBusy: true));
+      try {
+        final id = await _adminRepository.importReferralReceipt(
+          receiptId: event.receiptId,
+          payerUid: event.payerUid,
+          netMinor: event.netMinor,
+          settledAt: event.settledAt,
+        );
+        final latest = state;
+        if (latest is AdminLoaded) {
+          emit(latest.copyWith(lastReferralReceiptId: id));
+        }
+        _emitActionResult(emit, true, 'referral_receipt_recorded');
+      } catch (_) {
+        _emitActionResult(emit, false, 'admin_action_failed');
+      } finally {
+        final latest = state;
+        if (latest is AdminLoaded) {
+          emit(latest.copyWith(referralReceiptBusy: false));
+        }
+      }
+    });
+    on<ReverseReferralReceipt>((event, emit) async {
+      final current = state;
+      if (current is! AdminLoaded || current.referralReceiptBusy) return;
+      emit(current.copyWith(referralReceiptBusy: true));
+      try {
+        await _adminRepository.reverseReferralReceipt(event.receiptId);
+        _emitActionResult(emit, true, 'referral_receipt_reversed');
+      } catch (_) {
+        _emitActionResult(emit, false, 'admin_action_failed');
+      } finally {
+        final latest = state;
+        if (latest is AdminLoaded) {
+          emit(latest.copyWith(referralReceiptBusy: false));
+        }
+      }
+    });
     on<UpdateSystemStats>(_onUpdateStats);
     on<UpdatePendingRequests>(_onUpdateRequests);
     on<BroadcastRequested>(_onBroadcast);
     on<HandleRequest>(_onHandleRequest);
+    on<ConfirmReferralPayment>((event, emit) async {
+      try {
+        await _adminRepository.reviewReferralWithdrawal(
+          requestId: event.requestId,
+          action: 'paid',
+          paymentReference: event.paymentReference,
+        );
+        _emitActionResult(emit, true, 'referral_admin_payment_recorded');
+      } catch (_) {
+        _emitActionResult(emit, false, 'admin_action_failed');
+      }
+    });
     on<LoadAIConfig>(_onLoadAIConfig);
     on<SaveAIConfig>(_onSaveAIConfig);
     on<ToggleKillSwitch>(_onToggleKillSwitch);
@@ -142,6 +195,8 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
         dailyStats: current.dailyStats,
         radarConfig: event.config,
         radarConfigLoaded: true,
+        referralReceiptBusy: current.referralReceiptBusy,
+        lastReferralReceiptId: current.lastReferralReceiptId,
       ),
     );
   }

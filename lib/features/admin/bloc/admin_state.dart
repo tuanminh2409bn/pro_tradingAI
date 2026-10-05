@@ -26,6 +26,8 @@ class AdminLoaded extends AdminState {
   final List<Map<String, dynamic>> dailyStats;
   final RadarAdminConfig? radarConfig;
   final bool radarConfigLoaded;
+  final bool referralReceiptBusy;
+  final String? lastReferralReceiptId;
 
   const AdminLoaded({
     required this.stats,
@@ -42,6 +44,8 @@ class AdminLoaded extends AdminState {
     this.dailyStats = const [],
     this.radarConfig,
     this.radarConfigLoaded = false,
+    this.referralReceiptBusy = false,
+    this.lastReferralReceiptId,
   });
 
   AdminLoaded copyWith({
@@ -59,6 +63,8 @@ class AdminLoaded extends AdminState {
     List<Map<String, dynamic>>? dailyStats,
     RadarAdminConfig? radarConfig,
     bool? radarConfigLoaded,
+    bool? referralReceiptBusy,
+    String? lastReferralReceiptId,
   }) {
     return AdminLoaded(
       stats: stats ?? this.stats,
@@ -75,11 +81,16 @@ class AdminLoaded extends AdminState {
       dailyStats: dailyStats ?? this.dailyStats,
       radarConfig: radarConfig ?? this.radarConfig,
       radarConfigLoaded: radarConfigLoaded ?? this.radarConfigLoaded,
+      referralReceiptBusy: referralReceiptBusy ?? this.referralReceiptBusy,
+      lastReferralReceiptId:
+          lastReferralReceiptId ?? this.lastReferralReceiptId,
     );
   }
 
   @override
   List<Object?> get props => [
+    referralReceiptBusy,
+    lastReferralReceiptId,
     stats,
     requests,
     aiConfig,

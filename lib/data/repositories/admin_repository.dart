@@ -1,15 +1,23 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import '../../core/constants/backend_endpoints.dart';
 import '../../core/security/admin_access.dart';
 import '../models/admin_models.dart';
 
 class AdminRepository {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final http.Client _client;
 
-  AdminRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _firestore = firestore ?? FirebaseFirestore.instance,
-      _auth = auth ?? FirebaseAuth.instance;
+  AdminRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    http.Client? client,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _client = client ?? http.Client();
 
   Future<void> _requireAdmin() async {
     final user = _auth.currentUser;
@@ -53,29 +61,53 @@ class AdminRepository {
         .collection('admin')
         .doc('requests')
         .collection('pending')
-        .where('status', isEqualTo: 'PENDING')
+        .where('status', whereIn: ['PENDING', 'APPROVED'])
         .orderBy('date', descending: true)
         .limit(100)
         .snapshots()
         .map(
-          (s) => s.docs.map((doc) {
-            final data = doc.data();
-            return PendingRequest(
-              id: doc.id,
-              userId: data['userId'] ?? doc.id,
-              username: data['username'] ?? '@unknown',
-              type: data['type'] ?? 'REQUEST',
-              amount: data['amount'] ?? '0',
-              date: data['date'] != null
-                  ? (data['date'] as Timestamp).toDate()
-                  : DateTime.now(),
-            );
-          }).toList(),
+          (s) => s.docs
+              .where((doc) {
+                final data = doc.data();
+                return (data['status'] == 'PENDING' ||
+                        data['type'] == 'REFERRAL_WITHDRAWAL') &&
+                    data['userId'] is String &&
+                    (data['userId'] as String).isNotEmpty &&
+                    data['date'] is Timestamp &&
+                    data['amount'] is String;
+              })
+              .map((doc) {
+                final data = doc.data();
+                return PendingRequest(
+                  id: doc.id,
+                  userId: data['userId'] as String,
+                  username: data['username'] is String
+                      ? data['username'] as String
+                      : data['userId'] as String,
+                  type: data['type'] ?? 'REQUEST',
+                  status: data['status'] is String
+                      ? data['status'] as String
+                      : 'PENDING',
+                  amount: data['amount'] as String,
+                  date: (data['date'] as Timestamp).toDate(),
+                );
+              })
+              .toList(),
         );
   }
 
   Future<void> approveRequest(String requestId) async {
     await _requireAdmin();
+    final request = await _firestore
+        .collection('admin')
+        .doc('requests')
+        .collection('pending')
+        .doc(requestId)
+        .get();
+    if (request.data()?['type'] == 'REFERRAL_WITHDRAWAL') {
+      await reviewReferralWithdrawal(requestId: requestId, action: 'approve');
+      return;
+    }
     await _firestore
         .collection('admin')
         .doc('requests')
@@ -89,6 +121,16 @@ class AdminRepository {
 
   Future<void> rejectRequest(String requestId) async {
     await _requireAdmin();
+    final request = await _firestore
+        .collection('admin')
+        .doc('requests')
+        .collection('pending')
+        .doc(requestId)
+        .get();
+    if (request.data()?['type'] == 'REFERRAL_WITHDRAWAL') {
+      await reviewReferralWithdrawal(requestId: requestId, action: 'reject');
+      return;
+    }
     await _firestore
         .collection('admin')
         .doc('requests')
@@ -107,6 +149,108 @@ class AdminRepository {
       'tier': tier,
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> reviewReferralWithdrawal({
+    required String requestId,
+    required String action,
+    String? paymentReference,
+  }) async {
+    await _requireAdmin();
+    final user = _auth.currentUser;
+    final token = await user?.getIdToken();
+    if (user == null || token == null || _auth.currentUser?.uid != user.uid) {
+      throw StateError('Admin access denied');
+    }
+    final response = await _client
+        .post(
+          Uri.parse(
+            '${BackendEndpoints.apiBaseUrl}/api/admin/referral/withdrawals/review',
+          ),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'requestId': requestId,
+            'action': action,
+            if (paymentReference != null) 'paymentReference': paymentReference,
+          }),
+        )
+        .timeout(const Duration(seconds: 25));
+    if (_auth.currentUser?.uid != user.uid || response.statusCode != 200) {
+      throw StateError('Withdrawal review unavailable');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic> ||
+        data['status'] !=
+            {
+              'approve': 'APPROVED',
+              'reject': 'REJECTED',
+              'paid': 'PAID',
+            }[action]) {
+      throw const FormatException('Invalid withdrawal review');
+    }
+  }
+
+  Future<String> importReferralReceipt({
+    required String receiptId,
+    required String payerUid,
+    required int netMinor,
+    required DateTime settledAt,
+  }) async {
+    final data = await _referralMutation('receipts', {
+      'receiptId': receiptId,
+      'payerUid': payerUid,
+      'netMinor': netMinor,
+      'settledAt': settledAt.toUtc().toIso8601String(),
+    });
+    final id = data['receiptId'];
+    if (id is! String ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(id) ||
+        !{'recorded', 'restored'}.contains(data['status'])) {
+      throw const FormatException('Invalid receipt confirmation');
+    }
+    return id;
+  }
+
+  Future<void> reverseReferralReceipt(String receiptId) async {
+    final data = await _referralMutation('reversals', {'receiptId': receiptId});
+    if (!{'reversed', 'restored'}.contains(data['status'])) {
+      throw const FormatException('Invalid reversal confirmation');
+    }
+  }
+
+  Future<Map<String, dynamic>> _referralMutation(
+    String operation,
+    Map<String, Object> body,
+  ) async {
+    await _requireAdmin();
+    final user = _auth.currentUser;
+    final token = await user?.getIdToken();
+    if (user == null || token == null || _auth.currentUser?.uid != user.uid) {
+      throw StateError('Admin access denied');
+    }
+    final response = await _client
+        .post(
+          Uri.parse(
+            '${BackendEndpoints.apiBaseUrl}/api/admin/referral/$operation',
+          ),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 25));
+    if (_auth.currentUser?.uid != user.uid || response.statusCode != 200) {
+      throw StateError('Referral receipt unavailable');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic>) {
+      throw const FormatException('Invalid receipt confirmation');
+    }
+    return data;
   }
 
   Future<AIConfig?> getAIConfig() async {
