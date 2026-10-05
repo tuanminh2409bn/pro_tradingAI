@@ -16,6 +16,16 @@ enum NavbarItem {
 class NavigationCubit extends Cubit<NavbarItem> {
   NavigationCubit() : super(NavbarItem.tradingRoom);
 
+  NavigationCubit.forTradingRoom(String symbol, String timeframe)
+    : super(NavbarItem.tradingRoom) {
+    if (!RegExp(r'^[A-Z0-9]{3,16}$').hasMatch(symbol) ||
+        !TradingMode.values.any((mode) => mode.allowsTimeframe(timeframe))) {
+      throw ArgumentError('Invalid chart target');
+    }
+    _tradingRoomSymbol = symbol;
+    _tradingRoomTimeframe = timeframe;
+  }
+
   String? _tradingRoomSymbol;
   String? _tradingRoomTimeframe;
   String? get tradingRoomSymbol => _tradingRoomSymbol;

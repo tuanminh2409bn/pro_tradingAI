@@ -16,6 +16,7 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../../../core/security/admin_access.dart';
 import '../../../core/utils/community_post_link.dart';
+import '../../../core/utils/push_chart_target.dart';
 
 class WebDashboardShell extends StatefulWidget {
   const WebDashboardShell({super.key});
@@ -32,12 +33,19 @@ class _WebDashboardShellState extends State<WebDashboardShell> {
     final authState = context.watch<AuthBloc>().state;
     final String? userId = authState.user?.uid;
     final sharedPostId = sharedCommunityPostId(Uri.base);
+    final pushTarget = PushChartTarget.fromUri(Uri.base);
 
     return BlocProvider(
-      create: (context) => NavigationCubit()
-        ..getNavBarItem(
-          sharedPostId == null ? NavbarItem.tradingRoom : NavbarItem.community,
-        ),
+      create: (context) => pushTarget != null
+          ? NavigationCubit.forTradingRoom(
+              pushTarget.symbol,
+              pushTarget.timeframe,
+            )
+          : (NavigationCubit()..getNavBarItem(
+              sharedPostId == null
+                  ? NavbarItem.tradingRoom
+                  : NavbarItem.community,
+            )),
       child: SyncGateHost(
         userId: userId,
         child: LayoutBuilder(

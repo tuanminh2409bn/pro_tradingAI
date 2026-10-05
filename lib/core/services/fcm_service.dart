@@ -1,118 +1,162 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 class FCMService {
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+  final FirebaseMessaging _messaging;
   StreamSubscription<String>? _tokenRefreshSubscription;
-  static String? _initializedUserId;
+  StreamSubscription<User?>? _authSubscription;
+  String? _owner;
+  String? _token;
+  bool _enabled = false;
+  int _generation = 0;
+  Future<bool>? _enabling;
+  Future<bool> _cleanup = Future.value(true);
 
-  FCMService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
-
-  Future<bool> enable(String? userId) async {
-    if (userId == null || userId.isEmpty) return false;
-    if (_initializedUserId == userId) return true;
-    _initializedUserId = userId;
-
-    try {
-      // 1. Request notification permission from browser/device
-      NotificationSettings settings = await FirebaseMessaging.instance
-          .requestPermission(
-            alert: true,
-            announcement: false,
-            badge: true,
-            carPlay: false,
-            criticalAlert: false,
-            provisional: false,
-            sound: true,
-          );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // 2. Fetch the FCM token
-        String? token;
-        try {
-          if (kIsWeb) {
-            // Note: On Web, Google requires a VAPID public key.
-            // If the Firebase project does not have one, you can configure it under settings.
-            token = await FirebaseMessaging.instance.getToken(
-              vapidKey:
-                  'BKKdEbWfwC8UBq9EoXZePzc9z1mNtt_cl2ohtbDnsaLe-501J0ZbMOlo_ZQQfRJWo1WJn2MM7Ur5FZfLZ89YYq8',
-            );
-          } else {
-            token = await FirebaseMessaging.instance.getToken();
-          }
-        } catch (_) {
-          try {
-            token = await FirebaseMessaging.instance.getToken();
-          } catch (_) {}
-        }
-
-        if (token == null || token.isEmpty) {
-          _initializedUserId = null;
-          return false;
-        }
-        if (!await _saveTokenToFirestore(userId, token)) {
-          _initializedUserId = null;
-          return false;
-        }
-
-        // 3. Monitor token refreshes
-        _tokenRefreshSubscription?.cancel();
-        _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
-            .listen((newToken) {
-              _saveTokenToFirestore(userId, newToken);
-            });
-
-        // 4. Handle foreground notifications
-        FirebaseMessaging.onMessage.listen((RemoteMessage _) {
-          // Here foreground notifications can be processed if necessary
-        });
-        return true;
-      }
-    } catch (_) {
-      _initializedUserId = null;
-      return false;
-    }
-    _initializedUserId = null;
-    return false;
+  FCMService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    FirebaseMessaging? messaging,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _messaging = messaging ?? FirebaseMessaging.instance {
+    _authSubscription = _auth.authStateChanges().listen((user) {
+      if (_owner != null && user?.uid != _owner) unawaited(disable());
+    });
   }
 
-  Future<bool> _saveTokenToFirestore(String userId, String token) async {
-    try {
-      final deviceType = kIsWeb
-          ? 'web'
-          : (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android');
-      await _firestore.collection('fcm_tokens').doc(token).set({
-        'token': token,
-        'userId': userId,
-        'deviceType': deviceType,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return true;
-    } catch (_) {
-      return false;
+  bool _current(String uid, int generation) =>
+      generation == _generation &&
+      _owner == uid &&
+      _auth.currentUser?.uid == uid;
+
+  Future<bool> enable(String? userId) {
+    if (userId == null || userId.isEmpty || _auth.currentUser?.uid != userId) {
+      return Future.value(false);
     }
+    if (_owner == userId && _enabled) return Future.value(true);
+    if (_owner == userId && _enabling != null) return _enabling!;
+    if (_owner != null && _owner != userId) unawaited(disable());
+    _owner = userId;
+    final generation = ++_generation;
+    final pending = _enable(userId, generation);
+    _enabling = pending;
+    return pending.whenComplete(() {
+      if (generation == _generation) _enabling = null;
+    });
   }
 
-  Future<bool> disable() async {
+  Future<bool> _enable(String uid, int generation) async {
     try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null && token.isNotEmpty) {
-        await _firestore.collection('fcm_tokens').doc(token).delete();
+      await _cleanup;
+      if (!_current(uid, generation)) return false;
+      final settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      if (!_current(uid, generation) ||
+          settings.authorizationStatus != AuthorizationStatus.authorized) {
+        return false;
       }
-      await FirebaseMessaging.instance.deleteToken();
+      final token = await _messaging.getToken(
+        vapidKey: kIsWeb
+            ? 'BKKdEbWfwC8UBq9EoXZePzc9z1mNtt_cl2ohtbDnsaLe-501J0ZbMOlo_ZQQfRJWo1WJn2MM7Ur5FZfLZ89YYq8'
+            : null,
+      );
+      if (!_current(uid, generation) || token == null || token.isEmpty) {
+        return false;
+      }
+      _token = token;
+      if (!await _save(uid, token, generation)) return false;
       await _tokenRefreshSubscription?.cancel();
-      _tokenRefreshSubscription = null;
-      _initializedUserId = null;
+      if (!_current(uid, generation)) return false;
+      _tokenRefreshSubscription = _messaging.onTokenRefresh.listen((
+        next,
+      ) async {
+        if (!_current(uid, generation) || next.isEmpty) return;
+        final previous = _token;
+        _token = next;
+        if (await _save(uid, next, generation) &&
+            previous != null &&
+            previous != next &&
+            _current(uid, generation)) {
+          try {
+            await _firestore.collection('fcm_tokens').doc(previous).delete();
+          } catch (_) {
+            /* Server retires expired tokens. */
+          }
+        }
+      });
+      _enabled = true;
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  Future<bool> _save(String uid, String token, int generation) async {
+    if (!_current(uid, generation)) return false;
+    try {
+      await _firestore
+          .collection('fcm_tokens')
+          .doc(token)
+          .set({
+            'token': token,
+            'userId': uid,
+            'deviceType': kIsWeb
+                ? 'web'
+                : (defaultTargetPlatform == TargetPlatform.iOS
+                      ? 'ios'
+                      : 'android'),
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          .timeout(const Duration(seconds: 15));
+      return _current(uid, generation);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> disable() {
+    final owner = _owner;
+    final token = _token;
+    ++_generation;
+    _owner = null;
+    _token = null;
+    _enabled = false;
+    _enabling = null;
+    final subscription = _tokenRefreshSubscription;
+    _tokenRefreshSubscription = null;
+    _cleanup = _cleanup.then((_) async {
+      await subscription?.cancel();
+      if (token != null && _auth.currentUser?.uid == owner) {
+        try {
+          await _firestore
+              .collection('fcm_tokens')
+              .doc(token)
+              .delete()
+              .timeout(const Duration(seconds: 10));
+        } catch (_) {
+          /* Revoking the browser token still prevents future delivery. */
+        }
+      }
+      try {
+        await _messaging.deleteToken().timeout(const Duration(seconds: 10));
+        return true;
+      } catch (_) {
+        return false;
+      }
+    });
+    return _cleanup;
   }
 
   void dispose() {
-    _tokenRefreshSubscription?.cancel();
+    _authSubscription?.cancel();
+    unawaited(disable());
   }
 }
