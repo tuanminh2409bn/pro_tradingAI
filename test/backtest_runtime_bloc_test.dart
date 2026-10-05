@@ -62,6 +62,25 @@ class _Repository extends Fake implements BacktestRepository {
       const Stream.empty();
 }
 
+class _SlowRepository extends _Repository {
+  final firstTickSave = Completer<void>();
+  bool tickSaveBlocked = false;
+
+  @override
+  Future<void> saveRecording(
+    BacktestRecording recording, {
+    bool includeHistory = false,
+  }) async {
+    if (recording.simulation.replay.cursor == 1 &&
+        recording.simulation.replay.isPlaying &&
+        !firstTickSave.isCompleted) {
+      tickSaveBlocked = true;
+      await firstTickSave.future;
+    }
+    await super.saveRecording(recording, includeHistory: includeHistory);
+  }
+}
+
 List<Candle> _candles() => [
   for (final (index, price) in [100.0, 105.0, 90.0, 110.0].indexed)
     Candle(
@@ -77,6 +96,41 @@ List<Candle> _candles() => [
 ];
 
 void main() {
+  testWidgets('pause does not wait behind timer ticks during a slow save', (
+    tester,
+  ) async {
+    final repository = _SlowRepository();
+    final bloc = BacktestBloc(
+      backtestRepository: repository,
+      historyStream: (_) => Stream.value(_candles()),
+    );
+    addTearDown(() async {
+      if (!repository.firstTickSave.isCompleted) {
+        repository.firstTickSave.complete();
+      }
+      await bloc.close();
+    });
+    bloc.add(const StartBacktestSession('BTCUSD', 1000, userId: 'qa-user'));
+    await tester.pump();
+    bloc.add(const UpdateSpeed(10));
+    await tester.pump();
+    bloc.add(TogglePlayback());
+    await tester.pump();
+    expect((bloc.state as BacktestLoaded).session.isPlaying, isTrue);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(repository.tickSaveBlocked, isTrue);
+    await tester.pump(const Duration(seconds: 2));
+    bloc.add(TogglePlayback());
+    repository.firstTickSave.complete();
+    await tester.pump();
+    final paused = bloc.state as BacktestLoaded;
+    expect(paused.session.isPlaying, isFalse);
+    expect(paused.cursor, 1);
+    expect(repository.saved!.simulation.replay.cursor, 1);
+    await tester.pump(const Duration(seconds: 1));
+    expect((bloc.state as BacktestLoaded).cursor, 1);
+  });
+
   test(
     'Backtest quota denial ends loading with a localized error and no recording',
     () async {

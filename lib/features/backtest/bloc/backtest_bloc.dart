@@ -14,6 +14,7 @@ class BacktestBloc extends Bloc<BacktestEvent, BacktestState> {
   final void Function()? _disposeHistory;
   Timer? _replayTimer;
   int? _timerSpeed;
+  bool _replayTickPending = false;
   List<BacktestBar> _bars = const [];
   BacktestSimulationEngine? _simulation;
   BacktestSession? _session;
@@ -29,10 +30,13 @@ class BacktestBloc extends Bloc<BacktestEvent, BacktestState> {
        _disposeHistory = disposeHistory,
        super(BacktestInitial()) {
     // All event types share one queue, including writes and timer ticks.
-    on<BacktestEvent>(
-      _onEvent,
-      transformer: (events, mapper) => events.asyncExpand(mapper),
-    );
+    on<BacktestEvent>((event, emit) async {
+      try {
+        await _onEvent(event, emit);
+      } finally {
+        if (event is ReplayTick) _replayTickPending = false;
+      }
+    }, transformer: (events, mapper) => events.asyncExpand(mapper));
   }
 
   Future<void> _onEvent(
@@ -293,7 +297,11 @@ class BacktestBloc extends Bloc<BacktestEvent, BacktestState> {
       _replayTimer?.cancel();
       _timerSpeed = replay.speed;
       _replayTimer = Timer.periodic(replay.tickInterval, (_) {
-        if (!_closing && !isClosed) add(ReplayTick());
+        // Slow writes must not build a backlog ahead of pause/trade actions.
+        if (!_closing && !isClosed && !_replayTickPending) {
+          _replayTickPending = true;
+          add(ReplayTick());
+        }
       });
     }
   }
