@@ -1,7 +1,10 @@
-# Current VPS Docker 18.09 requires Bullseye. Override only on a verified,
-# supported host; see tasks/python-runtime-upgrade-2026-10-04.md.
-ARG PYTHON_RUNTIME_IMAGE=python:3.10.18-slim-bullseye@sha256:f1fb49e4d5501ac93d0ca519fb7ee6250842245aba8612926a46a0832a1ed089
+# Verified official Python 3.12 image; the bootstrap preserves Docker seccomp.
+ARG PYTHON_RUNTIME_IMAGE=python:3.12.15-slim-bookworm@sha256:54c85f3c47607a77f32adec749d3c81d1348bf25833671f512b26a9b6d778cb3
 FROM ${PYTHON_RUNTIME_IMAGE}
+
+COPY deploy/runtime_seccomp.py /usr/local/bin/runtime_seccomp.py
+# Keep Docker's filter; deny newer syscalls with errno for glibc fallback.
+SHELL ["python", "/usr/local/bin/runtime_seccomp.py", "/bin/sh", "-c"]
 
 # Cài đặt các công cụ hệ thống
 RUN apt-get update && apt-get install -y \
@@ -39,7 +42,9 @@ COPY quota_store.py .
 COPY backtest_api.py .
 COPY community_api.py .
 COPY referral_api.py .
+COPY referral_ledger.py .
 COPY official_news.py .
 
 # Không ép cứng cổng ở đây, Google Cloud sẽ cấp biến môi trường PORT
+ENTRYPOINT ["python", "/usr/local/bin/runtime_seccomp.py"]
 CMD uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}

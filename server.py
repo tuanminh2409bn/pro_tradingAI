@@ -5,14 +5,15 @@ import random
 import string
 import re
 import asyncio
+import weakref
 import os
 import hashlib
 from datetime import datetime, timezone
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Header, HTTPException
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, StrictFloat, StrictStr
+from pydantic import BaseModel, StrictFloat, StrictStr, StrictInt
 import websockets
 import httpx
 from metaapi_cloud_sdk import MetaApi
@@ -68,12 +69,16 @@ from tradingview_history import fetch_tradingview_mtf_history
 from push_preferences import push_recipient_opted_in
 from analysis_pipeline import run_market_pipeline
 from specialist_analysis import SpecialistProviderError
-from community_api import community_write_intent
+from community_api import community_write_intent, verified_leaderboard_entry
 from referral_api import canonical_referral_link, new_referral_code, ReferralCodeCollision, eligible_registration
 from entitlements import Capability, EntitlementDenied, QuotaEnforcer, VerifiedQuotaIdentity
 from quota_store import FirestoreQuotaStore
 from backtest_api import backtest_creation, same_backtest_creation
 from official_news import APPROVED_NEWS_FEEDS, MAX_BYTES as NEWS_MAX_BYTES, parse_official_feed
+from referral_ledger import (
+    LedgerDenied, commit_receipt, commit_receipt_reversal,
+    commit_withdrawal, commit_withdrawal_review,
+)
 
 LOCAL_QA_MODE = os.environ.get("PROTRADING_LOCAL_QA", "") == "1"
 if LOCAL_QA_MODE:
@@ -303,6 +308,32 @@ class ReferralRegistrationRequest(BaseModel):
     code: StrictStr
 
 
+class ReferralReceiptRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    receiptId: StrictStr
+    payerUid: StrictStr
+    netMinor: StrictInt
+    settledAt: StrictStr
+
+
+class ReferralWithdrawalRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    requestId: StrictStr
+    amountMinor: StrictInt
+
+
+class ReferralReviewRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    requestId: StrictStr
+    action: StrictStr
+    paymentReference: StrictStr | None = None
+
+
+class ReferralReversalRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    receiptId: StrictStr
+
+
 async def verified_user_id(
     authorization: str | None,
     claimed_uid: str = "",
@@ -318,6 +349,55 @@ async def verified_user_id(
         )
     except AuthDenied as error:
         raise HTTPException(status_code=error.status_code, detail=str(error)) from None
+
+
+_onboarding_locks = weakref.WeakValueDictionary()
+
+
+def refresh_onboarding_quota(user_id, role):
+    identity = VerifiedQuotaIdentity.from_decoded_token({'uid': user_id, 'role': role})
+    FirestoreQuotaStore(db, operation_id='onboarding:' + user_id).refresh_summary(
+        identity=identity, now=datetime.now(timezone.utc), timezone_name='UTC',
+    )
+
+
+def complete_standard_onboarding(user_id: str) -> dict:
+    """Grant the lowest role only to an active, role-less, non-Admin account."""
+    record = auth.get_user(user_id)
+    if record.disabled or record.uid != user_id:
+        raise HTTPException(status_code=403, detail='Account onboarding denied')
+    claims = record.custom_claims or {}
+    roles = {'standard', 'verified_partner', 'professional', 'enterprise'}
+    if 'role' in claims:
+        if not isinstance(claims['role'], str) or claims['role'] not in roles:
+            raise HTTPException(status_code=403, detail='Account role unavailable')
+        refresh_onboarding_quota(user_id, claims['role'])
+        return {'status': 'ready', 'role': claims['role']}
+    if 'admin' in claims:
+        raise HTTPException(status_code=403, detail='Account onboarding denied')
+    # Preserve unrelated claims. This endpoint never promotes an existing role.
+    auth.set_custom_user_claims(user_id, {**claims, 'role': 'standard'})
+    refresh_onboarding_quota(user_id, 'standard')
+    return {'status': 'ready', 'role': 'standard'}
+
+
+@app.post('/api/auth/onboarding')
+async def onboard_account(authorization: str | None = Header(default=None)):
+    user_id = await verified_user_id(authorization)
+    try:
+        lock = _onboarding_locks.get(user_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            _onboarding_locks[user_id] = lock
+        async with lock:
+            return await asyncio.wait_for(
+                asyncio.to_thread(complete_standard_onboarding, user_id), timeout=10,
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail='Account onboarding unavailable') from None
+
 
 class TradingViewStreamer:
     def __init__(self, shared_last_prices: dict | None = None,
@@ -569,7 +649,7 @@ class TradingViewStreamer:
 streamer = TradingViewStreamer()
 main_loop = None
 
-def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry: float, sl: float, tp: list, probability: int):
+def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry: float, sl: float, tp: list, probability: int, timeframe=None, closed_at=None):
     try:
         if not user_id:
             return
@@ -602,6 +682,10 @@ def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry
 
         print(f"[PUSH] Sending notification to {len(target_tokens)} tokens...")
         
+        frame = {'5': 'M5', '15': 'M15', '60': 'H1', '240': 'H4', '1440': 'D1'}.get(str(timeframe), timeframe)
+        target = {}
+        if re.fullmatch(r'[A-Z0-9]{3,16}', symbol) and frame in ('M5', 'M15', 'H1', 'H4', 'D1') and type(closed_at) is int and closed_at > 0:
+            target = {'tab': 'trading_room', 'symbol': symbol, 'timeframe': frame, 'closed_at': str(closed_at)}
         # 4. Construct Multicast message
         message = messaging.MulticastMessage(
             tokens=target_tokens,
@@ -610,6 +694,7 @@ def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry
                 body=body,
             ),
             data={
+                **target,
                 "click_action": "FLUTTER_NOTIFICATION_CLICK",
                 "symbol": symbol,
                 "type": signal_type,
@@ -619,9 +704,8 @@ def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry
                 "probability": str(probability)
             },
             webpush=messaging.WebpushConfig(
-                notification=messaging.WebpushNotification(
-                    icon="/favicon.png"
-                )
+                notification=messaging.WebpushNotification(icon="/favicon.png"),
+                fcm_options=messaging.WebpushFCMOptions(link='https://protrading-ai-2026.web.app/' + ('?' + urlencode(target) if target else '')),
             )
         )
 
@@ -630,7 +714,7 @@ def send_signal_push_to_owner(user_id: str, symbol: str, signal_type: str, entry
         print(f"✅ [PUSH] Sent successfully. Success count: {response.success_count}, Failure count: {response.failure_count}")
         if response.failure_count > 0:
             for idx, resp in enumerate(response.responses):
-                if not resp.success:
+                if not resp.success and isinstance(resp.exception, messaging.UnregisteredError):
                     failed_token = target_tokens[idx]
                     print("[PUSH] Invalid token will be retired")
                     try:
@@ -863,6 +947,8 @@ async def process_ai_analysis(doc_id, symbol, timeframe, user_id='', req_payload
                     sl=float(ai_result["slPrice"]),
                     tp=ai_result["tpPrices"],
                     probability=int(ai_result.get("probability", 0)),
+                    timeframe=timeframe,
+                    closed_at=last_closed_ts,
                 )
             except Exception:
                 print("FCM multicast trigger failed")
@@ -1489,6 +1575,61 @@ def run_firestore_transaction(commit, *args):
             time.sleep(0.2 * (2 ** attempt))
 
 
+async def verified_role_identity(authorization, *, admin=False):
+    uid = await verified_user_id(authorization)
+    try:
+        record = await asyncio.wait_for(asyncio.to_thread(auth.get_user, uid), timeout=10)
+        if record.disabled or record.uid != uid:
+            raise HTTPException(status_code=403, detail='Account unavailable')
+        claims = record.custom_claims or {}
+        if claims.get('role') not in ('standard', 'verified_partner', 'professional', 'enterprise'):
+            raise HTTPException(status_code=403, detail='Account role unavailable')
+        if admin:
+            identity = VerifiedQuotaIdentity.from_decoded_token({**claims, 'uid': uid})
+            if identity.is_admin is not True:
+                raise HTTPException(status_code=403, detail='Admin required')
+        return uid
+    except HTTPException:
+        raise
+    except EntitlementDenied:
+        raise HTTPException(status_code=403, detail='Admin required') from None
+    except Exception:
+        raise HTTPException(status_code=503, detail='Account verification unavailable') from None
+
+
+async def run_ledger_mutation(commit, *args):
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(run_firestore_transaction, commit, db, *args), timeout=20)
+    except LedgerDenied as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
+    except Exception:
+        raise HTTPException(status_code=503, detail='Referral ledger unavailable') from None
+
+
+@app.post('/api/admin/referral/receipts')
+async def import_referral_receipt(req: ReferralReceiptRequest, authorization: str | None = Header(default=None)):
+    actor = await verified_role_identity(authorization, admin=True)
+    return await run_ledger_mutation(commit_receipt, req.model_dump(), actor, datetime.now(timezone.utc))
+
+
+@app.post('/api/admin/referral/reversals')
+async def reverse_referral_receipt(req: ReferralReversalRequest, authorization: str | None = Header(default=None)):
+    actor = await verified_role_identity(authorization, admin=True)
+    return await run_ledger_mutation(commit_receipt_reversal, req.receiptId, actor, datetime.now(timezone.utc))
+
+
+@app.post('/api/referral/withdrawals')
+async def request_referral_withdrawal(req: ReferralWithdrawalRequest, authorization: str | None = Header(default=None)):
+    uid = await verified_role_identity(authorization)
+    return await run_ledger_mutation(commit_withdrawal, uid, req.requestId, req.amountMinor, datetime.now(timezone.utc))
+
+
+@app.post('/api/admin/referral/withdrawals/review')
+async def review_referral_withdrawal(req: ReferralReviewRequest, authorization: str | None = Header(default=None)):
+    actor = await verified_role_identity(authorization, admin=True)
+    return await run_ledger_mutation(commit_withdrawal_review, req.requestId, req.action, req.paymentReference, actor, datetime.now(timezone.utc))
+
+
 def commit_referral_identity(transaction, user_id: str, candidate_code: str) -> dict:
     owner_ref = db.collection("referrals").document(user_id)
     owner = owner_ref.get(transaction=transaction)
@@ -1647,6 +1788,27 @@ async def community_author(user_id: str) -> dict:
     if not avatar.startswith("https://") or len(avatar) > 2048:
         avatar = ""
     return {"userName": name, "avatarUrl": avatar}
+
+
+@app.get('/api/community/leaderboard')
+async def read_community_leaderboard(authorization: str | None = Header(default=None)):
+    await verified_role_identity(authorization)
+
+    def fetch():
+        now = datetime.now(timezone.utc)
+        snapshots = (db.collection('leaderboard')
+            .where('source', '==', 'broker_verified')
+            .where('isServerVerified', '==', True)
+            .order_by('growthPercent', direction='DESCENDING')
+            .order_by('unitVolume', direction='DESCENDING')
+            .limit(20).stream(timeout=8))
+        entries = [entry for snapshot in snapshots if (entry := verified_leaderboard_entry(snapshot.id, snapshot.to_dict(), now)) is not None]
+        return {'entries': entries[:20], 'source': 'broker_verified'}
+
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(fetch), timeout=10)
+    except Exception:
+        raise HTTPException(status_code=503, detail='Verified leaderboard unavailable') from None
 
 
 @app.post("/api/community/posts")

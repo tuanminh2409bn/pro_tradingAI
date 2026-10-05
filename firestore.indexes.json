@@ -1,6 +1,16 @@
 {
   "indexes": [
     {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "source", "order": "ASCENDING"},
+        {"fieldPath": "isServerVerified", "order": "ASCENDING"},
+        {"fieldPath": "growthPercent", "order": "DESCENDING"},
+        {"fieldPath": "unitVolume", "order": "DESCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "signals",
       "queryScope": "COLLECTION",
       "fields": [

@@ -91,7 +91,7 @@ def _query(collection, uid, filters):
             "fieldFilter": {
                 "field": {"fieldPath": field},
                 "op": "EQUAL",
-                "value": {"stringValue": value},
+                "value": {"booleanValue": value} if isinstance(value, bool) else {"stringValue": value},
             }
         }
         for field, value in filters.items()

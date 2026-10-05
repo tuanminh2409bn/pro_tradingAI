@@ -95,6 +95,8 @@ service cloud.firestore {
       allow write: if isOwner(userId)
         && subcollection != 'trades'
         && subcollection != 'meta'
+        && subcollection != 'referral_ledger'
+        && subcollection != 'referral_withdrawals'
         && subcollection != 'broker_accounts'
         && subcollection != 'risk_state';
     }
@@ -141,10 +143,13 @@ service cloud.firestore {
     match /admin/requests/pending/{reqId} {
       allow create: if isAuth()
         && request.resource.data.userId == request.auth.uid
+        && request.resource.data.get('type', '') != 'REFERRAL_WITHDRAWAL'
         && request.resource.data.status == 'PENDING';
       allow read: if isAdmin() || (isAuth()
         && resource.data.userId == request.auth.uid);
       allow update: if isAdmin()
+        && resource.data.get('type', '') != 'REFERRAL_WITHDRAWAL'
+        && request.resource.data.get('type', '') != 'REFERRAL_WITHDRAWAL'
         && request.resource.data.userId == resource.data.userId;
     }
 
@@ -165,7 +170,9 @@ service cloud.firestore {
       }
     }
     match /leaderboard/{document=**} {
-      allow read: if true;
+      // Read through the token API, which rejects legacy/private-field rows.
+      // Rules cannot project away sensitive fields in a collection query.
+      allow read, write: if false;
     }
 
     // ─── 9. Admin Settings (AI Config) ───
