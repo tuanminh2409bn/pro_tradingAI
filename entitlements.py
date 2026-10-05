@@ -254,6 +254,15 @@ class AtomicQuotaStore(Protocol):
 
 
 @dataclass(frozen=True)
+class QuotaWindow:
+    counter_key: str
+    window_start: datetime
+    reset_at: datetime
+    limit: int
+    period: QuotaPeriod
+
+
+@dataclass(frozen=True)
 class QuotaDecision:
     allowed: bool
     role: AccountRole
@@ -270,6 +279,18 @@ class QuotaEnforcer:
     def __init__(self, *, store: AtomicQuotaStore, timezone_name: str):
         self._store = store
         self._timezone = ZoneInfo(timezone_name)
+
+    def window_for(self, *, identity: VerifiedQuotaIdentity,
+                   capability: Capability, now: datetime) -> QuotaWindow | None:
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError("Quota clock must be timezone-aware")
+        policy = (ROLE_ANALYSIS_QUOTAS.get(identity.role)
+                  if capability in {Capability.ANALYSIS, Capability.BACKTEST} else None)
+        if policy is None:
+            return None
+        start, reset = self._window(now, policy.period)
+        return QuotaWindow(f"{identity.role.value}:{capability.value}:{policy.period.value}",
+                           start, reset, policy.limit, policy.period)
 
     def consume(
         self,
@@ -297,12 +318,8 @@ class QuotaEnforcer:
                 reason="unlimited_verified_partner_realtime",
             )
 
-        policy = (
-            ROLE_ANALYSIS_QUOTAS.get(identity.role)
-            if capability in {Capability.ANALYSIS, Capability.BACKTEST}
-            else None
-        )
-        if policy is None:
+        window = self.window_for(identity=identity, capability=capability, now=now)
+        if window is None:
             return QuotaDecision(
                 allowed=False,
                 role=identity.role,
@@ -315,38 +332,36 @@ class QuotaEnforcer:
                 reason="policy_pending",
             )
 
-        window_start, reset_at = self._window(now, policy.period)
-        counter_key = f"{identity.role.value}:{capability.value}:{policy.period.value}"
         used = self._store.consume_if_below(
             subject_id=identity.uid,
-            counter_key=counter_key,
-            window_start=window_start,
-            reset_at=reset_at,
-            limit=policy.limit,
+            counter_key=window.counter_key,
+            window_start=window.window_start,
+            reset_at=window.reset_at,
+            limit=window.limit,
         )
         if used is None:
             return QuotaDecision(
                 allowed=False,
                 role=identity.role,
                 capability=capability,
-                used=policy.limit,
-                limit=policy.limit,
+                used=window.limit,
+                limit=window.limit,
                 remaining=0,
-                period=policy.period.value,
-                reset_at=reset_at,
+                period=window.period.value,
+                reset_at=window.reset_at,
                 reason="quota_exhausted",
             )
-        if used <= 0 or used > policy.limit:
+        if used <= 0 or used > window.limit:
             raise RuntimeError("Atomic quota store returned an invalid count")
         return QuotaDecision(
             allowed=True,
             role=identity.role,
             capability=capability,
             used=used,
-            limit=policy.limit,
-            remaining=policy.limit - used,
-            period=policy.period.value,
-            reset_at=reset_at,
+            limit=window.limit,
+            remaining=window.limit - used,
+            period=window.period.value,
+            reset_at=window.reset_at,
             reason="quota_consumed",
         )
 

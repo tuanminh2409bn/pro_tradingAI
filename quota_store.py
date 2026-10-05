@@ -2,10 +2,32 @@
 
 import hashlib
 import threading
+from entitlements import Capability, QuotaEnforcer
 
 # Bounded memory: queue the same subject's local writers before Firestore.
 # Firestore transactions still enforce the limit across backend processes.
 _SUBJECT_LOCKS = tuple(threading.Lock() for _ in range(256))
+
+
+def commit_quota_summary(transaction, counter_refs, summary_ref, windows):
+    # Read both counters before writing; concurrent consumption forces a retry.
+    snapshots = [reference.get(transaction=transaction) for reference in counter_refs]
+    summary = {'source': 'server_enforced', 'apiUsed': 0, 'apiLimit': 0,
+               'backtestUsed': 0, 'backtestLimit': 0, 'resetAt': None, 'backtestResetAt': None}
+    for snapshot, window in zip(snapshots, windows):
+        data = snapshot.to_dict() or {}
+        if data and data.get('counter_key') != window.counter_key:
+            raise ValueError('Invalid authoritative quota counter')
+        used = data.get('used', 0) if data.get('window_start') == window.window_start else 0
+        if type(used) is not int or used < 0:
+            raise ValueError('Invalid authoritative quota counter')
+        backtest = ':backtest:' in window.counter_key
+        summary.update({
+            'backtestUsed' if backtest else 'apiUsed': used,
+            'backtestLimit' if backtest else 'apiLimit': window.limit,
+            'backtestResetAt' if backtest else 'resetAt': window.reset_at,
+        })
+    transaction.set(summary_ref, summary, merge=True)
 
 
 def commit_quota(transaction, counter_ref, marker_ref, summary_ref, *, counter_key, window_start, reset_at, limit,
@@ -55,6 +77,24 @@ class FirestoreQuotaStore:
         if (session_ref is None) != (session_data is None):
             raise ValueError('Backtest allocation requires reference and data')
         self.session_ref, self.session_data = session_ref, session_data
+
+    def refresh_summary(self, *, identity, now, timezone_name):
+        if not identity.uid:
+            raise ValueError('Quota identity required')
+        enforcer = QuotaEnforcer(store=self, timezone_name=timezone_name)
+        windows = [window for capability in (Capability.ANALYSIS, Capability.BACKTEST)
+                   if (window := enforcer.window_for(identity=identity, capability=capability, now=now)) is not None]
+        meta = self.db.collection('users').document(identity.uid).collection('meta')
+        refs = [meta.document('quota-' + hashlib.sha256(window.counter_key.encode()).hexdigest()[:24])
+                for window in windows]
+        transactional = self.transactional
+        if transactional is None:
+            from google.cloud import firestore
+            transactional = firestore.transactional
+        subject_lock = _SUBJECT_LOCKS[int(hashlib.sha256(identity.uid.encode()).hexdigest()[:2], 16)]
+        with subject_lock:
+            return transactional(commit_quota_summary)(self.db.transaction(max_attempts=20), refs,
+                                                        meta.document('quota'), windows)
 
     def consume_if_below(self, *, subject_id, counter_key, window_start, reset_at, limit):
         if not subject_id or not self.operation_id:

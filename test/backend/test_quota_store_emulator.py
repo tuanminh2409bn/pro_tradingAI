@@ -13,6 +13,36 @@ from quota_store import FirestoreQuotaStore
                                 os.environ.get('FIRESTORE_EMULATOR_HOST', '')),
                      'requires loopback Firestore Emulator')
 class QuotaStoreEmulatorTests(unittest.TestCase):
+    def test_summary_refresh_under_consumption_contention_does_not_reset_or_charge(self):
+        from datetime import datetime, timezone
+        from google.auth.credentials import AnonymousCredentials
+        from google.cloud import firestore
+        from entitlements import VerifiedQuotaIdentity, Capability, QuotaEnforcer
+        db = firestore.Client(project='protrading-ai-2026', credentials=AnonymousCredentials())
+        uid = 'quota-refresh-' + uuid.uuid4().hex
+        identity = VerifiedQuotaIdentity.from_decoded_token({'uid': uid, 'role': 'professional'})
+        now = datetime.now(timezone.utc)
+        store = FirestoreQuotaStore(db, operation_id='refresh')
+        window = QuotaEnforcer(store=store, timezone_name='UTC').window_for(identity=identity, capability=Capability.ANALYSIS, now=now)
+        meta = db.collection('users').document(uid).collection('meta')
+        def operation(i):
+            if i % 2:
+                store.refresh_summary(identity=identity, now=now, timezone_name='UTC')
+            else:
+                return FirestoreQuotaStore(db, operation_id='consume-' + str(i)).consume_if_below(
+                    subject_id=uid, counter_key=window.counter_key, window_start=window.window_start,
+                    reset_at=window.reset_at, limit=window.limit)
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+                values = list(pool.map(operation, range(40)))
+            self.assertEqual(sorted(value for value in values if value is not None), list(range(1, 21)))
+            store.refresh_summary(identity=identity, now=now, timezone_name='UTC')
+            self.assertEqual(meta.document('quota').get().to_dict()['apiUsed'], 20)
+            self.assertEqual(sum(document.id.startswith('quota-request-') for document in meta.stream()), 20)
+        finally:
+            for document in meta.stream(): document.reference.delete()
+            db.close()
+
     def test_backtest_sessions_and_counters_commit_together_under_contention(self):
         from google.auth.credentials import AnonymousCredentials
         from google.cloud import firestore

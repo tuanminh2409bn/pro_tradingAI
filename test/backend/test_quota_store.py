@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from quota_store import FirestoreQuotaStore
+from entitlements import VerifiedQuotaIdentity
 
 
 class StoreDatabase:
@@ -35,6 +36,36 @@ class Reference:
 
 
 class QuotaStoreTests(unittest.TestCase):
+    def test_new_account_summary_is_authoritative_without_consuming_allowance(self):
+        db = StoreDatabase()
+        store = FirestoreQuotaStore(db, operation_id='onboarding', transactional=db.transactional)
+        identity = VerifiedQuotaIdentity.from_decoded_token({'uid': 'qa', 'role': 'standard'})
+        now = datetime(2026, 10, 5, 12, tzinfo=timezone.utc)
+        store.refresh_summary(identity=identity, now=now, timezone_name='UTC')
+        self.assertEqual(set(db.values), {'users/qa/meta/quota'})
+        self.assertEqual(db.values['users/qa/meta/quota'], {
+            'source': 'server_enforced', 'apiUsed': 0, 'apiLimit': 2,
+            'backtestUsed': 0, 'backtestLimit': 2,
+            'resetAt': datetime(2026, 10, 12, tzinfo=timezone.utc),
+            'backtestResetAt': datetime(2026, 10, 12, tzinfo=timezone.utc),
+        })
+
+    def test_refresh_preserves_usage_retries_and_counter_window(self):
+        db = StoreDatabase()
+        store = FirestoreQuotaStore(db, operation_id='onboarding', transactional=db.transactional)
+        identity = VerifiedQuotaIdentity.from_decoded_token({'uid': 'qa', 'role': 'professional'})
+        now = datetime(2026, 10, 3, 12, tzinfo=timezone.utc)
+        self.assertEqual(self.consume(db, 'request-one'), 1)
+        before = {key: dict(value) for key, value in db.values.items() if key != 'users/qa/meta/quota'}
+        for _ in range(3):
+            store.refresh_summary(identity=identity, now=now, timezone_name='UTC')
+        self.assertEqual(db.values['users/qa/meta/quota']['apiUsed'], 1)
+        self.assertEqual({key: value for key, value in db.values.items() if key != 'users/qa/meta/quota'}, before)
+        self.assertEqual(self.consume(db, 'request-one'), 1)
+        store.refresh_summary(identity=identity, now=datetime(2026, 10, 4, tzinfo=timezone.utc), timezone_name='UTC')
+        self.assertEqual(db.values['users/qa/meta/quota']['apiUsed'], 0)
+        self.assertEqual({key: value for key, value in db.values.items() if key != 'users/qa/meta/quota'}, before)
+
     def consume(self, db, operation, start=None):
         return FirestoreQuotaStore(db, operation_id=operation, transactional=db.transactional).consume_if_below(
             subject_id='qa', counter_key='professional:analysis:daily',
