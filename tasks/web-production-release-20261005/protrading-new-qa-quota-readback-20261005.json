@@ -1,0 +1,15 @@
+{
+  "checkedAtUtc": "2026-10-05T08:05:34.235093+00:00",
+  "qaUidHash": "35e79b00c69e7179",
+  "role": "standard",
+  "admin": false,
+  "attributionMatchesReferral": true,
+  "inviterRegisteredCount": 1,
+  "quotaSummaryExists": true,
+  "quotaSource": "server_enforced",
+  "analysisUsed": 0,
+  "analysisLimit": 2,
+  "backtestUsed": 0,
+  "backtestLimit": 2,
+  "authoritativeCounterDocuments": 0
+}

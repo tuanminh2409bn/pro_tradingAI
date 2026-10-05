@@ -1,0 +1,26 @@
+{
+  "supportedHostGatePassed": false,
+  "productionSourceKeptRunning": true,
+  "rollbackDrillPerformed": false,
+  "backendEmulatorContainerRemoved": true,
+  "productionHealth": 200,
+  "firebaseProductionMutations": 0,
+  "sshEmulatorTunnelsClosed": true,
+  "containers": {
+    "protrading-current-vps-candidate-20261005": {
+      "imageId": "sha256:d6969706625efed31478dc23d2555119eeb6a99c07d37200e20e6c6e157dc0b1",
+      "id": "ab303ac5248003f7d9692ce2162992089fc6b3b8fa18f423c34b109397b36b69",
+      "state": "running"
+    },
+    "protrading-ai-referral-live-7ef3ab6": {
+      "imageId": "sha256:b2a9518698b73579018e65504c65b17d52a8130a614c41b816c71bc36f86ba94",
+      "id": "53162f72d11f9563f3fa1e15abd1b73c94a65f863a94cb30d280a577993a7f16",
+      "state": "running"
+    }
+  },
+  "productionCutover": false,
+  "candidateHealth": 200,
+  "completionRequests": 0,
+  "backupRestoreDrillPerformed": false,
+  "candidateWorkersEnabled": false
+}

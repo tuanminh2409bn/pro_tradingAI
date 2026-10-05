@@ -1,0 +1,82 @@
+{
+  "recordedAtUtc": "2026-10-05T04:46:05.148422+00:00",
+  "environment": "loopback-emulator-only; no paid providers",
+  "python": {
+    "status": "PASS",
+    "passed": 320,
+    "skipped": 0,
+    "durationSeconds": 34.021,
+    "command": "PROTRADING_LOCAL_QA=1 PROTRADING_BACKGROUND_WORKERS=0 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 PROTRADING_QA_API_BASE_URL=http://127.0.0.1:8088 GCLOUD_PROJECT=protrading-ai-2026 /tmp/protrading-web-qa-env/bin/python -m unittest discover -s test/backend",
+    "logSha256": "694fc909e089c93c481d1d4d100079565ae7d9b74f47ce84bb9b2cfe588808d4"
+  },
+  "flutter": {
+    "status": "PASS",
+    "passed": 272,
+    "skipped": 2,
+    "skipFiles": [
+      "test/auth_web_shell_test.dart",
+      "test/referral_video_test.dart"
+    ],
+    "skipReason": "Web-only cases skipped by Dart VM; not counted as PASS",
+    "command": "flutter test --no-pub",
+    "logSha256": "a4f772bce0f9706c4b27013e99d28998348bbd71d75829c901a6a689a4d06933"
+  },
+  "webJavascript": {
+    "status": "PASS",
+    "passed": 8,
+    "skipped": 0,
+    "command": "node --test test/web/bootstrap_cache_test.js test/web/fcm_worker_test.js test/web/firebase_qa_bootstrap_test.js",
+    "logSha256": "2380f64c2dc2c33129bbd93ad7ac021b85b7dfd751e1ad700615e61c2895cbd3"
+  },
+  "analyze": {
+    "status": "PASS_NO_ERRORS_OR_WARNINGS",
+    "errors": 0,
+    "warnings": 0,
+    "existingMobileInfos": 3,
+    "command": "flutter analyze --no-pub --no-fatal-infos",
+    "logSha256": "60742094248a15fb696c581284cd3352c9dedf769dea94902cce5205daff5047"
+  },
+  "qaBuild": {
+    "status": "PASS",
+    "command": "flutter build web --release --no-pub --dart-define=PROTRADING_USE_FIREBASE_EMULATORS=true --dart-define=PROTRADING_API_BASE_URL=http://127.0.0.1:8088 --dart-define=PROTRADING_WS_BASE_URL=ws://127.0.0.1:8088",
+    "logSha256": "ce5e2adc5f3614c5eb4dd4c129c5940e33f06ab6bdc2ddf7605873d164b2eb26"
+  },
+  "productionCandidateBuild": {
+    "status": "PASS_BUILD_ONLY",
+    "output": "/tmp/protrading-web-production-candidate-20261005",
+    "command": "flutter build web --release --no-pub --output /tmp/protrading-web-production-candidate-20261005",
+    "logSha256": "c21d390e420f2c4f6e70723fa8e35115c6ec70e2c00da43446ca93dedccff2ce"
+  },
+  "browser": {
+    "status": "PASS_SCOPED_EMULATOR",
+    "authRestore": true,
+    "chartTarget": "ETHUSD/H4/Day Trading",
+    "newConsoleErrorsOrWarnings": 0,
+    "referralWallet": "available 2000/held 0/paid 2000 USD cents",
+    "leaderboard": "one labeled public alias rendered; private and stale rows absent; created fixtures removed",
+    "realMoneyTransferred": false,
+    "realBrokerProof": false
+  },
+  "host": {
+    "status": "INELIGIBLE",
+    "imageThreadProbe": "NOT_RUN",
+    "evidence": "host-preflight-local.json"
+  },
+  "otherChecks": {
+    "py_compile": "PASS",
+    "gitDiffCheck": "PASS",
+    "acceptanceTraceability": {
+      "status": "PASS",
+      "tests": 1,
+      "command": "/tmp/protrading-web-qa-env/bin/python -m unittest test.backend.test_v21_web_traceability",
+      "logSha256": "fb184ea57734512b1f088f9181209901b9cd46df3eb7eaa2500ea9e48dde20b5"
+    }
+  },
+  "production": {
+    "deployed": false,
+    "acceptanceClosed": 7,
+    "acceptanceOpen": 29,
+    "paidDeepSeekProbe": "NOT_RUN; separate approval pending",
+    "replacementHost": "NOT_AVAILABLE; access required"
+  }
+}

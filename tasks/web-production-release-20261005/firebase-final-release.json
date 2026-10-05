@@ -1,0 +1,71 @@
+{
+  "recordedAtUtc": "2026-10-05T08:27:56.923518+00:00",
+  "projectId": "protrading-ai-2026",
+  "hosting": [
+    {
+      "channelId": "live",
+      "url": "https://protrading-ai-2026.web.app",
+      "version": "projects/protrading-ai-2026/sites/protrading-ai-2026/versions/713a4e79b2aa6b74",
+      "release": "projects/protrading-ai-2026/sites/protrading-ai-2026/channels/live/releases/1791188456114000",
+      "releasedAt": "2026-10-05T08:20:56.114Z"
+    },
+    {
+      "channelId": "rollback-quota-20261005",
+      "url": "https://protrading-ai-2026--rollback-quota-20261005-h52jrjdh.web.app",
+      "version": "projects/protrading-ai-2026/sites/protrading-ai-2026/versions/20cb2d7b6d93edd6",
+      "release": "projects/protrading-ai-2026/sites/protrading-ai-2026/channels/rollback-quota-20261005/releases/1791188403184000",
+      "releasedAt": "2026-10-05T08:20:03.184Z"
+    },
+    {
+      "channelId": "rollback-20261005",
+      "url": "https://protrading-ai-2026--rollback-20261005-vrvrbdoo.web.app",
+      "version": "projects/protrading-ai-2026/sites/protrading-ai-2026/versions/8f55a00dd30bbf99",
+      "release": "projects/protrading-ai-2026/sites/protrading-ai-2026/channels/rollback-20261005/releases/1791182575045000",
+      "releasedAt": "2026-10-05T06:42:55.045Z"
+    }
+  ],
+  "rules": {
+    "release": "projects/protrading-ai-2026/releases/cloud.firestore",
+    "ruleset": "projects/protrading-ai-2026/rulesets/7fc0eb8f-92bd-4d49-baff-e76f6c33a346",
+    "sourceHashes": [
+      {
+        "name": "/Volumes/Developer/Projects/protrading_ai/firestore.rules",
+        "sha256": "ba8ade18c10b1e9a4748cd60b25006ac4822d5869d3690525084b19e8a39f0ad"
+      }
+    ]
+  },
+  "indexes": {
+    "indexes": [
+      {
+        "name": "projects/protrading-ai-2026/databases/(default)/collectionGroups/leaderboard/indexes/CICAgJiUsZIK",
+        "state": "READY",
+        "fields": [
+          {
+            "fieldPath": "source",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "isServerVerified",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "growthPercent",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "unitVolume",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ],
+        "queryScope": "COLLECTION"
+      }
+    ]
+  },
+  "publicMainJsSha256": "5bee67a2d577575666ba6ba11bd9696613e4dadc2e1d43edb7bbeba6e9ced1e1",
+  "publicBundleMatchesFinalBuild": true,
+  "webBundleFingerprint": "d7b1094dd85699a8d80708f76a304c4d1610bfffcaed82a35aa5fbbdf3e89ecd"
+}

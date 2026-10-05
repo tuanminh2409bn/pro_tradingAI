@@ -1,0 +1,38 @@
+{
+  "createdAtUtc": "2026-10-05T06:09:56.498183+00:00",
+  "sourceFingerprint": "52c2d5d5fe030c6380649c66319612f139637407148c0d831e3b843262458b5e",
+  "imageId": "sha256:d6969706625efed31478dc23d2555119eeb6a99c07d37200e20e6c6e157dc0b1",
+  "results": {
+    "local": {
+      "tests": 324,
+      "seconds": 18.75,
+      "skipped": 0,
+      "result": "PASS",
+      "logSha256": "37b62fd644da1cd8d9c79c4ac61712aea70b97dacb398ba81f2310665eac75bb",
+      "command": "python -m unittest discover -s test/backend -p 'test_*.py'",
+      "emulators": [
+        "Auth",
+        "Firestore"
+      ],
+      "qaApi": "http://127.0.0.1:8088",
+      "paidProviderRequests": 0
+    },
+    "vpsImage": {
+      "tests": 324,
+      "seconds": 53.848,
+      "skipped": 0,
+      "result": "PASS",
+      "logSha256": "42d88564ecadf1b0505ba0ff6e168cbbe43964b40f22b38551ecf4880ffcec74",
+      "command": "python -m unittest discover -s test/backend -p 'test_*.py'",
+      "emulators": [
+        "Auth",
+        "Firestore"
+      ],
+      "qaApi": "http://127.0.0.1:8088",
+      "paidProviderRequests": 0
+    }
+  },
+  "productionCutover": false,
+  "acceptanceRowsClosed": 7,
+  "acceptanceRowsOpen": 29
+}

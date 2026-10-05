@@ -1,0 +1,51 @@
+{
+  "paidCompletionsTriggeredByProbe": 0,
+  "finalRunningContainer": "protrading-web-live-20261005",
+  "endedAtEpoch": 1791183338.2114038,
+  "events": [
+    {
+      "deepseekConfigured": true,
+      "analysisCache": "redis",
+      "healthStatus": 200,
+      "phase": "candidate-first-cutover"
+    },
+    {
+      "phase": "candidate-first-cutover",
+      "unauthenticatedApiStatus": {
+        "/api/auth/onboarding": 401,
+        "/api/community/leaderboard": 401,
+        "/api/referral/withdrawals": 401
+      }
+    },
+    {
+      "deepseekConfigured": true,
+      "analysisCache": "redis",
+      "healthStatus": 200,
+      "phase": "rollback-to-old"
+    },
+    {
+      "onboardingOldVersionStatus": 404,
+      "phase": "rollback-to-old",
+      "rollbackResult": "PASS"
+    },
+    {
+      "deepseekConfigured": true,
+      "analysisCache": "redis",
+      "healthStatus": 200,
+      "phase": "final-new-live"
+    },
+    {
+      "phase": "final-new-live",
+      "unauthenticatedApiStatus": {
+        "/api/auth/onboarding": 401,
+        "/api/community/leaderboard": 401,
+        "/api/referral/withdrawals": 401
+      }
+    }
+  ],
+  "startedAtEpoch": 1791183295.305165,
+  "result": "PASS",
+  "oldContainer": "protrading-ai-referral-live-7ef3ab6",
+  "newContainer": "protrading-web-live-20261005",
+  "oldContainerRetained": true
+}

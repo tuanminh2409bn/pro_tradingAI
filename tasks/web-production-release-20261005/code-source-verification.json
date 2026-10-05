@@ -1,0 +1,20 @@
+{
+  "verifiedAtUtc": "2026-10-05T09:21:10.127310+00:00",
+  "codeCommit": "b3668d9878156cc6d583c8d5a3e6b831f9983d5a",
+  "results": [
+    {
+      "manifest": "backend-source-manifest.json",
+      "manifestSha256": "4ea1dbe97bd510951f7ee698f94d9db11f6fa3de5759c39b0b8037b021694477",
+      "sourceFiles": 28,
+      "gitHeadMatchesDeployedSource": true,
+      "mismatches": []
+    },
+    {
+      "manifest": "web-final-manifest.json",
+      "manifestSha256": "95bd820ebf2b1bf7da714c3e36cd1b7c55a9fb95571e4ca25599302fb61840c8",
+      "sourceFiles": 32,
+      "gitHeadMatchesDeployedSource": true,
+      "mismatches": []
+    }
+  ]
+}

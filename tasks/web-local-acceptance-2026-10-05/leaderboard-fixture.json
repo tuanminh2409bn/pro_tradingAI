@@ -1,0 +1,20 @@
+{
+  "environment": "loopback-emulator-only",
+  "createdAt": "2026-10-05T04:42:13.438503+00:00",
+  "documentIds": [
+    "5c99ba1f9a2347d3981a43bf91b88670",
+    "5c99ba1f9a2347d3981a43bf91b88670a",
+    "5c99ba1f9a2347d3981a43bf91b88670b"
+  ],
+  "expectedVisibleAliases": [
+    "[Emulator QA] Verified alias"
+  ],
+  "expectedHidden": [
+    "private fields",
+    "stale row"
+  ],
+  "realBrokerProof": false,
+  "cleanup": "removed-only-the-3-created-fixtures",
+  "cleanupAt": "2026-10-05T04:43:10.729446+00:00",
+  "browserResult": "one-valid-alias-only; no private or stale row; zero new console errors/warnings"
+}

@@ -73,10 +73,12 @@ scope only; it does not mark a requirement complete.
 |---|---|---|---|
 | J-01..03 Journal | Trade metric, strict finite parser, measured PF/payoff/flat counts, atomic owner snapshot, UTC/weekend heatmap, single/flat P&L pixel, locked pointer/focus/semantics/relock, TTS locale/generation and owner-loaded CSV/filter tests | 04/10 FE c63467e released: 237 Flutter + 2 Web-only skip; local CSV/precision/ratios/EN-VI summary/play-stop UI passed. Production public bundle matches and gate AX hides private controls/data. Broker/currency/initial-risk sample and positive entitled device CSV/audio remain | IN_PROGRESS |
 | N-01..03 News | Parser, sentiment, scenario, fake-clock tests | Local Web showed empty/unavailable state on 2026-09-25; provider sample and cross-tab Red Zone remain | IN_PROGRESS |
-| B-01..03 Backtest | Pure replay, future-mutation isolation, BUY/SELL accounting, lock/review/ack, restore, and tamper-rejection tests | Local Web timed out to unavailable state without provider history; approved-history parity, durable state, and full simulation remain | IN_PROGRESS |
-| C-01..03 Community | Token-bound idempotent post/comment/like, atomic counters, sanitized share deep link, owner-only like reads and lifecycle tests | 2026-10-03 local Auth/Firestore/FastAPI browser post/comment counts 1/1, share after login and automatic like restoration; v1 production released with verified empty collections and Standard browser empty state. Production write flow and W25 verified leaderboard remain | IN_PROGRESS |
-| REF-01..03 Referral | Token-bound unique code/registration attribution, private registry, exact origin/QR payload, verified-money parser, responsive/copy/retry tests and Chrome video lifecycle/encoding 4/4 | 2026-10-04 FE a54d67d / BE 7ef3ab6 production: actual QR/banner/video downloads; independent H.264 decoder verifies 1200×630, 5.964 s, 99,573 bytes and correct QR at first/middle/last frames. Local positive new-registration/count restoration passed. Production new-account registration and W27 ledger/Admin withdrawal remain | IN_PROGRESS |
-| ROLE-01..05 | Exact claim allowlist, quota table, reset/timezone, fail-closed policy, atomic-boundary concurrency, Standard-only ad eligibility, Professional receipt lifecycle, exclusive Partner capability matrix, and Enterprise membership/aggregate-risk fixtures | Firebase/shared-store enforcement, AdMob/store sandbox integration, Rules/API bypass denial, durable Enterprise membership, and account-by-account entitlement matrix | IN_PROGRESS |
+| B-01..03 Backtest | Pure replay/no-future-data, BUY/SELL, risk/restore/tamper tests; 05/10 slow-storage pause red regression then 17/17 pass, full Flutter 273 pass | 05/10 final Hosting 713a4e79b2aa6b74: 2999 server BTCUSD/M5 bars, BUY/SELL close balance 999.56318, restore/pause cursor stable, quota stays 1/2. Licensed-history parity and full risk/review matrix remain; web-production-release-20261005 | IN_PROGRESS |
+| C-01 Community interactions | Token-bound idempotent post/comment/like, ownership/cross-user Rules, atomic counters, sanitized share link and lifecycle tests; final Python 331 and Flutter 273 pass | 05/10 final Hosting 713a4e79b2aa6b74: real QA post/comment/like/clipboard copy/open share/reload, counters 1/1 and owner like restored; SDK readback confirms owner/one comment/one marker. web-production-release-20261005, W24 PASS | PASS |
+| C-02..03 Privacy/leaderboard | Privacy payload exclusion, token leaderboard/public DTO, fresh role/private-field/freshness/finite guards, direct Firestore denial | 05/10 API/private Rules deployed, index READY; Emulator public/private/stale proof passed. Broker publisher, consent/legacy migration and real ranking sample remain, W25 open | IN_PROGRESS |
+| REF-01..02 Link/Marketing Kit | Server-issued unique code/private registry, canonical origin/QR payload, owner/retry guards, kit/copy/download/decode tests | 05/10 final Hosting 713a4e79b2aa6b74: two real QA signups from inviter link, count 0→1→2; readback attribution correct, reload count 2. Native QR/banner/H.264 video 1200×630/6.181s/96466 bytes, QR image/first/middle/last frames matches server. web-production-release-20261005, W26 PASS | PASS |
+| REF-03 Ledger/withdrawal | Integer cents/immutable receipt/reversal, reserve/concurrency, owner Rules/fresh Admin/API review tests | BE/FE/Rules deployed 05/10. Emulator CREDIT/HOLD/APPROVED/PAID readback available 2000/held 0/paid 2000 cents; no real transfer. Real receipt/refund/review/payout reconciliation remains, W27 open | IN_PROGRESS |
+| ROLE-01..05 | Claim allowlist/quota/reset/concurrency, fail-closed policy, Professional/Partner/Enterprise tests; 05/10 onboarding single-flight/UID/preserve-role/retry and quota summary refresh without consume/reset, 40 mixed refresh/consume concurrency tests | BE/FE deployed 05/10; two Web production signups auto-Standard/no Admin, server quota 0/2, Backtest restore 1/2. Other production role/tenant/entitlement matrix and Mobile AdMob/store sandbox obligations remain | IN_PROGRESS |
 
 ## Admin and operations
 
@@ -84,7 +86,7 @@ scope only; it does not mark a requirement complete.
 |---|---|---|---|
 | ADM-01 | Verified-Admin boundary and exact five-minute authoritative prompt cache/invalidation tests | Local Auth/Firestore Emulator and Web role matrix passed on 2026-09-25; existing Admin claim audit and save propagation without rebuild remain | IN_PROGRESS |
 | ADM-02 | 50/100-asset worker, volume/barrier filter, model call-count, provenance, structured target, atomic idempotency-boundary; Radar snapshot/clear/generation, strength-unmeasured, EN-VI/390px and chart-target matrix tests | 04/10 FE 1487cd8: native production ETHUSD→ETHUSD/M5 candles/price, local H4/Day Trading, full Flutter 247 + 2 skip. Worker/provider/license/freshness/50-100 staging SLA, real AI/FCM and device/load/role proof remain | IN_PROGRESS |
-| ADM-03 | Server-side segment intersection, verified-Admin, opt-out, payload limits, provider reconciliation, opaque-token retirement, token-free audit, and structured deep-link tests | Firestore/FCM adapters, persistent audit, and Web/Android/iOS sandbox deliveries | IN_PROGRESS |
+| ADM-03 | Server-side segment intersection, verified-Admin, opt-out, payload limits, provider reconciliation, token-free audit; 05/10 UID/rotation/disable/dispose guards, retire only UnregisteredError, once-only worker notification and same-origin structured chart tests | 05/10 final local bundle preserves Standard and opens ETHUSD/H4/Day Trading after reload; no AI call from chart target. Persistent audit, real FCM delivery/rotation/click, role/segment device matrix remain | IN_PROGRESS |
 | ADM-04 | Closed output allowlist, sensitive/nested-field rejection, HMAC pseudonym/key rotation, consent/version/retention, and pseudonymous deletion tests | Approved consent policy, secret-managed key, real sink/log scan, and retained/deleted Data Lake sample | IN_PROGRESS |
 | ADM-05 | Kill-switch contract and analysis/chat/new-execution wiring; 50-100 watchlist validation | Authenticated bypass, global-risk, watchlist worker, approval, and service-status demonstration | IN_PROGRESS |
 
@@ -97,14 +99,32 @@ scope only; it does not mark a requirement complete.
 | C - AI engine | Three agents, aggregator, confirmation, Veto, no fabrication | IN_PROGRESS |
 | D - Tab 1 | 27/27 render and 8/8 functions | IN_PROGRESS |
 | E - Tabs 2-3 | Journal/TTS and news/scenario/Red Zone | IN_PROGRESS |
-| F - Tabs 4-6 | Backtest, Community, Referral | IN_PROGRESS — Community post/like passed on local Emulator; Backtest/Referral provider and money flows remain |
-| G - Roles/Admin/Radar | Quotas, entitlements, controls, worker, push, masking | IN_PROGRESS — local role gate and Admin Rules matrix passed; backend controls, provider worker and push remain |
+| F - Tabs 4-6 | Backtest, Community, Referral | IN_PROGRESS — W24/C-01 and W26/REF-01..02 PASS on final 05/10 production release; Backtest restore/pause and quota demonstrated. Broker/history/business-receipt and production money proof remain |
+| G - Roles/Admin/Radar | Quotas, entitlements, controls, worker, push, masking | IN_PROGRESS — auto-Standard production signup/Profile quota passed, role/Admin Rules and FCM lifecycle tests passed; other provider/role/load/device proof remains |
 | H - Release | Local Python/Flutter regression and Web/Android/iOS release compilation are green; APK production signing, iOS signing, same-build device runtime, authenticated security/load, staging evidence, named owners, rollback drill, sign-off, and G6 remain | IN_PROGRESS |
 
 Local Web QA checkpoint 2026-09-25: `checkpoint-2026-09-25-web-fullstack-qa.md`
 records the build hash, browser paths, **216/216 Python** tests with Auth and
 Firestore Emulators, **120/120 Flutter** tests, analyzer result, and exact
 remaining gaps. These are partial row evidence, not `PASS` records.
+
+Historical VPS candidate checkpoint 2026-10-05:
+[`current-vps-runtime-2026-10-05/README.md`](current-vps-runtime-2026-10-05/README.md)
+records the immutable Python 3.12 image, matching source hashes, **324/324**
+local and **324/324** VPS tests against Emulators with no skips, default-seccomp
+compatibility and loopback candidate health/Redis/auth denial. The supported-host
+gate remains false; the two approved DeepSeek read-only requests return 401.
+These are pre-cutover measurements retained for traceability.
+
+Final production checkpoint 2026-10-05:
+[web-production-release-20261005/README.md](web-production-release-20261005/README.md).
+Source `b3668d9` matches deployed BE and FE manifests; Python **331/331 local
+and VPS image**, Flutter **273 + 2 existing Web-only VM skips**, Node **8/8**,
+analyzer 0 errors/warnings. BE/FE/Rules deployed, leaderboard index READY;
+BE rollback drill and isolated Redis restore/persistence passed. Hosting
+`713a4e79b2aa6b74` has same-build production proof for **C-01**, **REF-01..02**.
+DeepSeek key valid but last balance unavailable; supported-host gate still
+false. Other acceptance rows retain their specific open conditions.
 
 ## Evidence record template
 

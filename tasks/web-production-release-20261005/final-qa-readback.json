@@ -1,0 +1,31 @@
+{
+  "checkedAtUtc": "2026-10-05T08:30:57.671951+00:00",
+  "qaAccounts": [
+    {
+      "qaUidHash": "35e79b00c69e7179",
+      "role": "standard",
+      "admin": false,
+      "attributionMatchesReferral": true,
+      "quotaSource": "server_enforced",
+      "analysisUsed": 0,
+      "analysisLimit": 2,
+      "backtestUsed": 1,
+      "backtestLimit": 2
+    },
+    {
+      "qaUidHash": "36b344420af176da",
+      "role": "standard",
+      "admin": false,
+      "attributionMatchesReferral": true,
+      "quotaSource": "server_enforced",
+      "analysisUsed": 0,
+      "analysisLimit": 2,
+      "backtestUsed": 0,
+      "backtestLimit": 2
+    }
+  ],
+  "inviterRegisteredCount": 2,
+  "hostingVersion": "713a4e79b2aa6b74",
+  "financialReceiptsSeeded": 0,
+  "paidProviderRequestsTriggered": 0
+}

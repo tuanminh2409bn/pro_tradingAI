@@ -1,0 +1,17 @@
+{
+  "endedAtEpoch": 1791183170.5695252,
+  "finalRunningContainer": "protrading-ai-referral-live-7ef3ab6",
+  "result": "FAIL_ROLLED_BACK",
+  "events": [
+    {
+      "analysisCache": "redis",
+      "healthStatus": 200,
+      "deepseekConfigured": true,
+      "phase": "candidate-first-cutover"
+    }
+  ],
+  "paidCompletionsTriggeredByProbe": 0,
+  "startedAtEpoch": 1791183145.2566657,
+  "oldContainer": "protrading-ai-referral-live-7ef3ab6",
+  "newContainer": "protrading-web-live-20261005"
+}

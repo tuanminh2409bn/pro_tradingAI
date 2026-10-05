@@ -1,0 +1,1120 @@
+{
+  "requested_since_utc": "2026-10-02T17:00:00Z",
+  "events": [
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:52:22.416393571Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:52:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:52:22.416399160Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:52:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:52:22.416403326Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:52:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:52:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1336,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:52:22.416407240Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:53:22.434775314Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:53:22.434838261Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00"
+    },
+    {
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T05:53:22.434843672Z",
+      "event": "master_prompt_fallback",
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00"
+    },
+    {
+      "candle_timestamp": 1791006300,
+      "timestamp_utc": "2026-10-03T05:53:22.434847920Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:53:22.434852243Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": true,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:53:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1417,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:53:22.434860686Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:55:12.413414988Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:55:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:55:12.413421347Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:55:12+07:00"
+    },
+    {
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T05:55:22.419008636Z",
+      "event": "master_prompt_fallback",
+      "timestamp_vietnam": "2026-10-03T12:55:22+07:00"
+    },
+    {
+      "candle_timestamp": 1791006600,
+      "timestamp_utc": "2026-10-03T05:55:22.419047922Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:55:22+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:55:22.419053352Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": true,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:55:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:55:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1880,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:55:22.419058303Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:02.416436769Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:02+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:02.416497269Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:02+07:00"
+    },
+    {
+      "candle_timestamp": 1791006600,
+      "timestamp_utc": "2026-10-03T05:56:02.416515949Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "HIT",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:56:02+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:02.416537220Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": true,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": true,
+      "timestamp_vietnam": "2026-10-03T12:56:02+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:02+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1584,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:02.416546095Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415775313Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415898619Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "candle_timestamp": 1791006600,
+      "timestamp_utc": "2026-10-03T05:56:12.415902290Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "HIT",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415906124Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": true,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": true,
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1206,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:12.415910104Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415914960Z",
+      "event": "analysis_requested",
+      "timeframe": "15",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415918525Z",
+      "event": "analysis_started",
+      "timeframe": "15",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T05:56:12.415925117Z",
+      "event": "master_prompt_fallback",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "candle_timestamp": 1791005400,
+      "timestamp_utc": "2026-10-03T05:56:12.415928374Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "15",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415931770Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": true,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1339,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:12.415935246Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415939368Z",
+      "event": "analysis_requested",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415942633Z",
+      "event": "analysis_started",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T05:56:12.415945900Z",
+      "event": "master_prompt_fallback",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "candle_timestamp": 1791000000,
+      "timestamp_utc": "2026-10-03T05:56:12.415949238Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415967383Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1934,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:12.415971346Z"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415978668Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415982071Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:12.415988958Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:12+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1676,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:12.415992644Z"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430420320Z",
+      "event": "analysis_requested",
+      "timeframe": "15",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430479891Z",
+      "event": "analysis_started",
+      "timeframe": "15",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430486276Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1730,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:22.430490642Z"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430495720Z",
+      "event": "analysis_requested",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430499599Z",
+      "event": "analysis_started",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "XAUUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430510691Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 2418,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:22.430514757Z"
+    },
+    {
+      "symbol": "EURUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430519230Z",
+      "event": "analysis_requested",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "EURUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430526255Z",
+      "event": "analysis_started",
+      "timeframe": "60",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "EURUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430529857Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 1585,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:22.430533366Z"
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430537850Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp_utc": "2026-10-03T05:56:22.430542179Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:22+07:00"
+    },
+    {
+      "symbol": "BNBUSD",
+      "timestamp_utc": "2026-10-03T05:56:32.414557887Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 527,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:32.414593746Z"
+    },
+    {
+      "symbol": "US100",
+      "timestamp_utc": "2026-10-03T05:56:32.414599942Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00"
+    },
+    {
+      "symbol": "US100",
+      "timestamp_utc": "2026-10-03T05:56:32.414603915Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00"
+    },
+    {
+      "symbol": "US100",
+      "timestamp_utc": "2026-10-03T05:56:32.414607918Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T12:56:32+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 714,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T05:56:32.414611722Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T07:52:03.591318588Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T14:52:03+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T07:52:03.591329128Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T14:52:03+07:00"
+    },
+    {
+      "candle_timestamp": 1791013500,
+      "timestamp_utc": "2026-10-03T07:52:03.591340296Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T14:52:03+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T07:52:03.591343895Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T14:52:03+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T14:52:03+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 2737,
+      "outcome": "fallback",
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T07:52:03.591347701Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T08:45:06.648051680Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T15:45:06+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T08:45:06.648057757Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T15:45:06+07:00"
+    },
+    {
+      "candle_timestamp": 1791016500,
+      "timestamp_utc": "2026-10-03T08:45:06.648061591Z",
+      "event": "analysis_cache",
+      "symbol": "BTCUSD",
+      "scope": "production_named",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "result": "SET",
+      "backend": "redis",
+      "timestamp_vietnam": "2026-10-03T15:45:06+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T08:45:06.648065200Z",
+      "event": "analysis_signal_saved",
+      "setup_ready": false,
+      "veto": false,
+      "scope": "production_named",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "cache_hit": false,
+      "timestamp_vietnam": "2026-10-03T15:45:06+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T15:45:06+07:00",
+      "event": "backend_operation",
+      "error_code": "provider_unavailable",
+      "scope": "production_named",
+      "latency_ms": 3111,
+      "outcome": "fallback",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "fallback": true,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T08:45:06.648068937Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T08:52:03.221940559Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T15:52:03+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T08:52:03.221955803Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T15:52:03+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T15:52:11+07:00",
+      "event": "backend_operation",
+      "error_code": "internal_error",
+      "scope": "production_named",
+      "latency_ms": 1623,
+      "outcome": "failure",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "fallback": false,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T08:52:11.632169626Z"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T09:08:33.213927840Z",
+      "event": "analysis_requested",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T16:08:33+07:00"
+    },
+    {
+      "symbol": "BTCUSD",
+      "timestamp_utc": "2026-10-03T09:08:33.213977901Z",
+      "event": "analysis_started",
+      "timeframe": "5",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "scope": "production_named",
+      "timestamp_vietnam": "2026-10-03T16:08:33+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T16:08:33+07:00",
+      "event": "backend_operation",
+      "error_code": "internal_error",
+      "scope": "production_named",
+      "latency_ms": 1607,
+      "outcome": "failure",
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "fallback": false,
+      "operation": "analysis",
+      "timestamp_utc": "2026-10-03T09:08:33.213987927Z"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T17:29:45+07:00",
+      "event": "backend_operation",
+      "error_code": "internal_error",
+      "scope": "production_named",
+      "latency_ms": 735,
+      "outcome": "failure",
+      "container": "protrading-ai-news-live-6271bd6007ae",
+      "fallback": false,
+      "operation": "ai_chat",
+      "timestamp_utc": "2026-10-03T10:29:45.332896046Z"
+    },
+    {
+      "container": "protrading-ai-news-live-6271bd6007ae",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T10:29:45.332907569Z",
+      "event": "chat_failed",
+      "timestamp_vietnam": "2026-10-03T17:29:45+07:00"
+    },
+    {
+      "timestamp_vietnam": "2026-10-03T17:57:51+07:00",
+      "event": "backend_operation",
+      "error_code": "internal_error",
+      "scope": "production_named",
+      "latency_ms": 621,
+      "outcome": "failure",
+      "container": "protrading-ai-news-live-6271bd6007ae",
+      "fallback": false,
+      "operation": "ai_chat",
+      "timestamp_utc": "2026-10-03T10:57:51.309353108Z"
+    },
+    {
+      "container": "protrading-ai-news-live-6271bd6007ae",
+      "scope": "production_named",
+      "timestamp_utc": "2026-10-03T10:57:51.309419677Z",
+      "event": "chat_failed",
+      "timestamp_vietnam": "2026-10-03T17:57:51+07:00"
+    }
+  ],
+  "requested_until_utc": "2026-10-05T01:59:59.438895+00:00",
+  "collected_at_utc": "2026-10-05T01:59:59.438895+00:00",
+  "sources": [
+    {
+      "first_retained_timestamp": "2026-10-03T17:34:31.233180895Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 10531,
+      "container": "protrading-ai-referral-live-7ef3ab6",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-05T01:55:07.354680738Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T17:31:43.554710181Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 18,
+      "container": "protrading-ai-referral-candidate-7ef3ab6",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T17:41:26.696426606Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T13:56:36.719746946Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 1775,
+      "container": "protrading-ai-community-live-f11707a",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T17:15:49.904816405Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T13:54:59.550366726Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 18,
+      "container": "protrading-ai-community-candidate-f11707a",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T14:01:02.553063108Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T12:41:20.045565087Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 885,
+      "container": "protrading-ai-backtest-live-0de11ce",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T13:47:38.020263441Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T12:41:04.582400063Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 16,
+      "container": "protrading-ai-backtest-candidate-0de11ce",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T12:56:37.082894830Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T11:54:16.972977986Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 194,
+      "container": "protrading-ai-cost-live-64f7341",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T12:41:10.711131530Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T11:53:39.092324693Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 16,
+      "container": "protrading-ai-cost-candidate-64f7341",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T11:56:41.692536176Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T11:13:14.527306995Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 519,
+      "container": "protrading-ai-services-live-e03feca1d470",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T11:51:58.076598790Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T11:11:04.497939485Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 12,
+      "container": "protrading-ai-services-candidate-e03feca1d470",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T11:11:21.486282805Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T10:11:56.313719792Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 2692,
+      "container": "protrading-ai-news-live-6271bd6007ae",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T11:13:06.068135438Z",
+      "matching_events": 4
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T10:09:49.102720011Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 12,
+      "container": "protrading-ai-news-candidate-6271bd6007ae",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T10:10:28.880743597Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T08:40:38.203376122Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 1701,
+      "container": "protrading-ai-web-live-49660550a6fc",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T10:11:51.693482434Z",
+      "matching_events": 11
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T08:39:10.592171984Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 10,
+      "container": "protrading-ai-web-candidate-49660550a6fc",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T08:39:45.123114798Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T07:50:47.155088041Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 19,
+      "container": "protrading-ai-web-candidate-bd64ab0fad17",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T08:41:46.050325684Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T06:25:33.239797538Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 16,
+      "container": "protrading-ai-web-candidate-ddab7db107af",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T08:41:46.051812005Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T05:50:55.067280090Z",
+      "deepseek_mention_lines": 2,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 1415,
+      "container": "protrading-ai-tv-live-387ec598b9af",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T08:40:33.740791400Z",
+      "matching_events": 67
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T05:34:12.640148994Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 17,
+      "container": "protrading-ai-tv-candidate-387ec598b9af",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T05:57:01.008929104Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-02T17:00:52.631367108Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 1666,
+      "container": "protrading-ai-live-7c5ef68",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T05:50:52.451015653Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": null,
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 0,
+      "container": "protrading-ai-candidate-7c5ef68",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": null,
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": "2026-10-03T05:50:42.247443405Z",
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "candidate_excluded",
+      "lines_scanned": 29,
+      "container": "protrading-ai-candidate-fcf1fe88066a",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": "2026-10-03T05:50:42.373168186Z",
+      "matching_events": 0
+    },
+    {
+      "first_retained_timestamp": null,
+      "deepseek_mention_lines": 0,
+      "docker_logs_exit_code": 0,
+      "scope": "production_named",
+      "lines_scanned": 0,
+      "container": "protrading-ai",
+      "usage_marker_lines": 0,
+      "last_retained_timestamp": null,
+      "matching_events": 0
+    }
+  ],
+  "source": "Docker retained logs, allowlisted fields only",
+  "limitations": [
+    "Retained Docker logs only; no provider dashboard export or Firestore audit query.",
+    "A backend event is not a provider request. No inferred request-to-event associations.",
+    "No usage marker or provider HTTP response found in scanned logs. Request counts, tokens and cost are unknown, not zero.",
+    "Container scope is determined by name; candidate logs excluded from production totals.",
+    "Docker timestamps describe log emission; buffering may delay prints.",
+    "No raw prompt, user identifier, credential or provider response body exported."
+  ],
+  "summary": {
+    "containers_scanned": 22,
+    "production_named_containers": 10,
+    "lines_scanned": 21561,
+    "events_exported": 82,
+    "production_event_counts": {
+      "analysis_requested": 17,
+      "analysis_started": 17,
+      "analysis_signal_saved": 15,
+      "backend_operation": 19,
+      "master_prompt_fallback": 4,
+      "analysis_cache": 8,
+      "chat_failed": 2
+    },
+    "cache_results": {
+      "SET": 6,
+      "HIT": 2
+    },
+    "provider_usage_records": 0,
+    "observed_provider_completion_requests": null,
+    "observed_total_tokens": null,
+    "observed_cost_usd": null
+  }
+}

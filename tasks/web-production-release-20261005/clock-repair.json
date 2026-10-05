@@ -1,0 +1,24 @@
+{
+  "clockAdvancedSeconds": 2.0363709926605225,
+  "ntpUdpUnavailable": true,
+  "result": "PASS",
+  "afterUnixTime": 1791183957.1178923,
+  "originalUnixTime": 1791183955.081147,
+  "observations": [
+    {
+      "lowerOffset": 1.036661148071289,
+      "roundTripSeconds": 0.12563705444335938,
+      "provider": "https://www.google.com/generate_204",
+      "date": "Mon, 05 Oct 2026 07:05:56 GMT",
+      "upperOffset": 2.1622982025146484
+    },
+    {
+      "lowerOffset": 0.9190969467163086,
+      "roundTripSeconds": 0.11727404594421387,
+      "provider": "https://www.cloudflare.com/cdn-cgi/trace",
+      "date": "Mon, 05 Oct 2026 07:05:56 GMT",
+      "upperOffset": 2.0363709926605225
+    }
+  ],
+  "firebaseClockToleranceUnchanged": true
+}

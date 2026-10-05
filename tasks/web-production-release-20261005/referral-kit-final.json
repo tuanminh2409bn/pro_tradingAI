@@ -1,0 +1,52 @@
+{
+  "artifacts": [
+    {
+      "bytes": 7747,
+      "filename": "protrading-referral-Y48bMIzsdoTiyuPU3C5p4Yax-qr.png",
+      "height": 600,
+      "qrMatchesServerLink": true,
+      "width": 600,
+      "sha256": "4814b8890e8658fd6d7577c5f4f0c38c16964454719c20f38d2ebb6ac668e462"
+    },
+    {
+      "bytes": 71307,
+      "filename": "protrading-referral-Y48bMIzsdoTiyuPU3C5p4Yax-banner.png",
+      "height": 630,
+      "qrMatchesServerLink": true,
+      "width": 1200,
+      "sha256": "03b62158b215eb334412c34281aadd5e80023716cd9b40f33c0ba13b3567ed06"
+    },
+    {
+      "bytes": 96466,
+      "codec": "avc1",
+      "durationSeconds": 6.181,
+      "filename": "protrading-referral-Y48bMIzsdoTiyuPU3C5p4Yax-video.mp4",
+      "frames": [
+        {
+          "height": 630,
+          "qrMatchesServerLink": true,
+          "time": 0,
+          "width": 1200
+        },
+        {
+          "height": 630,
+          "qrMatchesServerLink": true,
+          "time": 3.064,
+          "width": 1200
+        },
+        {
+          "height": 630,
+          "qrMatchesServerLink": true,
+          "time": 5.8634,
+          "width": 1200
+        }
+      ],
+      "sha256": "83d4edea9b61cb7599510620f5529583b50bca0f4e8bce7309197076947148c7"
+    }
+  ],
+  "expectedServerLink": "https://protrading-ai-2026.web.app/?ref=Y48bMIzsdoTiyuPU3C5p4Yax",
+  "hostingVersion": "713a4e79b2aa6b74",
+  "validation": "Apple Vision and AVFoundation; native files downloaded by production Web",
+  "paidProviderRequests": 0,
+  "result": "PASS"
+}

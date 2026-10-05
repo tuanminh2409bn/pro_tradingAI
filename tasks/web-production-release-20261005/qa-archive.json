@@ -1,0 +1,8 @@
+{
+  "files": 117,
+  "archiveSha256": "8aeec99c308b247a78015f354fdf6ecbc89bc3c416ed5043d8f5c8123396306b",
+  "updatedFixture": "test/backend/test_leaderboard_rules.py",
+  "updatedFixtureSha256": "8a4a1acb5d2a93e57df647e081bf9745464d2e7e46f3134b189df7d62a632fb6",
+  "productionCredentials": false,
+  "syntheticDataScope": "loopback Emulators only"
+}

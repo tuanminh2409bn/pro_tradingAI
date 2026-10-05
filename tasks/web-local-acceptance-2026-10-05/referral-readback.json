@@ -1,0 +1,34 @@
+{
+  "checkedAtUtc": "2026-10-05T03:57:27.022012+00:00",
+  "environment": "loopback Auth/Firestore Emulator and FastAPI; synthetic browser fixtures only",
+  "realMoneyTransferred": false,
+  "currency": "USD",
+  "walletSource": "admin_verified_receipts",
+  "policyVersion": "manual-subscription-v1",
+  "creditsMinor": 4000,
+  "reversedMinor": 0,
+  "heldMinor": 0,
+  "paidMinor": 2000,
+  "availableMinor": 2000,
+  "openRequest": false,
+  "ledger": [
+    {
+      "kind": "CREDIT",
+      "amountMinor": 4000
+    },
+    {
+      "kind": "HOLD",
+      "amountMinor": 2000
+    },
+    {
+      "kind": "PAYOUT",
+      "amountMinor": 2000
+    }
+  ],
+  "withdrawals": [
+    {
+      "status": "PAID",
+      "amountMinor": 2000
+    }
+  ]
+}

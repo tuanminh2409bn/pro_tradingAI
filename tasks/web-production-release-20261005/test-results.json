@@ -1,0 +1,63 @@
+{
+  "createdAtUtc": "2026-10-05T08:18:43.138235+00:00",
+  "backendSourceFingerprint": "462688f7e329cb6a1d6550ffe5edbbf02b7b6dfbd7d3d85f242d6c73205b92f7",
+  "backendImageId": "sha256:be21990d6d9ca2faf463d4a9d8ae8c25f44ef5dc136777fdcd20c7b9cf1bfe8b",
+  "results": {
+    "backendLocal": {
+      "result": "PASS",
+      "tests": 331,
+      "seconds": 82.011,
+      "skipped": 0,
+      "logSha256": "c05673dc53c3e4e68e53e06a491a1d19da7c1ec2dc3b6c10e8ad49488a5d4d8c",
+      "environment": "Auth/Firestore/FastAPI loopback Emulators",
+      "paidProviderRequests": 0
+    },
+    "backendVpsImage": {
+      "result": "PASS",
+      "tests": 331,
+      "seconds": 67.052,
+      "skipped": 0,
+      "logSha256": "33d8f8c17037ae127a2830d22082d04c7a329b995c41c3d3ee2b6bfa1045f0cd",
+      "environment": "Auth/Firestore/FastAPI loopback Emulators",
+      "paidProviderRequests": 0
+    },
+    "flutter": {
+      "result": "PASS",
+      "tests": 273,
+      "skipped": 2,
+      "skipReason": "Existing browser-only cases unavailable in Dart VM",
+      "logSha256": "5cf405a7cadda5e13f208a2e040eabfbf3b8f506fa75a0eceea769b089b8db87"
+    },
+    "node": {
+      "result": "PASS",
+      "tests": 8,
+      "skipped": 0,
+      "logSha256": "b6db493c0ee3d7f2430f82b8ec7f1388bd7e9400a0ba037798cb4a1cf5895a0d"
+    },
+    "backtestRegression": {
+      "result": "PASS",
+      "tests": 17,
+      "reproducedBeforeFix": true,
+      "scenario": "pause during slow storage at 10X; cursor remains at first pending tick"
+    },
+    "analyzer": {
+      "result": "PASS",
+      "errors": 0,
+      "warnings": 0,
+      "infos": 3,
+      "infoScope": "existing Mobile activeColor deprecations",
+      "logSha256": "60742094248a15fb696c581284cd3352c9dedf769dea94902cce5205daff5047"
+    },
+    "webProductionBuild": {
+      "result": "PASS",
+      "mode": "production",
+      "bundleFingerprint": "d7b1094dd85699a8d80708f76a304c4d1610bfffcaed82a35aa5fbbdf3e89ecd",
+      "logSha256": "ceeeb4f52eceb21c0ac4bf92495cce03b8256205241e4a5e52a25214332472b3"
+    }
+  },
+  "priorFailedVpsRun": {
+    "tests": 331,
+    "failures": 1,
+    "cause": "Fresh QA timestamp from VPS was ahead of API host. Fresh fixture moved one minute into past; future rejection assertion unchanged."
+  }
+}

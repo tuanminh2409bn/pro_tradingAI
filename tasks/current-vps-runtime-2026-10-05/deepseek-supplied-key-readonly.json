@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "/models": {
+      "httpStatus": 200
+    },
+    "/user/balance": {
+      "httpStatus": 200
+    }
+  },
+  "modelsAvailable": [
+    "deepseek-flash",
+    "deepseek-v4-pro"
+  ],
+  "hasBudgetForUsd010Probe": false,
+  "completionRequests": 0,
+  "credentialPrinted": false,
+  "result": "PASS"
+}

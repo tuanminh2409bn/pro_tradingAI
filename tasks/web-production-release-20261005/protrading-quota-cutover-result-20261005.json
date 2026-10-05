@@ -1,0 +1,39 @@
+{
+  "stages": {
+    "finalRelease": {
+      "health": 200,
+      "analysisCache": "redis",
+      "unauthenticatedStatuses": {
+        "leaderboard": 401,
+        "withdrawal": 401,
+        "onboarding": 401
+      }
+    },
+    "rollback": {
+      "health": 200,
+      "analysisCache": "redis",
+      "unauthenticatedStatuses": {
+        "leaderboard": 401,
+        "withdrawal": 401,
+        "onboarding": 401
+      }
+    },
+    "newRelease": {
+      "health": 200,
+      "analysisCache": "redis",
+      "unauthenticatedStatuses": {
+        "leaderboard": 401,
+        "withdrawal": 401,
+        "onboarding": 401
+      }
+    }
+  },
+  "finishedAtUtc": "2026-10-05T08:03:01.715987+00:00",
+  "financialMutations": 0,
+  "previousContainer": "protrading-web-live-20261005",
+  "paidProviderRequestsTriggered": 0,
+  "imageId": "sha256:be21990d6d9ca2faf463d4a9d8ae8c25f44ef5dc136777fdcd20c7b9cf1bfe8b",
+  "result": "PASS",
+  "startedAtUtc": "2026-10-05T08:02:17.844706+00:00",
+  "container": "protrading-web-quota-live-20261005"
+}

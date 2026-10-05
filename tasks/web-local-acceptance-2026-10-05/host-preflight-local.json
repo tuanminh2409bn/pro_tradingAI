@@ -1,0 +1,10 @@
+{
+  "host_eligible": false,
+  "image_thread_probe": "NOT_RUN",
+  "issues": [
+    "Requires a replacement Ubuntu 24.04/26.04 LTS host.",
+    "Docker daemon unavailable or below the project floor 25.0.",
+    "Default seccomp protection is unavailable."
+  ],
+  "release_acceptance": "REQUIRES_STAGING_AND_ROLLBACK"
+}

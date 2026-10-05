@@ -1,0 +1,13 @@
+{
+  "checkedAtUtc": "2026-10-05T09:22:22.884481+00:00",
+  "endpoint": "/user/balance",
+  "paidCompletionsTriggered": 0,
+  "httpStatus": 200,
+  "isAvailable": false,
+  "balances": [
+    {
+      "currency": "USD",
+      "totalBalance": "-0.13"
+    }
+  ]
+}

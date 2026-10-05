@@ -1,0 +1,19 @@
+{
+  "os": "Ubuntu 16.04.7 LTS",
+  "productionCutover": false,
+  "image_thread_probe": "NOT_RUN_BY_STRICT_GATE",
+  "issues": [
+    "Requires a replacement Ubuntu 24.04/26.04 LTS host.",
+    "Kernel below the project floor 5.15.",
+    "Docker daemon unavailable or below the project floor 25.0."
+  ],
+  "docker": "18.09.7",
+  "kernel": "4.4.0-210-generic",
+  "securityOptions": [
+    "name=apparmor",
+    "name=seccomp,profile=default"
+  ],
+  "virtualization": "qemu",
+  "host_eligible": false,
+  "separateRuntimeProbe": "PASS"
+}

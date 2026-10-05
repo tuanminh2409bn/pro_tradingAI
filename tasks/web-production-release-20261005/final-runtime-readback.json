@@ -1,0 +1,32 @@
+{
+  "checkedAtUtc": "2026-10-05T09:06:35.784008+00:00",
+  "hostingVersion": "713a4e79b2aa6b74",
+  "qaAccounts": [
+    {
+      "qaUidHash": "35e79b00c69e7179",
+      "role": "standard",
+      "admin": false,
+      "attributionMatchesReferral": true
+    },
+    {
+      "qaUidHash": "36b344420af176da",
+      "role": "standard",
+      "admin": false,
+      "attributionMatchesReferral": true
+    }
+  ],
+  "inviterRegisteredCountAfterReload": 2,
+  "expectedRegisteredCount": 2,
+  "referralRetryPass": true,
+  "community": {
+    "postExists": true,
+    "ownerMatchesFinalQA": true,
+    "likes": 1,
+    "comments": 1,
+    "commentDocuments": 1,
+    "ownerLikeMarkerExists": true,
+    "qaLabelPresent": true
+  },
+  "financialReceiptsSeeded": 0,
+  "paidProviderRequestsTriggered": 0
+}

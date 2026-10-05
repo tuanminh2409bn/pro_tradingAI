@@ -20,6 +20,20 @@ Tài khoản QA và vị trí lưu credential an toàn: [QA access](qa-access.md
 Cập nhật production mới nhất 2026-10-04:
 [Journal, Radar, Community và các gate còn mở](checkpoint-2026-10-04-web-production.md).
 
+Cập nhật production 2026-10-05:
+[Standard onboarding, Referral ledger/Admin, leaderboard boundary, FCM và host](checkpoint-2026-10-05-web-completion.md).
+BE/FE/Rules đã phát hành, index leaderboard READY. QA mới tự được Standard,
+quota view không tiêu/reset lượt; Backtest pause/restore đã kiểm tra trên bản
+cuối. Community và Referral registration/kit có bằng chứng cùng release:
+**W24/W26 PASS; 9/36 hàng đóng, 27 mở**. Xem [release evidence](web-production-release-20261005/README.md).
+
+Cập nhật VPS hiện tại 05/10 theo yêu cầu mới:
+[Python 3.12 image, 324/324 Emulator tests trên VPS và candidate Redis/auth smoke](current-vps-runtime-2026-10-05/README.md).
+Runtime candidate ban đầu giữ seccomp; bản cuối Python 3.12 đã cutover/rollback
+thật, **331/331 local và VPS image**. Host gate vẫn không đạt, không hạ chuẩn.
+Key DeepSeek mới trả 200 cho hai GET chỉ đọc nhưng balance gần nhất -0.13 USD,
+không khả dụng; chưa gọi AI trả phí. W35 tiếp tục mở.
+
 Cập nhật triển khai và nghiệm thu runtime 2026-10-03:
 [Analysis/quota, Backtest, Profile, News và cache release](checkpoint-2026-10-03-web-runtime.md).
 BE/FE đã phát hành cùng phần source kiểm thử; Backtest BUY/SELL/close, risk lock,
@@ -126,12 +140,21 @@ chốt quyền nguồn/role/nghiệm thu còn lại; không coi quota là toàn 
 |---|---|---|---|
 | [ ] W22 · Replay Backtest trên Web (M) | Repo/BLoC/page dùng lịch sử được duyệt; nút play/pause/x1/x5/x10/cursor chạy thật, bỏ giá/ticker/số dư cố định. | No-future-data unit tests, widget controls, browser playback và parity mẫu lịch sử. | W09, G5 |
 | [ ] W23 · Backtest risk và lưu phiên (M) | Entry/exit, P&L và max-loss lock chỉ tính đến cursor; phiên/review/ack khôi phục đúng sau refresh. | No-Repaint, BUY/SELL accounting, tamper/restore tests + browser refresh. | W22, W15, G1 |
-| [ ] W24 · Community có danh tính (M) | Post/comment/like/share dùng UID thật, chống gửi lặp, kiểm tra ownership; nút rỗng được nối hoặc gỡ khỏi giao diện. **03/10:** BE `f11707a`, FE/Rules `43fd970` đã lên main/production, public bundle khớp source; QA hiện feed trống thật sau reload. Browser Emulator qua post/comment/like/share, tự khôi phục đã thích sau login mới. Chưa có write-flow production; xem `web-community-qa-2026-10-03.json`. | Repository/BLoC/widget tests + Rules owner/cross-user + browser flow. | W04–W05 |
+| [x] W24 · Community có danh tính (M) | UID/token thật, owner/cross-user/idempotent retry tests đạt. **05/10:** Hosting `713a4e79b2aa6b74` và BE mới: QA post/comment/like/copy link; mở lại share/reload giữ 1 like/1 comment và đã thích. SDK readback xác nhận owner, một comment và owner like marker. | Tests + Rules + positive production browser/readback; `web-production-release-20261005/README.md`. | W04–W05 |
 | [ ] W25 · Chia sẻ riêng tư và leaderboard (M) | Payload chỉ chứa tỷ lệ tăng trưởng cho phép; xếp hạng từ dữ liệu đã xác minh server-side; dữ liệu cũ có phương án xử lý được duyệt. | Privacy/PII tests, Firestore tamper tests, browser ranking sample. | W24, W18, G1/G7 |
-| [ ] W26 · Referral link/kit (M) | Link/QR và asset kit dùng code do server cấp, cá nhân hóa thật, tải được trên Web; không có demo/UID-derived code. **04/10:** BE `7ef3ab6`, FE `a54d67d` đã lên main/production; QA Standard cấp mã, Clipboard, QR/banner và video H.264 tải thật. Decoder xác nhận QR đầu/giữa/cuối video khớp link server. Registration attribution/Auth retry có positive browser/SDK trên Emulator. Còn positive new-account registration production; xem `web-production-referral-video-qa-2026-10-04.json`. | QR decode, asset render/download, cross-user/empty-state tests. | W04–W05, G2/G5 |
+| [x] W26 · Referral link/kit (M) | Server cấp mã riêng, không demo/UID-derived code. **05/10:** hai đăng ký QA Web production từ link inviter, attribution đúng, count 0→1→2 và reload không tăng trùng. Bản cuối tải QR/banner/H.264 video 6.181 s/96,466 byte; QR ảnh và frame đầu/giữa/cuối đúng link server. | QR/kit/cross-user/retry tests + native downloads/decode + production readback; `web-production-release-20261005/README.md`. | W04–W05, G2/G5 |
 | [ ] W27 · Ledger và rút tiền (M) | F1/F2 có chính sách tỷ lệ/tiền tệ, ledger bất biến và xét duyệt Admin đúng quyền; không vượt số dư. | Arithmetic/transaction concurrency, Rules/API/Admin workflow và browser review. | W06, W26, G1 + chính sách hoa hồng |
 
 **Checkpoint P5:** cổng F đạt trên Web; không còn nút giả, danh tính giả hoặc tiền giả trong ba tab.
+
+Cập nhật W25/W27 05/10: BE/FE/Rules đã phát hành. Leaderboard dùng token API với fresh role,
+allowlist/freshness và tối đa 20 bản ghi; Web refresh 5 phút. Rules chặn direct
+read/write, kể cả Admin client, để document legacy không lộ PII. Browser fixture
+public/private/stale đạt; index production READY, publisher/mẫu broker thật vẫn thiếu.
+Ledger USD integer cents, receipt/reversal/rút/xét duyệt/xác nhận thanh toán
+thủ công đã có API, Rules và Admin/owner UI. Browser Emulator qua CREDIT →
+HOLD → APPROVED → PAID, readback available 20/held 0; không chuyển tiền thật.
+Xem checkpoint 05/10; W25/W27 vẫn mở cho business/provider/production proof.
 
 ### P6 — Profile, Admin, Radar và dữ liệu riêng tư (T42–T48)
 
@@ -148,9 +171,16 @@ Cập nhật Auth/Profile 04/10: FE `6a2745b` đã lên main/production, profile
 được transaction/UID guard bảo vệ; 254 Flutter tests đạt + 2 Web-only VM skip,
 analyzer 0 error/warning. Native Emulator tạo/giữ profile và Rules foreign UID
 403; production QA restore/Profile EN-VI/Journal gate/Radar ETHUSD chart đạt.
-W28 vẫn thiếu onboarding cấp `role=standard` tự động cho tài khoản mới và
-ma trận production các role; không suy claim từ trường profile `tier=FREE`.
+Ở checkpoint 04/10, onboarding tự động chưa có. Bản 05/10 đã xử lý và phát
+hành; W28 còn ma trận production các role, không suy claim từ `tier=FREE`.
 Xem `profile-seed-correctness-spec-2026-10-04.md` và checkpoint 04/10.
+
+Cập nhật W28/W32 production 05/10: onboarding Standard qua token API/claim
+refresh đã deploy; hai đăng ký QA mới và Profile quota nguồn server đạt.
+Refresh view không tiêu/reset counter, restore Backtest giữ 1/2 lượt.
+Role matrix production vẫn mở. FCM lifecycle/rotation/cleanup
+và same-origin structured chart click có test; Chrome reload giữ phiên QA và
+ETHUSD/H4, không tự gọi AI. FCM delivery/token/device production vẫn cần proof.
 
 **Checkpoint P6:** cổng G đạt cho các luồng Web; Admin không chỉ là nút giao diện, mọi thay đổi có hiệu lực và bị kiểm soát quyền.
 
@@ -162,6 +192,12 @@ Xem `profile-seed-correctness-spec-2026-10-04.md` và checkpoint 04/10.
 | [ ] W35 · Web staging/release (M) | Chốt source manifest, backend image, Web build, Rules/index version; chạy ma trận trên staging, đo tải, tập rollback và ký nghiệm thu. | Python/Flutter suites, `flutter build web --release`, browser smoke cùng build, security/load, rollback drill; deploy chỉ sau G6. | W01–W34, G6 |
 
 **Checkpoint cuối:** mọi hàng Web cần thiết trong ma trận PASS với bằng chứng cùng build, không có lỗi security/trading nghiêm trọng, không có dữ liệu sản phẩm bịa ra. Gói phát hành Mobile không thuộc checkpoint này.
+
+Cập nhật W34/W35 local 05/10: Python 320/320 đạt; Flutter 272 đạt + 2 Web-only VM skips,
+Node Web 8/8, analyzer không error/warning (3 info Mobile cũ), build Web QA và
+candidate mặc định production đạt. Gate host/read-only + thread probe đã có
+code; local không có Docker đạt điều kiện nên NOT_RUN. Phương án host mới và
+backup/staging/rollback ở `backend-host-migration-2026-10-05.md`; chưa cutover.
 
 ## 5. Cổng quyết định và việc làm được trong lúc chờ
 

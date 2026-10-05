@@ -1,0 +1,14 @@
+{
+  "configured": true,
+  "checks": {
+    "/models": {
+      "httpStatus": 401
+    },
+    "/user/balance": {
+      "httpStatus": 401
+    }
+  },
+  "completionRequests": 0,
+  "credentialPrinted": false,
+  "result": "UNAVAILABLE"
+}

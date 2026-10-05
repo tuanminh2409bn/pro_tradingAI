@@ -1,0 +1,17 @@
+{
+  "httpStatus": {
+    "/models": 200,
+    "/user/balance": 200
+  },
+  "available": false,
+  "balances": [
+    {
+      "currency": "USD",
+      "totalBalance": "-0.13"
+    }
+  ],
+  "keyConfigured": true,
+  "completionRequests": 0,
+  "credentialPrinted": false,
+  "result": "PASS"
+}

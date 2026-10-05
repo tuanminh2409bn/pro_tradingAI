@@ -1,0 +1,22 @@
+{
+  "python": "3.12.15",
+  "bootstrapSha256": "177891651490f961547e8e791a6c0279536e85caa1691aa3b7649c55721e0059",
+  "control": "THREAD_DENIED",
+  "clone3BeforeErrno": 1,
+  "clone3AfterErrno": 38,
+  "faccessat2BeforeErrno": 1,
+  "faccessat2AfterErrno": 38,
+  "keyringAccess": "PASS",
+  "missingFileDenied": true,
+  "threadJobsPassed": 80,
+  "execInheritance": "PASS",
+  "seccomp": 2,
+  "noNewPrivileges": 1,
+  "effectiveCapabilities": 0,
+  "mountDenied": true,
+  "unshareDenied": true,
+  "network": "none",
+  "readOnly": true,
+  "credentialsMounted": false,
+  "result": "PASS"
+}

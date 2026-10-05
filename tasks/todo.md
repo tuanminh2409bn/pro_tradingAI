@@ -426,6 +426,13 @@ Status convention: `[ ]` not started, `[~]` in progress, `[x]` verified complete
 
 ### T38 — Authenticated community interactions
 
+**Web checkpoint 05/10/2026:** W24/C-01 PASS on production Hosting
+`713a4e79b2aa6b74` and matching backend source `b3668d9`: QA post/comment/like,
+copy/open share link and reload keep counters 1/1 and owner marker. Auth/Rules/
+idempotency tests pass; readback and screenshots are in
+`web-production-release-20261005/README.md`. This closes the Web slice only;
+the shared checklist below is not treated as Mobile runtime sign-off.
+
 **Description:** Replace fake identity and wire authenticated posts, comments, reactions, discussion, and share actions with ownership and abuse-safe validation.
 
 **Acceptance criteria:** [ ] User identity derives from auth. [ ] Like/comment operations are idempotent and ownership rules apply. [ ] Empty/error/loading states are real.
@@ -445,6 +452,13 @@ Status convention: `[ ]` not started, `[~]` in progress, `[x]` verified complete
 **Dependencies:** T05, T31, T38, G7. **Likely files:** `lib/data/models/community_models.dart`, `lib/data/repositories/community_repository.dart`, `server.py`, `firestore.rules`, `test/community_privacy_test.dart`. **Scope:** M.
 
 ### T40 — Referral QR and personalized Marketing Kit [~]
+
+**Web checkpoint 05/10/2026:** W26/REF-01..02 PASS on final production build.
+Two real QA signups from inviter link produce correct attribution/count 2;
+reload does not duplicate registration. Server-issued personalized QR/banner/
+H.264 video download; image and first/middle/last video QR decode matches.
+Evidence: `web-production-release-20261005/README.md`. Mobile asset smoke and
+the overall T40 remain separate from this completed Web slice.
 
 **Description:** Generate authenticated referral links/QR codes and personalize approved videos/banners with the user's code before download without embedding another user's identity.
 
